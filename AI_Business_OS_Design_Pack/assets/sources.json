@@ -1,0 +1,21 @@
+{
+  "education.jpg": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=680&q=78&fit=crop",
+  "clinic.jpg": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=680&q=78&fit=crop",
+  "salon.jpg": "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=680&q=78&fit=crop",
+  "store.jpg": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=680&q=78&fit=crop",
+  "google-g.png": "https://developers.google.com/identity/images/g-logo.png",
+  "google-calendar.png": "https://www.gstatic.com/images/branding/product/2x/calendar_2020q4_48dp.png",
+  "telegram.svg": "https://telegram.org/img/t_logo.svg?1",
+  "material_symbols": {
+    "check": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/check/default/24px.svg",
+    "arrow_forward": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/arrow_forward/default/24px.svg",
+    "badge": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/badge/default/24px.svg",
+    "business": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/business/default/24px.svg",
+    "extension": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/extension/default/24px.svg",
+    "close": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/close/default/24px.svg",
+    "arrow_back": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/arrow_back/default/24px.svg",
+    "chevron_right": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/chevron_right/default/24px.svg",
+    "space_dashboard": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/space_dashboard/default/24px.svg",
+    "person": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/person/default/24px.svg"
+  }
+}

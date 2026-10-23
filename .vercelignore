@@ -1,0 +1,9 @@
+.next
+node_modules
+.git
+.data
+.neon
+AI_Business_OS_Design_Pack
+*.png
+scripts
+m.md
