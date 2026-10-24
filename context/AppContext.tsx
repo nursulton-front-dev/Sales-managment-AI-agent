@@ -208,6 +208,25 @@ export function AppContextProvider({ children }: { children: ReactNode }) {
               }
             })
             .catch(() => {});
+        } else if (data.success === false) {
+          // If server reports workspace no longer exists (e.g. DB was wiped), purge client cache
+          setUser(null);
+          setAgents([]);
+          setLeads([]);
+          setTokenBalance(0);
+          setEmailVerified(false);
+          setIsGoogleCalendarConnected(false);
+          try {
+            localStorage.removeItem('ai_os_user');
+            localStorage.removeItem('ai_os_workspace');
+            localStorage.removeItem('ai_os_tokens');
+            localStorage.removeItem('ai_os_plan');
+            localStorage.removeItem('ai_os_agents');
+            localStorage.removeItem('ai_os_leads');
+            localStorage.removeItem('ai_os_email_verified');
+            localStorage.removeItem('ai_os_gcal_connected');
+            document.cookie = 'ai_os_workspace_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          } catch {}
         }
       })
       .catch(() => {});
