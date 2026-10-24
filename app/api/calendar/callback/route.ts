@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Exchange code for tokens
-    const tokens = await exchangeCodeForTokens(code);
+    const tokens = await exchangeCodeForTokens(code, req.nextUrl.origin);
 
     // Identify target workspace
     const cookieStore = await cookies();

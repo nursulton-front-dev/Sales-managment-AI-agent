@@ -41,15 +41,15 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen flex bg-[var(--background)] text-[var(--text-primary)] font-sans antialiased">
-      {/* Sidebar (Desktop left rail + Mobile Slide-over Drawer) */}
+    <div className="h-[100dvh] w-full flex overflow-hidden bg-[var(--background)] text-[var(--text-primary)] font-sans antialiased">
+      {/* Sidebar (Desktop fixed left rail + Mobile Slide-over Drawer) */}
       <Sidebar
         mobileOpen={isMobileMenuOpen}
         onMobileClose={() => setIsMobileMenuOpen(false)}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Content Area: fixed column with isolated vertical scroll */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
         {/* Support Session Warning Banner */}
         {isImpersonating && (
           <div className="bg-amber-600 text-white px-4 sm:px-6 py-2.5 text-xs flex items-center justify-between font-medium shadow-xs z-40 shrink-0">
@@ -69,9 +69,13 @@ export default function DashboardLayout({
           </div>
         )}
 
-        <Header onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+        {/* Sticky/Fixed Header (shrink-0) */}
+        <div className="shrink-0 z-30">
+          <Header onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+        </div>
 
-        <main className="flex-1 p-4 sm:p-6 md:p-8 w-full max-w-[1600px] mx-auto">
+        {/* Scrollable Main Area (flex-1, min-h-0, overflow-y-auto) */}
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 w-full max-w-[1600px] mx-auto">
           {children}
         </main>
       </div>

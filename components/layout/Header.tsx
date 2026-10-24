@@ -78,21 +78,27 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
 
         {/* User Profile / Logout */}
         <div className="flex items-center gap-2 sm:gap-2.5 border-l border-[var(--border)] pl-2 sm:pl-3">
-          <div
-            className="w-8 h-8 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] text-xs font-semibold shrink-0"
-            title={user?.email || 'Пользователь'}
+          <Link
+            href="/dashboard/profile"
+            title="Открыть профиль"
+            className="flex items-center gap-2 group hover:opacity-80 transition-opacity"
           >
-            {user?.name ? user.name[0].toUpperCase() : 'U'}
-          </div>
+            <div
+              className="w-8 h-8 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] text-xs font-semibold shrink-0 group-hover:border-[#DC2626] transition-colors"
+              title={user?.email || 'Пользователь'}
+            >
+              {user?.name ? user.name[0].toUpperCase() : 'U'}
+            </div>
 
-          <div className="hidden xl:block text-left text-xs max-w-[140px] truncate">
-            <div className="font-medium text-[var(--text-primary)] leading-tight truncate">
-              {user?.name || 'Пользователь'}
+            <div className="hidden xl:block text-left text-xs max-w-[140px] truncate">
+              <div className="font-medium text-[var(--text-primary)] leading-tight truncate group-hover:text-[#DC2626] transition-colors">
+                {user?.name || 'Пользователь'}
+              </div>
+              <div className="text-[11px] text-[var(--text-muted)] truncate">
+                {user?.email || 'user@example.com'}
+              </div>
             </div>
-            <div className="text-[11px] text-[var(--text-muted)] truncate">
-              {user?.email || 'user@example.com'}
-            </div>
-          </div>
+          </Link>
 
           <button
             type="button"

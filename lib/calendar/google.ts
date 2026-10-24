@@ -48,10 +48,21 @@ export function isGoogleCalendarConfigured(): boolean {
 /**
  * Generates Google OAuth 2.0 authorization URL
  */
-export function getGoogleAuthUrl(workspaceId?: string): string {
+export function getGoogleAuthUrl(workspaceId?: string, requestOrigin?: string): string {
   const clientId = process.env.GOOGLE_CLIENT_ID || '';
-  const redirectUri =
-    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/calendar/callback';
+  
+  let redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  if (!redirectUri) {
+    if (requestOrigin) {
+      redirectUri = `${requestOrigin}/api/calendar/callback`;
+    } else if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      redirectUri = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/api/calendar/callback`;
+    } else if (process.env.VERCEL_URL) {
+      redirectUri = `https://${process.env.VERCEL_URL}/api/calendar/callback`;
+    } else {
+      redirectUri = 'http://localhost:3000/api/calendar/callback';
+    }
+  }
 
   const scopes = [
     'https://www.googleapis.com/auth/calendar.events',
@@ -76,11 +87,22 @@ export function getGoogleAuthUrl(workspaceId?: string): string {
 /**
  * Exchanges authorization code for Access & Refresh tokens
  */
-export async function exchangeCodeForTokens(code: string): Promise<GoogleTokens> {
+export async function exchangeCodeForTokens(code: string, requestOrigin?: string): Promise<GoogleTokens> {
   const clientId = process.env.GOOGLE_CLIENT_ID || '';
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
-  const redirectUri =
-    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/calendar/callback';
+  
+  let redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  if (!redirectUri) {
+    if (requestOrigin) {
+      redirectUri = `${requestOrigin}/api/calendar/callback`;
+    } else if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      redirectUri = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/api/calendar/callback`;
+    } else if (process.env.VERCEL_URL) {
+      redirectUri = `https://${process.env.VERCEL_URL}/api/calendar/callback`;
+    } else {
+      redirectUri = 'http://localhost:3000/api/calendar/callback';
+    }
+  }
 
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',

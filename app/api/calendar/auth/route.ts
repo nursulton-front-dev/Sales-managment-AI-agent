@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const authUrl = getGoogleAuthUrl(workspaceId);
+    const origin = req.nextUrl.origin;
+    const authUrl = getGoogleAuthUrl(workspaceId, origin);
     return NextResponse.redirect(authUrl);
   } catch (error: any) {
     console.error('Error in calendar auth route:', error);

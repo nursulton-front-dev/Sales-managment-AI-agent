@@ -970,3 +970,49 @@ export async function recordTrialGrant(ownerEmail: string, ownerPhone: string, w
   writeStore(store);
   return grant;
 }
+
+// ================= ADMIN AUDIT LOGS =================
+export async function createAdminAuditLog(data: Omit<schema.AdminAuditLog, 'id' | 'createdAt'>): Promise<schema.AdminAuditLog> {
+  const log: schema.AdminAuditLog = {
+    id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    adminEmail: data.adminEmail,
+    adminRole: data.adminRole,
+    entityType: data.entityType,
+    entityId: data.entityId,
+    action: data.action,
+    reason: data.reason,
+    diffBefore: data.diffBefore || null,
+    diffAfter: data.diffAfter || null,
+    result: data.result || 'success',
+    createdAt: new Date(),
+  };
+
+  if (db) {
+    try {
+      await db.insert(schema.adminAuditLogs).values(log);
+    } catch (err) {
+      console.warn('Neon insert adminAuditLog error:', err);
+    }
+  }
+
+  const store = readStore() as any;
+  if (!store.adminAuditLogs) store.adminAuditLogs = [];
+  store.adminAuditLogs.unshift(log);
+  writeStore(store);
+  return log;
+}
+
+export async function getAllAdminAuditLogs(): Promise<schema.AdminAuditLog[]> {
+  if (db) {
+    try {
+      const rows = await db.select().from(schema.adminAuditLogs);
+      return rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (err) {
+      console.warn('Neon select adminAuditLogs error:', err);
+    }
+  }
+  const store = readStore() as any;
+  return (store.adminAuditLogs || []).sort(
+    (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}

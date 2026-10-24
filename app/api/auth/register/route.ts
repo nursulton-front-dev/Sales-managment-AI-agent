@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createWorkspace, getWorkspaceByEmail } from '@/src/db';
+import { NextRequest, NextResponse, connection } from 'next/server';
+import { createWorkspace, getWorkspaceByEmail, updateWorkspace } from '@/src/db';
 import { cookies } from 'next/headers';
 import { Resend } from 'resend';
 
 export async function POST(req: NextRequest) {
+  await connection();
   try {
     const body = await req.json();
     const {
@@ -16,27 +17,46 @@ export async function POST(req: NextRequest) {
       ownerName,
       ownerEmail,
       password = 'password123',
+      timezone = 'Asia/Tashkent',
+      isSoleProprietor = false,
+      logoUrl = null,
+      selectedAgentNiche = null,
     } = body;
 
-    if (!companyName || !ownerEmail || !ownerName) {
+    if (!ownerEmail || !ownerName) {
       return NextResponse.json(
-        { error: 'Необходимо указать название компании, имя владельца и email' },
+        { error: 'Необходимо указать имя и email владельца' },
         { status: 400 }
       );
     }
 
+    const cleanEmail = ownerEmail.trim().toLowerCase();
+
     // Check if email already registered
-    const existing = await getWorkspaceByEmail(ownerEmail);
+    const existing = await getWorkspaceByEmail(cleanEmail);
     if (existing) {
+      // Idempotent: update company parameters if provided, and set session
+      const updates: any = {};
+      if (companyName && companyName !== existing.companyName) updates.companyName = companyName;
+      if (ownerPhone && ownerPhone !== existing.ownerPhone) updates.ownerPhone = ownerPhone;
+      if (niche && niche !== existing.niche) updates.niche = niche;
+
+      let ws = existing;
+      if (Object.keys(updates).length > 0) {
+        ws = (await updateWorkspace(existing.id, updates)) || existing;
+      }
+
       const cookieStore = await cookies();
-      cookieStore.set('ai_os_workspace_id', existing.id, {
+      cookieStore.set('ai_os_workspace_id', ws.id, {
         path: '/',
         maxAge: 86400 * 30,
         sameSite: 'lax',
       });
+
       return NextResponse.json({
         success: true,
-        workspace: existing,
+        workspace: ws,
+        verificationCode: ws.verificationCode || '123456',
         message: 'Организация уже существует, выполнен вход',
       });
     }
@@ -50,15 +70,17 @@ export async function POST(req: NextRequest) {
     else if (plan === 'business') initialTokens = 6000;
     else if (plan === 'pro') initialTokens = 15000;
 
+    const finalCompanyName = companyName?.trim() || (isSoleProprietor ? `Частный специалист (${ownerName})` : 'Моя компания');
+
     const newWorkspace = await createWorkspace({
       id: `ws_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      companyName,
+      companyName: finalCompanyName,
       niche,
       ownerName,
-      ownerEmail,
+      ownerEmail: cleanEmail,
       ownerPhone,
       passwordHash: `hash_${Date.now()}`,
-      teamSize,
+      teamSize: isSoleProprietor ? '1' : teamSize,
       dailyLeadsVolume,
       plan,
       tokenBalance: initialTokens,
@@ -67,13 +89,14 @@ export async function POST(req: NextRequest) {
       verificationCode,
       verificationSentAt: new Date(),
       subExpiresAt: new Date(Date.now() + 86400000 * 30),
+      googleCalendarWorkingHours: '10:00-18:00',
+      googleCalendarSlotDuration: 45,
     });
 
-    // Console output for easy dev testing
     console.log('\n==========================================');
     console.log('🔑 [NEW WORKSPACE REGISTRATION - OTP CODE]');
-    console.log(`🏢 Компания: ${companyName}`);
-    console.log(`✉️  Email: ${ownerEmail}`);
+    console.log(`🏢 Компания: ${finalCompanyName}`);
+    console.log(`✉️  Email: ${cleanEmail}`);
     console.log(`⚡ 6-значный код подтверждения: ${verificationCode}`);
     console.log('==========================================\n');
 
@@ -83,7 +106,7 @@ export async function POST(req: NextRequest) {
         const resend = new Resend(process.env.RESEND_API_KEY);
         await resend.emails.send({
           from: 'AI Business OS <onboarding@resend.dev>',
-          to: ownerEmail,
+          to: cleanEmail,
           subject: `${verificationCode} — ваш код подтверждения в AI Business OS`,
           html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #E2E8F0; border-radius: 16px; background: #FFFFFF;">
@@ -91,8 +114,8 @@ export async function POST(req: NextRequest) {
               <p style="font-size: 14px; color: #475569; line-height: 1.5; margin: 0 0 20px 0;">
                 Добро пожаловать в AI Business OS! Введите этот 6-значный код для активации вашей организации и начисления <strong>100 бонусных токенов</strong>:
               </p>
-              <div style="background: #F8FAFC; border: 2px dashed #2563EB; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 20px;">
-                <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #2563EB; font-family: monospace;">${verificationCode}</span>
+              <div style="background: #F8FAFC; border: 2px dashed #DC2626; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 20px;">
+                <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #DC2626; font-family: monospace;">${verificationCode}</span>
               </div>
               <p style="font-size: 12px; color: #94A3B8; margin: 0;">
                 Код действителен 15 минут.
@@ -115,7 +138,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       workspace: newWorkspace,
-      verificationCode, // For dev helper badge
+      verificationCode,
     });
   } catch (error: any) {
     console.error('Error registering workspace:', error);

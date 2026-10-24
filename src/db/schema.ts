@@ -216,6 +216,56 @@ export const verifications = pgTable('verifications', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// 12. Support Tickets (Обращения, жалобы и предложения пользователей)
+export const supportTickets = pgTable('support_tickets', {
+  id: text('id').primaryKey(),
+  ticketNumber: integer('ticket_number').notNull(),
+  workspaceId: text('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  authorEmail: text('author_email').notNull(),
+  authorName: text('author_name').notNull(),
+  type: text('type').notNull(), // 'question', 'bug', 'complaint', 'suggestion'
+  subject: text('subject').notNull(),
+  description: text('description').notNull(),
+  status: text('status').notNull().default('new'), // 'new', 'in_progress', 'waiting_user', 'resolved'
+  assignedTo: text('assigned_to'), // email or name of support agent
+  unreadByCustomer: boolean('unread_by_customer').notNull().default(false),
+  unreadBySupport: boolean('unread_by_support').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// 13. Support Messages (Переписка по обращению)
+export const supportMessages = pgTable('support_messages', {
+  id: text('id').primaryKey(),
+  ticketId: text('ticket_id')
+    .notNull()
+    .references(() => supportTickets.id, { onDelete: 'cascade' }),
+  senderRole: text('sender_role').notNull(), // 'customer', 'support'
+  senderEmail: text('sender_email').notNull(),
+  senderName: text('sender_name').notNull(),
+  text: text('text').notNull(),
+  isInternalNote: boolean('is_internal_note').notNull().default(false),
+  attachments: jsonb('attachments').$type<Array<{ name: string; url: string; size: number; mimeType: string }>>().default([]),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// 14. Admin Audit Logs (Журнал действий администраторов платформы)
+export const adminAuditLogs = pgTable('admin_audit_logs', {
+  id: text('id').primaryKey(),
+  adminEmail: text('admin_email').notNull(),
+  adminRole: text('admin_role').notNull(), // 'super_admin', 'support', 'finance'
+  entityType: text('entity_type').notNull(), // 'workspace', 'agent', 'billing', 'support_ticket', 'system'
+  entityId: text('entity_id').notNull(),
+  action: text('action').notNull(), // 'add_tokens', 'change_plan', 'suspend_workspace', 'suspend_agent', 'extend_trial', 'reply_ticket', 'support_session_start'
+  reason: text('reason').notNull(),
+  diffBefore: jsonb('diff_before'),
+  diffAfter: jsonb('diff_after'),
+  result: text('result').notNull().default('success'), // 'success', 'failed'
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 export type Workspace = typeof workspaces.$inferSelect;
 export type NewWorkspace = typeof workspaces.$inferInsert;
 export type Agent = typeof agents.$inferSelect;
@@ -240,3 +290,9 @@ export type SupportSession = typeof supportSessions.$inferSelect;
 export type NewSupportSession = typeof supportSessions.$inferInsert;
 export type TrialGrant = typeof trialGrants.$inferSelect;
 export type NewTrialGrant = typeof trialGrants.$inferInsert;
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type NewSupportTicket = typeof supportTickets.$inferInsert;
+export type SupportMessage = typeof supportMessages.$inferSelect;
+export type NewSupportMessage = typeof supportMessages.$inferInsert;
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+export type NewAdminAuditLog = typeof adminAuditLogs.$inferInsert;

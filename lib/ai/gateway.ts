@@ -28,7 +28,7 @@ export interface ChatCompletionResult {
   isBooking: boolean;
   appointmentTime?: string;
   leadCreated?: any;
-  provider: 'openai' | 'gemini' | 'rules_engine';
+  provider: 'openai' | 'gemini' | 'deepseek' | 'rules_engine';
   model: string;
 }
 
@@ -154,41 +154,73 @@ export async function processAgentMessage({
   }
 
   let reply = '';
-  let provider: 'openai' | 'gemini' | 'rules_engine' = 'rules_engine';
+  let provider: 'openai' | 'gemini' | 'deepseek' | 'rules_engine' = 'rules_engine';
   let modelName = 'local-rules-v1';
 
   // Construct system prompt
   const basePrompt = agent?.systemPrompt || `Вы — профессиональный ИИ-сотрудник компании. Ваша задача — квалифицировать клиента и записать на пробный урок/прием.`;
   const fullSystemPrompt = `${basePrompt}\n\nБаза знаний и прайс:\n${agent?.knowledgeBase || 'Стандартные условия'}\n\nВопросы квалификации:\n${((agent?.qualificationQuestions as string[]) || []).join('\n')}`;
 
-  // 1. Attempt OpenAI
-  const openAiReply = await callOpenAI(fullSystemPrompt, query, history);
-  if (openAiReply) {
-    reply = openAiReply;
-    provider = 'openai';
-    modelName = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  } else {
-    // 2. Attempt Gemini backup
+  // Sandbox provider override: if AI_SANDBOX_PROVIDER=deepseek (or in sandbox mode with deepseek key)
+  const useDeepSeek = (isSandbox && (process.env.AI_SANDBOX_PROVIDER === 'deepseek' || process.env.DEEPSEEK_API_KEY)) || process.env.AI_DEFAULT_PROVIDER === 'deepseek';
+
+  if (useDeepSeek && process.env.DEEPSEEK_API_KEY) {
+    try {
+      const { DeepSeekProvider } = await import('@/lib/server/ai/providers/deepseek');
+      const { BUSINESS_AGENT_TOOLS } = await import('@/lib/server/ai/tools');
+      const ds = new DeepSeekProvider();
+      const dsRes = await ds.complete({
+        messages: [
+          { role: 'system', content: fullSystemPrompt },
+          ...history.slice(-6).map((h) => ({ role: h.role, content: h.content })),
+          { role: 'user', content: query },
+        ],
+        tools: BUSINESS_AGENT_TOOLS,
+      });
+      if (dsRes.content) {
+        reply = dsRes.content;
+        provider = 'deepseek';
+        modelName = ds.defaultModel;
+      }
+    } catch (dsErr) {
+      console.warn('DeepSeek provider error, falling back:', dsErr);
+    }
+  }
+
+  // 1. Attempt OpenAI if not already answered
+  if (!reply) {
+    const openAiReply = await callOpenAI(fullSystemPrompt, query, history);
+    if (openAiReply) {
+      reply = openAiReply;
+      provider = 'openai';
+      modelName = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    }
+  }
+
+  // 2. Attempt Gemini backup if not already answered
+  if (!reply) {
     const geminiReply = await callGemini(fullSystemPrompt, query);
     if (geminiReply) {
       reply = geminiReply;
       provider = 'gemini';
       modelName = 'gemini-2.5-flash';
-    } else {
-      // 3. Fallback to structured rules engine
-      provider = 'rules_engine';
-      modelName = 'local-rules-v1';
-      const questions = (agent?.qualificationQuestions as string[]) || [];
+    }
+  }
 
-      if (isBooking) {
-        reply = `Отлично! Я проверил расписание. Ближайший свободный слот: завтра в 14:30. Подскажите, пожалуйста, ваше имя и номер телефона для подтверждения брони?`;
-      } else if (lower.includes('цен') || lower.includes('скольк') || lower.includes('прайс') || lower.includes('стоим')) {
-        reply = `Вот наш прайс-лист:\n\n${agent?.knowledgeBase || 'Стандартный тариф: от 150 000 сум.'}\n\n${questions[0] || 'Какой формат вам больше подходит?'}`;
-      } else if (lower.includes('уровен') || lower.includes('возраст') || lower.includes('симптом') || lower.includes('мастер')) {
-        reply = `Понял вас! ${questions[1] || 'В какие дни и часы вам удобнее подойти на встречу?'}`;
-      } else {
-        reply = `Здравствуйте! Я виртуальный консультант компании. ${questions[0] || 'Чем могу помочь вам сегодня?'}`;
-      }
+  // 3. Fallback to structured rules engine
+  if (!reply) {
+    provider = 'rules_engine';
+    modelName = 'local-rules-v1';
+    const questions = (agent?.qualificationQuestions as string[]) || [];
+
+    if (isBooking) {
+      reply = `Отлично! Я проверил расписание. Ближайший свободный слот: завтра в 14:30. Подскажите, пожалуйста, ваше имя и номер телефона для подтверждения брони?`;
+    } else if (lower.includes('цен') || lower.includes('скольк') || lower.includes('прайс') || lower.includes('стоим')) {
+      reply = `Вот наш прайс-лист:\n\n${agent?.knowledgeBase || 'Стандартный тариф: от 150 000 сум.'}\n\n${questions[0] || 'Какой формат вам больше подходит?'}`;
+    } else if (lower.includes('уровен') || lower.includes('возраст') || lower.includes('симптом') || lower.includes('мастер')) {
+      reply = `Понял вас! ${questions[1] || 'В какие дни и часы вам удобнее подойти на встречу?'}`;
+    } else {
+      reply = `Здравствуйте! Я виртуальный консультант компании. ${questions[0] || 'Чем могу помочь вам сегодня?'}`;
     }
   }
 

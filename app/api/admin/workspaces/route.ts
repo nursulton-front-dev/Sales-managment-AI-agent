@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
-import { getAllWorkspaces, updateWorkspace, addTokenLog, getAllTokenLogs } from '@/src/db';
+import { getAllWorkspaces, updateWorkspace, addTokenLog, getAllTokenLogs, createAdminAuditLog } from '@/src/db';
 
 export async function GET() {
   await connection();
@@ -98,7 +98,7 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { workspaceId, action, tokensToAdd, newPlan, status } = body;
+    const { workspaceId, action, tokensToAdd, newPlan, daysToAdd, status, reason, adminEmail = 'founder@platform.local', adminRole = 'super_admin' } = body;
 
     if (!workspaceId) {
       return NextResponse.json({ error: 'workspaceId обязателен' }, { status: 400 });
@@ -110,9 +110,10 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Организация не найдена' }, { status: 404 });
     }
 
+    const auditReason = reason || 'Административное действие в панели управления';
+
     if (action === 'add_tokens') {
       const delta = Number(tokensToAdd) || 500;
-      const reason = body.reason || 'Ручная корректировка основателем платформы';
       const updatedBalance = current.tokenBalance + delta;
       const updated = await updateWorkspace(workspaceId, { tokenBalance: updatedBalance });
 
@@ -123,8 +124,20 @@ export async function PATCH(req: NextRequest) {
         tokensDelta: delta,
         amountUsd: '0',
         paymentMethod: 'system',
-        description: `Суперадмин: +${delta} токенов. Причина: ${reason}`,
+        description: `Суперадмин: +${delta} токенов. Причина: ${auditReason}`,
         createdAt: new Date(),
+      });
+
+      await createAdminAuditLog({
+        adminEmail,
+        adminRole,
+        entityType: 'workspace',
+        entityId: workspaceId,
+        action: 'add_tokens',
+        reason: auditReason,
+        diffBefore: { tokenBalance: current.tokenBalance },
+        diffAfter: { tokenBalance: updatedBalance, delta },
+        result: 'success',
       });
 
       return NextResponse.json({ success: true, workspace: updated });
@@ -153,8 +166,66 @@ export async function PATCH(req: NextRequest) {
         tokensDelta: bonusTokens,
         amountUsd: newPlan === 'start' ? '29' : newPlan === 'business' ? '59' : newPlan === 'pro' ? '119' : '0',
         paymentMethod: 'system',
-        description: `Суперадмин сменил тариф на ${newPlan.toUpperCase()}`,
+        description: `Суперадмин сменил тариф на ${newPlan.toUpperCase()}. Причина: ${auditReason}`,
         createdAt: new Date(),
+      });
+
+      await createAdminAuditLog({
+        adminEmail,
+        adminRole,
+        entityType: 'workspace',
+        entityId: workspaceId,
+        action: 'change_plan',
+        reason: auditReason,
+        diffBefore: { plan: current.plan, tokenBalance: current.tokenBalance },
+        diffAfter: { plan: newPlan, tokenBalance: current.tokenBalance + bonusTokens },
+        result: 'success',
+      });
+
+      return NextResponse.json({ success: true, workspace: updated });
+    }
+
+    if (action === 'extend_trial') {
+      const days = Number(daysToAdd) || 7;
+      const currentExpiry = current.subExpiresAt ? new Date(current.subExpiresAt).getTime() : Date.now();
+      const baseTime = currentExpiry > Date.now() ? currentExpiry : Date.now();
+      const newExpiry = new Date(baseTime + days * 86400000);
+
+      const updated = await updateWorkspace(workspaceId, {
+        plan: 'trial',
+        subExpiresAt: newExpiry,
+        status: 'active',
+      });
+
+      await createAdminAuditLog({
+        adminEmail,
+        adminRole,
+        entityType: 'workspace',
+        entityId: workspaceId,
+        action: 'extend_trial',
+        reason: auditReason,
+        diffBefore: { subExpiresAt: current.subExpiresAt },
+        diffAfter: { subExpiresAt: newExpiry, daysAdded: days },
+        result: 'success',
+      });
+
+      return NextResponse.json({ success: true, workspace: updated });
+    }
+
+    if (action === 'suspend' || action === 'restore' || action === 'set_status') {
+      const targetStatus = action === 'suspend' ? 'suspended' : action === 'restore' ? 'active' : (status || 'active');
+      const updated = await updateWorkspace(workspaceId, { status: targetStatus });
+
+      await createAdminAuditLog({
+        adminEmail,
+        adminRole,
+        entityType: 'workspace',
+        entityId: workspaceId,
+        action: action === 'suspend' ? 'suspend_workspace' : action === 'restore' ? 'restore_workspace' : 'update_status',
+        reason: auditReason,
+        diffBefore: { status: current.status },
+        diffAfter: { status: targetStatus },
+        result: 'success',
       });
 
       return NextResponse.json({ success: true, workspace: updated });
@@ -176,16 +247,23 @@ export async function PATCH(req: NextRequest) {
           tokensDelta: bonus,
           amountUsd: '0',
           paymentMethod: 'system',
-          description: 'Ручная верификация Email суперадмином (+100 токенов)',
+          description: `Ручная верификация Email суперадмином (+100 токенов). Причина: ${auditReason}`,
           createdAt: new Date(),
         });
       }
 
-      return NextResponse.json({ success: true, workspace: updated });
-    }
+      await createAdminAuditLog({
+        adminEmail,
+        adminRole,
+        entityType: 'workspace',
+        entityId: workspaceId,
+        action: 'verify_email',
+        reason: auditReason,
+        diffBefore: { emailVerified: current.emailVerified },
+        diffAfter: { emailVerified: true },
+        result: 'success',
+      });
 
-    if (action === 'set_status') {
-      const updated = await updateWorkspace(workspaceId, { status: status || 'active' });
       return NextResponse.json({ success: true, workspace: updated });
     }
 

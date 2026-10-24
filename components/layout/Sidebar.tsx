@@ -12,10 +12,11 @@ import {
   Bot,
   Plug,
   CreditCard,
-  Settings,
+  Building2,
+  LifeBuoy,
+  User,
   Shield,
   Play,
-  Building2,
   X,
 } from 'lucide-react';
 
@@ -63,6 +64,16 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       href: '/dashboard/billing',
       icon: CreditCard,
     },
+    {
+      title: 'Компания и команда',
+      href: '/dashboard/company',
+      icon: Building2,
+    },
+    {
+      title: 'Поддержка и идеи',
+      href: '/dashboard/support',
+      icon: LifeBuoy,
+    },
   ];
 
   // Close mobile drawer on Escape key
@@ -89,38 +100,38 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   }, [mobileOpen]);
 
   const sidebarContent = (
-    <div className="flex flex-col justify-between h-full bg-[var(--surface)] text-[var(--text-primary)]">
-      <div>
-        {/* Brand Header with Red Square Icon */}
-        <div className="h-16 flex items-center justify-between px-5 border-b border-[var(--border)]">
-          <Link
-            href="/dashboard"
+    <div className="flex flex-col h-full min-h-0 bg-[var(--surface)] text-[var(--text-primary)]">
+      {/* 1. Fixed Top Brand Header */}
+      <div className="h-16 shrink-0 flex items-center justify-between px-5 border-b border-[var(--border)]">
+        <Link
+          href="/dashboard"
+          onClick={onMobileClose}
+          className="flex items-center gap-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] rounded-[6px]"
+        >
+          <div className="w-8 h-8 rounded-[6px] bg-[#DC2626] flex items-center justify-center text-white font-bold text-sm shadow-2xs shrink-0">
+            <Building2 className="w-4 h-4" />
+          </div>
+          <span className="font-bold text-[var(--text-primary)] text-sm tracking-tight">
+            AI Business OS
+          </span>
+        </Link>
+
+        {/* Close button on mobile */}
+        {onMobileClose && (
+          <button
+            type="button"
             onClick={onMobileClose}
-            className="flex items-center gap-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] rounded-[6px]"
+            aria-label="Закрыть меню навигации"
+            className="lg:hidden w-10 h-10 -mr-2 rounded-[6px] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-[6px] bg-[#DC2626] flex items-center justify-center text-white font-bold text-sm shadow-2xs shrink-0">
-              <Building2 className="w-4 h-4" />
-            </div>
-            <span className="font-bold text-[var(--text-primary)] text-sm tracking-tight">
-              AI Business OS
-            </span>
-          </Link>
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
 
-          {/* Close button on mobile */}
-          {onMobileClose && (
-            <button
-              type="button"
-              onClick={onMobileClose}
-              aria-label="Закрыть меню навигации"
-              className="lg:hidden w-10 h-10 -mr-2 rounded-[6px] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-
-        {/* Navigation list */}
-        <nav className="p-3 space-y-1" aria-label="Основная навигация">
+      {/* 2. Scrollable Middle Navigation Menu (takes available space, scrollable if height is small) */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
+        <nav aria-label="Основная навигация">
           {navItems.map((item) => {
             const isActive = item.exact
               ? pathname === item.href
@@ -151,8 +162,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         </nav>
       </div>
 
-      {/* Bottom Actions: Test-drive, Settings, Admin Platform */}
-      <div className="p-3 border-t border-[var(--border)] space-y-1">
+      {/* 3. Fixed Bottom Actions: Test-drive, Profile, Platform (pinned to bottom) */}
+      <div className="p-3 shrink-0 border-t border-[var(--border)] space-y-1 bg-[var(--surface)]">
         {/* Test-Drive (Sandbox) trigger */}
         <button
           type="button"
@@ -166,24 +177,24 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
           <span className="truncate">Тест-драйв</span>
         </button>
 
-        {/* Settings */}
+        {/* Profile (replacing generic Settings) */}
         <Link
-          href="/dashboard/settings"
+          href="/dashboard/profile"
           onClick={onMobileClose}
           className={`h-10 px-3 flex items-center gap-3 rounded-[6px] text-sm transition-colors cursor-pointer ${
-            pathname === '/dashboard/settings'
+            pathname === '/dashboard/profile'
               ? 'bg-[#FEF2F2] dark:bg-[rgba(220,38,38,0.16)] text-[#DC2626] dark:text-[#FCA5A5] font-semibold'
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] font-normal'
           }`}
         >
-          <Settings
+          <User
             className={`w-[18px] h-[18px] shrink-0 ${
-              pathname === '/dashboard/settings'
+              pathname === '/dashboard/profile'
                 ? 'text-[#DC2626] dark:text-[#FCA5A5]'
                 : 'text-[var(--text-muted)]'
             }`}
           />
-          <span className="truncate">Настройки</span>
+          <span className="truncate">Профиль</span>
         </Link>
 
         {/* SuperAdmin Access Platform block */}
@@ -193,7 +204,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
               href="/admin"
               onClick={onMobileClose}
               className={`h-10 px-3 flex items-center justify-between rounded-[6px] text-sm transition-colors cursor-pointer ${
-                pathname === '/admin'
+                pathname === '/admin' || pathname?.startsWith('/admin/')
                   ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)] font-medium'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] font-normal'
               }`}
@@ -214,8 +225,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
 
   return (
     <>
-      {/* Desktop static left rail */}
-      <aside className="hidden lg:flex w-60 border-r border-[var(--border)] flex-col justify-between shrink-0 min-h-screen bg-[var(--surface)]">
+      {/* Desktop static left rail (full height 100%, shrink-0, overflow-hidden) */}
+      <aside className="hidden lg:flex w-60 border-r border-[var(--border)] shrink-0 h-full overflow-hidden bg-[var(--surface)]">
         {sidebarContent}
       </aside>
 
@@ -235,7 +246,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
             role="dialog"
             aria-modal="true"
             aria-label="Меню навигации"
-            className="relative w-72 max-w-[85vw] h-full shadow-2xl z-50 border-r border-[var(--border)] transform transition-transform duration-200 ease-out"
+            className="relative w-72 max-w-[85vw] h-full shadow-2xl z-50 border-r border-[var(--border)] transform transition-transform duration-200 ease-out overflow-hidden"
           >
             {sidebarContent}
           </div>

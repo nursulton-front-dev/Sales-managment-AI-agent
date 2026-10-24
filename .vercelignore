@@ -1,9 +1,15 @@
 .next
+.next/**
 node_modules
+node_modules/**
 .git
 .data
 .neon
 AI_Business_OS_Design_Pack
+AI_Business_OS_Design_Pack/**
 *.png
+*.crdownload
 scripts
+scripts/**
 m.md
+take_screenshots*
