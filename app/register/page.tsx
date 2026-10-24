@@ -6,18 +6,14 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
-import { PricingSelector } from '@/components/pricing/PricingSelector';
-import { PlanOrTrialId } from '@/lib/pricing';
+import { TRIAL_PLAN, PLANS, PLANS_LIST, PlanOrTrialId } from '@/lib/pricing';
 import {
   Building2,
-  User,
-  Mail,
   Lock,
   Eye,
   EyeOff,
   Phone,
   Clock,
-  Globe,
   Upload,
   Trash2,
   GraduationCap,
@@ -25,71 +21,40 @@ import {
   Scissors,
   ShoppingBag,
   Briefcase,
-  Bot,
   ArrowRight,
   ArrowLeft,
-  CheckCircle2,
+  Check,
   AlertCircle,
   RotateCcw,
-  ShieldCheck,
-  Check,
   Sparkles,
 } from 'lucide-react';
 
-interface NicheOption {
-  id: string;
-  title: string;
-  desc: string;
-  icon: React.ElementType;
-}
-
-const COMPANY_NICHES: NicheOption[] = [
-  { id: 'education', title: 'Учебный центр / Курсы', desc: 'Языковые школы, IT, детские центры', icon: GraduationCap },
-  { id: 'clinic', title: 'Клиника / Стоматология', desc: 'Медицинские центры, врачи, косметология', icon: Stethoscope },
-  { id: 'salon', title: 'Салон красоты / Услуги', desc: 'Барбершопы, маникюр, мастера', icon: Scissors },
-  { id: 'ecommerce', title: 'Магазин (TG / Каталог)', desc: 'Одежда, электроника, товары', icon: ShoppingBag },
-  { id: 'other', title: 'Другая сфера', desc: 'B2B, услуги, консалтинг, недвижимость', icon: Briefcase },
+const STEP_DATA = [
+  { step: 1, name: 'Аккаунт', title: 'Создайте аккаунт', subtitle: 'Затем настроим пространство вашей компании' },
+  { step: 2, name: 'Компания', title: 'Настроим вашу компанию', subtitle: 'Эти данные можно будет изменить позже' },
+  { step: 3, name: 'Тариф', title: 'Выберите подходящий тариф', subtitle: 'Начните с 3 дней бесплатно или выберите тариф для команды' },
+  { step: 4, name: 'ИИ-сотрудник', title: 'Настроим первого ИИ-сотрудника', subtitle: 'Мы подготовили подходящий сценарий под вашу нишу' },
 ];
 
-const AGENT_TASKS = [
-  {
-    id: 'courses',
-    nicheId: 'education',
-    title: 'Учебный центр',
-    desc: 'Ответы о курсах, квалификация уровня и запись на пробное занятие',
-    icon: GraduationCap,
-  },
-  {
-    id: 'clinic',
-    nicheId: 'clinic',
-    title: 'Клиника и медицина',
-    desc: 'Информация об услугах, врачах и запись на приём к специалисту',
-    icon: Stethoscope,
-  },
-  {
-    id: 'salon',
-    nicheId: 'salon',
-    title: 'Салон красоты',
-    desc: 'Выбор мастера, подбор услуги и бронирование свободного времени',
-    icon: Scissors,
-  },
-  {
-    id: 'ecommerce',
-    nicheId: 'ecommerce',
-    title: 'Магазин и каталог',
-    desc: 'Консультация по наличию товаров, ценам и оформление заявки',
-    icon: ShoppingBag,
-  },
+const NICHE_OPTIONS = [
+  { id: 'education', label: 'Учебный центр', defaultAgentTask: 'courses' },
+  { id: 'clinic', label: 'Клиника', defaultAgentTask: 'clinic' },
+  { id: 'salon', label: 'Салон красоты', defaultAgentTask: 'salon' },
+  { id: 'ecommerce', label: 'Магазин', defaultAgentTask: 'ecommerce' },
+  { id: 'other', label: 'Другая сфера', defaultAgentTask: 'other' },
 ];
 
 export default function RegisterWizardPage() {
   const router = useRouter();
   const { setWorkspace, showToast } = useApp();
 
-  // Wizard Step: 1 (Account), 2 (Company), 3 (Tariff), 4 (First Agent), 5 (OTP verify if needed)
+  // Wizard Step: 1 (Account), 2 (Company), 3 (Tariff), 4 (First Agent)
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Accessible heading focus ref
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
 
   // Step 1: Account
   const [ownerName, setOwnerName] = useState<string>('');
@@ -98,7 +63,7 @@ export default function RegisterWizardPage() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isEmailVerifiedLocally, setIsEmailVerifiedLocally] = useState<boolean>(false);
 
-  // Step 1.5: OTP Email verification modal/subview
+  // Step 1 sub-stage: OTP Verification
   const [showOtpView, setShowOtpView] = useState<boolean>(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [devCode, setDevCode] = useState<string | null>(null);
@@ -108,29 +73,34 @@ export default function RegisterWizardPage() {
 
   // Step 2: Company
   const [companyName, setCompanyName] = useState<string>('');
-  const [niche, setNiche] = useState<string>('education');
-  const [ownerPhone, setOwnerPhone] = useState<string>('+998 90 ');
+  const [niche, setNiche] = useState<string>(''); // Default empty for "Выберите сферу бизнеса"
+  const [ownerPhone, setOwnerPhone] = useState<string>('');
   const [timezone, setTimezone] = useState<string>('Asia/Tashkent');
   const [isSoleProprietor, setIsSoleProprietor] = useState<boolean>(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Step 3: Tariff
-  const [selectedPlan, setSelectedPlan] = useState<PlanOrTrialId | null>('trial');
+  const [selectedPlan, setSelectedPlan] = useState<PlanOrTrialId>('trial');
+  const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
 
   // Step 4: First Agent
   const [selectedAgentTask, setSelectedAgentTask] = useState<string>('courses');
+  const [isSubmittingFinal, setIsSubmittingFinal] = useState<boolean>(false);
 
-  // Created Workspace reference
-  const [createdWorkspace, setCreatedWorkspace] = useState<any>(null);
-
-  // Focus ref for accessible transitions
-  const stepHeaderRef = useRef<HTMLHeadingElement | null>(null);
+  // Focus heading on step transitions
+  const transitionToStep = (newStep: number) => {
+    setCurrentStep(newStep);
+    setErrorMsg(null);
+    setTimeout(() => {
+      headingRef.current?.focus();
+    }, 120);
+  };
 
   // Restore draft state safely from sessionStorage
   useEffect(() => {
     try {
-      const draft = sessionStorage.getItem('ai_os_reg_draft');
+      const draft = sessionStorage.getItem('ai_os_reg_draft_v2');
       if (draft) {
         const parsed = JSON.parse(draft);
         if (parsed.ownerName) setOwnerName(parsed.ownerName);
@@ -139,12 +109,13 @@ export default function RegisterWizardPage() {
         if (parsed.niche) setNiche(parsed.niche);
         if (parsed.ownerPhone) setOwnerPhone(parsed.ownerPhone);
         if (parsed.isSoleProprietor !== undefined) setIsSoleProprietor(parsed.isSoleProprietor);
-        if (parsed.currentStep && parsed.currentStep <= 4) setCurrentStep(parsed.currentStep);
+        if (parsed.timezone) setTimezone(parsed.timezone);
         if (parsed.selectedPlan) setSelectedPlan(parsed.selectedPlan);
+        if (parsed.currentStep && parsed.currentStep >= 1 && parsed.currentStep <= 4) {
+          setCurrentStep(parsed.currentStep);
+        }
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, []);
 
   // Save draft state safely (never password or OTP)
@@ -156,15 +127,14 @@ export default function RegisterWizardPage() {
         companyName,
         niche,
         ownerPhone,
+        timezone,
         isSoleProprietor,
         currentStep,
         selectedPlan,
       };
-      sessionStorage.setItem('ai_os_reg_draft', JSON.stringify(safeData));
-    } catch {
-      // ignore
-    }
-  }, [ownerName, ownerEmail, companyName, niche, ownerPhone, isSoleProprietor, currentStep, selectedPlan]);
+      sessionStorage.setItem('ai_os_reg_draft_v2', JSON.stringify(safeData));
+    } catch {}
+  }, [ownerName, ownerEmail, companyName, niche, ownerPhone, timezone, isSoleProprietor, currentStep, selectedPlan]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -174,15 +144,10 @@ export default function RegisterWizardPage() {
   }, [resendCooldown]);
 
   // Password requirements calculation
-  const getPasswordValidation = (pwd: string) => {
-    return {
-      minLength: pwd.length >= 8,
-      hasUpperAndLower: /[a-z]/.test(pwd) && /[A-Z]/.test(pwd),
-      hasNumber: /\d/.test(pwd),
-    };
+  const pwdChecks = {
+    minLength: password.length >= 8,
+    hasNumber: /\d/.test(password),
   };
-
-  const pwdChecks = getPasswordValidation(password);
   const isPasswordValid = pwdChecks.minLength && pwdChecks.hasNumber;
 
   // Handle Logo Upload
@@ -198,7 +163,7 @@ export default function RegisterWizardPage() {
     const reader = new FileReader();
     reader.onload = () => {
       setLogoPreview(reader.result as string);
-      showToast('Логотип загружен', 'Предпросмотр обновлен', 'success');
+      showToast('Логотип загружен', 'Файл успешно прикреплен', 'success');
     };
     reader.readAsDataURL(file);
   };
@@ -253,51 +218,39 @@ export default function RegisterWizardPage() {
 
     setIsLoading(true);
     try {
-      // Call send-code API
       const res = await fetch('/api/auth/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: ownerEmail }),
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Не удалось отправить код подтверждения');
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось отправить проверочный код');
       }
 
-      setDevCode(data.code || '123456');
       setShowOtpView(true);
+      setDevCode(data.devCode || data.code || null);
       setResendCooldown(60);
-      showToast('Код отправлен', `Шестизначный код выслан на ${ownerEmail}`, 'info');
+      showToast('Код отправлен', `Проверьте входящие сообщения на ${ownerEmail}`, 'info');
+      setTimeout(() => {
+        digitInputRefs.current[0]?.focus();
+      }, 100);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Сбой отправки кода. Попробуйте еще раз.');
+      setErrorMsg(err.message || 'Сбой при отправке кода на почту');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle OTP digit changes
+  // Handle OTP Digit Input
   const handleOtpChange = (index: number, val: string) => {
-    if (val.length > 1) {
-      const pasted = val.replace(/\D/g, '').slice(0, 6);
-      if (pasted.length > 0) {
-        const newDigits = [...otpDigits];
-        for (let i = 0; i < 6; i++) {
-          newDigits[i] = pasted[i] || '';
-        }
-        setOtpDigits(newDigits);
-        const nextIdx = Math.min(5, pasted.length);
-        digitInputRefs.current[nextIdx]?.focus();
-      }
-      return;
-    }
-
-    const digit = val.replace(/\D/g, '');
+    const clean = val.replace(/\D/g, '');
     const newDigits = [...otpDigits];
-    newDigits[index] = digit;
+    newDigits[index] = clean.slice(-1);
     setOtpDigits(newDigits);
 
-    if (digit && index < 5) {
+    if (clean && index < 5) {
       digitInputRefs.current[index + 1]?.focus();
     }
   };
@@ -308,44 +261,34 @@ export default function RegisterWizardPage() {
     }
   };
 
-  const handleResendCode = async () => {
-    if (resendCooldown > 0) return;
-    try {
-      const res = await fetch('/api/auth/send-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: ownerEmail }),
-      });
-      const data = await res.json();
-      setDevCode(data.code || '123456');
-      setResendCooldown(60);
-      showToast('Новый код отправлен', `Проверьте входящие на ${ownerEmail}`, 'info');
-    } catch {
-      showToast('Ошибка', 'Не удалось отправить повторный код', 'error');
-    }
-  };
-
-  // Verify code & proceed to Step 2
   const handleConfirmOtp = async () => {
-    const code = otpDigits.join('');
-    if (code.length < 6) {
-      setErrorMsg('Введите все 6 цифр кода');
+    const fullCode = otpDigits.join('');
+    if (fullCode.length < 6) {
+      setErrorMsg('Введите все 6 цифр проверочного кода');
       return;
     }
 
     setIsVerifyingOtp(true);
     setErrorMsg(null);
     try {
-      // In Step 1, verify that code matches server-generated code
-      if (devCode && code !== devCode && code !== '123456') {
-        throw new Error('Неверный код подтверждения. Проверьте код в письме.');
+      const res = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: ownerEmail,
+          code: fullCode,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Неверный или устаревший проверочный код');
       }
 
       setIsEmailVerifiedLocally(true);
       setShowOtpView(false);
-      setCurrentStep(2);
-      showToast('Почта подтверждена', 'Переходим к оформлению компании', 'success');
-      setTimeout(() => stepHeaderRef.current?.focus(), 100);
+      showToast('Email подтвержден', 'Переходим к оформлению компании', 'success');
+      transitionToStep(2);
     } catch (err: any) {
       setErrorMsg(err.message || 'Ошибка проверки кода');
     } finally {
@@ -353,43 +296,62 @@ export default function RegisterWizardPage() {
     }
   };
 
-  // Step 2: Proceed from Company to Tariff
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return;
+    setErrorMsg(null);
+    try {
+      const res = await fetch('/api/auth/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: ownerEmail }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDevCode(data.devCode || null);
+        setResendCooldown(60);
+        showToast('Код повторно отправлен', 'Проверьте почту', 'info');
+      }
+    } catch {
+      setErrorMsg('Не удалось повторно отправить код');
+    }
+  };
+
+  // Step 2: Submit Company
   const handleCompanySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
     if (!isSoleProprietor && !companyName.trim()) {
-      setErrorMsg('Укажите название компании или выберите вариант «Работаю на себя»');
+      setErrorMsg('Укажите название компании или включите «Работаю на себя»');
       return;
     }
-    if (!ownerPhone.trim() || ownerPhone.length < 9) {
-      setErrorMsg('Укажите рабочий телефон в формате +998...');
+    if (!niche) {
+      setErrorMsg('Пожалуйста, выберите сферу деятельности');
+      return;
+    }
+    if (!ownerPhone.trim() || ownerPhone.trim() === '+998') {
+      setErrorMsg('Укажите контактный номер телефона');
       return;
     }
 
-    // Auto-match first agent niche to company niche
-    const matchedTask = AGENT_TASKS.find((t) => t.nicheId === niche);
-    if (matchedTask) {
-      setSelectedAgentTask(matchedTask.id);
+    // Auto-match default agent task from selected niche
+    const matchedNiche = NICHE_OPTIONS.find((n) => n.id === niche);
+    if (matchedNiche) {
+      setSelectedAgentTask(matchedNiche.defaultAgentTask);
     }
 
-    setCurrentStep(3);
-    setTimeout(() => stepHeaderRef.current?.focus(), 100);
+    transitionToStep(3);
   };
 
-  // Step 3: Proceed from Tariff to First Agent
+  // Step 3: Proceed from Tariff to Step 4
   const handleTariffSubmit = () => {
-    if (!selectedPlan) {
-      setErrorMsg('Пожалуйста, выберите тариф или начните с бесплатного пробного периода');
-      return;
-    }
-    setErrorMsg(null);
-    setCurrentStep(4);
-    setTimeout(() => stepHeaderRef.current?.focus(), 100);
+    transitionToStep(4);
   };
 
   // Step 4: Finalize Server Registration & Launch Agent
   const handleFinishRegistration = async (skipAgent: boolean = false) => {
+    if (isSubmittingFinal) return; // Prevent double submission
+    setIsSubmittingFinal(true);
     setIsLoading(true);
     setErrorMsg(null);
 
@@ -403,7 +365,7 @@ export default function RegisterWizardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyName: finalName,
-          niche,
+          niche: niche || 'education',
           ownerPhone,
           plan: selectedPlan || 'trial',
           ownerName,
@@ -419,8 +381,6 @@ export default function RegisterWizardPage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Ошибка при сохранении организации');
       }
-
-      setCreatedWorkspace(data.workspace);
 
       // Verify email on server side if code was entered
       if (isEmailVerifiedLocally) {
@@ -447,704 +407,742 @@ export default function RegisterWizardPage() {
       });
 
       // Clear draft
-      sessionStorage.removeItem('ai_os_reg_draft');
+      sessionStorage.removeItem('ai_os_reg_draft_v2');
 
       showToast('Рабочее пространство создано', 'Добро пожаловать в AI Business OS', 'success');
 
       if (skipAgent) {
-        // Direct to dashboard empty state
         router.push('/dashboard');
       } else {
-        // Open the existing single agent creator wizard with selected template
         router.push(`/dashboard/agents/new?template=${selectedAgentTask}&niche=${niche}`);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Не удалось завершить регистрацию');
       setIsLoading(false);
+      setIsSubmittingFinal(false);
     }
   };
 
-  // Active step metadata
-  const stepTitles = [
-    { step: 1, title: 'Аккаунт', subtitle: 'Создайте личный профиль для входа' },
-    { step: 2, title: 'Компания', subtitle: 'Оформление рабочего пространства' },
-    { step: 3, title: 'Тариф', subtitle: 'Выбор условий обслуживания' },
-    { step: 4, title: 'ИИ-сотрудник', subtitle: 'Подготовка первого ассистента' },
-  ];
+  const currentStepMeta = STEP_DATA[currentStep - 1] || STEP_DATA[0];
 
   return (
-    <div className="min-h-screen bg-[var(--background)] flex flex-col text-[var(--text-primary)]">
-      {/* Top Header Bar */}
-      <header className="h-16 bg-[var(--surface)] border-b border-[var(--border)] px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 transition-colors">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-[6px] bg-[#DC2626] flex items-center justify-center text-white font-bold shadow-2xs">
-            <Building2 className="w-4 h-4" />
+    <div className="min-h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1220] flex items-center justify-center p-4 sm:p-6 md:p-8 text-slate-900 dark:text-slate-100">
+      {/* ========================================================================= */}
+      {/* SINGLE UNIFIED REGISTRATION CARD (max-width: 640px, NO upper header)     */}
+      {/* ========================================================================= */}
+      <div className="w-full max-w-[640px] bg-white dark:bg-[#111827] border border-[#E2E8F0] dark:border-slate-800 rounded-[8px] p-6 sm:p-10 shadow-sm transition-all duration-200">
+        {/* Top Header inside Card: Compact Logo + Theme Switcher */}
+        <div className="flex items-center justify-between pb-5 border-b border-slate-100 dark:border-slate-800/80">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-[6px] bg-[#DC2626] flex items-center justify-center text-white font-bold shrink-0 shadow-xs">
+              <Building2 className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-semibold text-base tracking-tight text-slate-900 dark:text-white">
+              AI Business OS
+            </span>
           </div>
-          <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
-            AI Business OS
-          </span>
-        </div>
-
-        {/* Center Progress: Steps indicator (Desktop) */}
-        <div className="hidden md:flex items-center gap-2 text-xs">
-          {stepTitles.map((s, idx) => {
-            const isDone = currentStep > s.step;
-            const isCurrent = currentStep === s.step;
-            return (
-              <React.Fragment key={s.step}>
-                <div
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] transition-colors ${
-                    isCurrent
-                      ? 'bg-[#FEF2F2] dark:bg-[rgba(220,38,38,0.16)] text-[#DC2626] dark:text-[#FCA5A5] font-semibold'
-                      : isDone
-                      ? 'text-emerald-700 dark:text-emerald-400 font-medium'
-                      : 'text-[var(--text-muted)]'
-                  }`}
-                >
-                  <span
-                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      isDone
-                        ? 'bg-emerald-600 text-white'
-                        : isCurrent
-                        ? 'bg-[#DC2626] text-white'
-                        : 'bg-[var(--surface-secondary)] text-[var(--text-muted)] border border-[var(--border)]'
-                    }`}
-                  >
-                    {isDone ? <Check className="w-2.5 h-2.5" /> : s.step}
-                  </span>
-                  <span>{s.title}</span>
-                </div>
-                {idx < stepTitles.length - 1 && (
-                  <div className="w-4 h-px bg-[var(--border)]" />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
-
-        {/* Right side: Login link & Theme switcher */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="text-xs text-[var(--text-secondary)] hover:text-[#DC2626] transition-colors font-medium hidden sm:inline"
-          >
-            Уже есть аккаунт? Войти
-          </Link>
           <ThemeSwitcher />
         </div>
-      </header>
 
-      {/* Mobile Step Progress Bar */}
-      <div className="md:hidden bg-[var(--surface)] border-b border-[var(--border)] px-4 py-2.5 flex items-center justify-between text-xs">
-        <span className="font-semibold text-[#DC2626]">
-          Шаг {currentStep} из 4: {stepTitles[currentStep - 1]?.title}
-        </span>
-        <span className="text-[11px] text-[var(--text-muted)]">
-          Далее: {stepTitles[currentStep]?.title || 'Завершение'}
-        </span>
-      </div>
-
-      {/* Main Container */}
-      <main className="flex-1 flex flex-col justify-center py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
-        <div className={`mx-auto w-full transition-all duration-300 ${currentStep === 3 ? 'max-w-6xl' : 'max-w-4xl'}`}>
-          {/* Top Heading */}
-          <div className="mb-6 sm:mb-8 text-center max-w-xl mx-auto">
-            <h1
-              ref={stepHeaderRef}
-              tabIndex={-1}
-              className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] focus:outline-none"
-            >
-              {currentStep === 1 && (showOtpView ? 'Подтверждение почты' : 'Создайте рабочее пространство')}
-              {currentStep === 2 && 'Расскажите о вашем бизнесе'}
-              {currentStep === 3 && 'Выберите подходящий тариф'}
-              {currentStep === 4 && 'Подготовим первого ИИ-сотрудника'}
-            </h1>
-            <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed">
-              {currentStep === 1 && (showOtpView ? `Введите 6-значный код, отправленный на ${ownerEmail}` : 'Начните с аккаунта, затем настройте свою компанию')}
-              {currentStep === 2 && 'Эти данные помогут настроить рабочее пространство и календарь'}
-              {currentStep === 3 && '3 дня бесплатно на тарифе TRIAL или выбор платного плана для команды'}
-              {currentStep === 4 && 'Выберите задачу – мы откроем подходящую настройку'}
-            </p>
+        {/* Step Counter & 4 Short Progress Segments */}
+        <div className="pt-5 pb-4 space-y-2.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-medium text-slate-500 dark:text-slate-400">
+              Шаг {currentStep} из 4 · <strong className="text-slate-900 dark:text-white">{currentStepMeta.name}</strong>
+            </span>
+            <span className="text-slate-400 font-mono text-[11px]">
+              {Math.round((currentStep / 4) * 100)}%
+            </span>
           </div>
 
-          {/* Global Form Error Alert */}
-          {errorMsg && (
-            <div className="max-w-md mx-auto mb-6 p-3 bg-[var(--danger-bg)] border border-[var(--danger-border)] rounded-[6px] flex items-start gap-2.5 text-xs text-[var(--danger-text)]">
-              <AlertCircle className="w-4 h-4 shrink-0 text-[var(--danger)] mt-0.5" />
-              <span className="leading-relaxed">{errorMsg}</span>
-            </div>
-          )}
+          {/* 4 segments */}
+          <div className="grid grid-cols-4 gap-1.5" aria-hidden="true">
+            {[1, 2, 3, 4].map((s) => (
+              <div
+                key={s}
+                className={`h-1.5 rounded-full transition-colors duration-200 ${
+                  currentStep >= s
+                    ? 'bg-[#DC2626]'
+                    : 'bg-slate-200 dark:bg-slate-800'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
 
-          {/* ========================================================================= */}
-          {/* STEP 1: ACCOUNT CREATION */}
-          {/* ========================================================================= */}
-          {currentStep === 1 && !showOtpView && (
-            <div className="max-w-[440px] mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-6 sm:p-8 shadow-xs animate-[fadeIn_240ms_ease-out]">
-              {/* Google Button */}
-              <button
-                type="button"
-                onClick={handleGoogleAuth}
-                disabled={isLoading}
-                className="w-full min-h-[44px] flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-secondary)] text-xs sm:text-sm font-semibold text-[var(--text-primary)] transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
-              >
+        {/* Step Title & Subtitle inside Card */}
+        <div className="pt-1 pb-6 space-y-1">
+          <h1
+            ref={headingRef}
+            tabIndex={-1}
+            className="text-[28px] sm:text-[32px] font-semibold text-slate-900 dark:text-white tracking-tight leading-tight outline-none"
+          >
+            {showOtpView && currentStep === 1 ? 'Подтверждение почты' : currentStepMeta.title}
+          </h1>
+          <p className="text-[15px] sm:text-[16px] text-slate-500 dark:text-slate-400">
+            {showOtpView && currentStep === 1
+              ? `Введите 6-значный код, отправленный на ${ownerEmail}`
+              : currentStepMeta.subtitle}
+          </p>
+        </div>
+
+        {/* Global Error Banner */}
+        {errorMsg && (
+          <div role="alert" className="mb-5 p-3 bg-red-50 dark:bg-rose-950/40 border border-red-200 dark:border-rose-900/50 rounded-[6px] flex items-start gap-2.5 text-xs text-red-700 dark:text-rose-300 animate-fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626] mt-0.5" />
+            <span className="leading-relaxed">{errorMsg}</span>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* STEP 1: ACCOUNT (Initial form & OTP sub-stage)                           */}
+        {/* ========================================================================= */}
+        {currentStep === 1 && !showOtpView && (
+          <div className="space-y-5 animate-fade-in" style={{ animationDuration: '200ms' }}>
+            {/* Google Continue Button */}
+            <button
+              type="button"
+              onClick={handleGoogleAuth}
+              disabled={isLoading}
+              className="w-full h-[48px] flex items-center justify-center gap-3 px-4 rounded-[6px] border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-[15px] font-medium text-slate-800 dark:text-slate-200 transition-colors duration-150 cursor-pointer shadow-2xs disabled:opacity-50"
+            >
+              <div className="w-[18px] h-[18px] relative shrink-0">
                 <Image
-                  src="/images/brands/google-g.png"
+                  src="/images/brands/google-g.svg"
                   alt="Google"
                   width={18}
                   height={18}
-                  className="w-4 h-4 object-contain"
+                  className="w-full h-full object-contain"
                 />
-                <span>Продолжить с Google</span>
-              </button>
-
-              {/* Divider */}
-              <div className="flex items-center gap-3 my-5">
-                <div className="h-px bg-[var(--border)] flex-1" />
-                <span className="text-xs text-[var(--text-muted)] font-medium">или по email</span>
-                <div className="h-px bg-[var(--border)] flex-1" />
               </div>
+              <span>Продолжить с Google</span>
+            </button>
 
-              {/* Account Form */}
-              <form onSubmit={handleAccountSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
-                    Ваше имя и фамилия
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    autoComplete="name"
-                    value={ownerName}
-                    onChange={(e) => setOwnerName(e.target.value)}
-                    placeholder="Например: Сардор Рахимов"
-                    className="w-full px-3.5 py-2.5 min-h-[44px] sm:min-h-[40px] bg-[var(--surface)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[#DC2626] transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
-                    Электронная почта
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={ownerEmail}
-                    onChange={(e) => setOwnerEmail(e.target.value)}
-                    placeholder="sardor@example.com"
-                    className="w-full px-3.5 py-2.5 min-h-[44px] sm:min-h-[40px] bg-[var(--surface)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[#DC2626] transition-all"
-                  />
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                    На этот адрес мы отправим 6-значный код подтверждения
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
-                    Пароль
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      autoComplete="new-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full pl-3.5 pr-10 py-2.5 min-h-[44px] sm:min-h-[40px] bg-[var(--surface)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[#DC2626] transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                      className="absolute right-3 top-3 sm:top-2.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-
-                  {/* Password Requirements Guidance */}
-                  <div className="mt-2 text-[11px] space-y-1">
-                    <div className={`flex items-center gap-1.5 ${pwdChecks.minLength ? 'text-emerald-600 font-medium' : 'text-[var(--text-muted)]'}`}>
-                      <Check className="w-3 h-3" />
-                      <span>Минимум 8 символов</span>
-                    </div>
-                    <div className={`flex items-center gap-1.5 ${pwdChecks.hasNumber ? 'text-emerald-600 font-medium' : 'text-[var(--text-muted)]'}`}>
-                      <Check className="w-3 h-3" />
-                      <span>Хотя бы одна цифра</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full min-h-[44px] flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-semibold py-2.5 rounded-[6px] transition-all shadow-2xs cursor-pointer disabled:opacity-50 text-xs sm:text-sm mt-4"
-                >
-                  <span>{isLoading ? 'Отправляем код...' : 'Продолжить'}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </form>
-
-              <div className="mt-5 text-center text-xs text-[var(--text-secondary)]">
-                Уже есть аккаунт?{' '}
-                <Link href="/login" className="font-semibold text-[#DC2626] hover:underline">
-                  Войти
-                </Link>
-              </div>
+            {/* Divider */}
+            <div className="flex items-center gap-3 py-1">
+              <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
+              <span className="text-[13px] text-slate-400 dark:text-slate-500 font-normal">
+                или по электронной почте
+              </span>
+              <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
             </div>
-          )}
 
-          {/* ========================================================================= */}
-          {/* STEP 1.5: OTP VERIFICATION SUBVIEW */}
-          {/* ========================================================================= */}
-          {currentStep === 1 && showOtpView && (
-            <div className="max-w-[440px] mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-6 sm:p-8 shadow-xs animate-[fadeIn_240ms_ease-out] space-y-5">
-              {/* Back to Email edit */}
-              <button
-                type="button"
-                onClick={() => setShowOtpView(false)}
-                className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Изменить email ({ownerEmail})</span>
-              </button>
-
-              {/* 6 Digit Inputs */}
+            {/* Email Registration Form */}
+            <form onSubmit={handleAccountSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-primary)] text-center mb-3">
-                  Код подтверждения
+                <label className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5">
+                  Ваше имя
                 </label>
-                <div className="flex justify-center gap-2 sm:gap-2.5">
-                  {otpDigits.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={(el) => {
-                        digitInputRefs.current[i] = el;
-                      }}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(i, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      className="w-11 h-12 sm:w-12 sm:h-14 text-center font-mono text-xl font-bold bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[#DC2626] transition-all"
-                    />
-                  ))}
-                </div>
+                <input
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={ownerName}
+                  onChange={(e) => setOwnerName(e.target.value)}
+                  placeholder="Например: Сардор Рахимов"
+                  className="w-full h-[48px] px-3.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
+                />
               </div>
 
-              {/* Fast fill dev code badge */}
-              {devCode && (
-                <div className="p-2.5 rounded-[6px] bg-[var(--surface-secondary)] border border-[var(--border)] text-center text-xs">
-                  <span className="text-[var(--text-muted)]">Тестовый код: </span>
+              <div>
+                <label className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5">
+                  Электронная почта
+                </label>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={ownerEmail}
+                  onChange={(e) => setOwnerEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  className="w-full h-[48px] px-3.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5">
+                  Пароль
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder=""
+                    className="w-full h-[48px] pl-3.5 pr-11 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
+                  />
                   <button
                     type="button"
-                    onClick={() => {
-                      const chars = devCode.split('');
-                      setOtpDigits(chars);
-                      digitInputRefs.current[5]?.focus();
-                    }}
-                    className="font-mono font-bold text-[#DC2626] underline cursor-pointer"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors duration-150 cursor-pointer"
                   >
-                    {devCode} (вставить)
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* Compact Password Requirements */}
+                <div className="mt-2 text-[12px] flex items-center gap-4 text-slate-500 dark:text-slate-400">
+                  <div className={`flex items-center gap-1 ${pwdChecks.minLength ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}`}>
+                    <Check className={`w-3.5 h-3.5 ${pwdChecks.minLength ? 'opacity-100' : 'opacity-30'}`} />
+                    <span>От 8 символов</span>
+                  </div>
+                  <div className={`flex items-center gap-1 ${pwdChecks.hasNumber ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}`}>
+                    <Check className={`w-3.5 h-3.5 ${pwdChecks.hasNumber ? 'opacity-100' : 'opacity-30'}`} />
+                    <span>Минимум 1 цифра</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-[48px] mt-2 flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-transform duration-120 shadow-xs cursor-pointer disabled:opacity-60"
+              >
+                <span>{isLoading ? 'Отправляем код…' : 'Продолжить'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+
+            {/* Bottom link: Single instance */}
+            <div className="pt-2 text-center">
+              <p className="text-[14px] text-slate-500 dark:text-slate-400">
+                Уже есть аккаунт?{' '}
+                <Link
+                  href="/login"
+                  className="font-medium text-[#DC2626] hover:underline transition-colors duration-150"
+                >
+                  Войти
+                </Link>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 1.5: OTP VERIFICATION SUB-VIEW */}
+        {currentStep === 1 && showOtpView && (
+          <div className="space-y-5 animate-fade-in" style={{ animationDuration: '200ms' }}>
+            <button
+              type="button"
+              onClick={() => setShowOtpView(false)}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Изменить адрес ({ownerEmail})</span>
+            </button>
+
+            {/* 6 Digit Inputs */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 text-center mb-3">
+                Введите 6-значный код
+              </label>
+              <div className="flex justify-center gap-2 sm:gap-2.5">
+                {otpDigits.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => {
+                      digitInputRefs.current[i] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    className="w-11 h-12 sm:w-12 sm:h-14 text-center font-mono text-xl font-bold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-slate-900 dark:text-white focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-all"
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Fast fill dev code badge if in local mode */}
+            {devCode && (
+              <div className="p-2.5 rounded-[6px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center text-xs">
+                <span className="text-slate-500">Тестовый код: </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtpDigits(devCode.split(''));
+                    digitInputRefs.current[5]?.focus();
+                  }}
+                  className="font-mono font-bold text-[#DC2626] underline cursor-pointer"
+                >
+                  {devCode} (вставить)
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleConfirmOtp}
+              disabled={isVerifyingOtp || otpDigits.join('').length < 6}
+              className="w-full h-[48px] flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] text-white font-medium text-[15px] rounded-[6px] transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <span>{isVerifyingOtp ? 'Проверяем код…' : 'Подтвердить и продолжить'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <div className="text-center text-xs">
+              {resendCooldown > 0 ? (
+                <span className="text-slate-400">Отправить повторно через {resendCooldown} сек.</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  className="text-[#DC2626] hover:underline font-medium cursor-pointer"
+                >
+                  Отправить код повторно
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* STEP 2: COMPANY (No preview column, single unified layout)               */}
+        {/* ========================================================================= */}
+        {currentStep === 2 && (
+          <form onSubmit={handleCompanySubmit} className="space-y-4 animate-fade-in" style={{ animationDuration: '200ms' }}>
+            {/* 1. Company Name */}
+            {!isSoleProprietor && (
+              <div>
+                <label className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5">
+                  Название компании
+                </label>
+                <input
+                  type="text"
+                  required={!isSoleProprietor}
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Например: Учебный центр Oxford"
+                  className="w-full h-[48px] px-3.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626]"
+                />
+              </div>
+            )}
+
+            {/* 2. Compact "Работаю на себя" Toggle */}
+            <div className="p-3 rounded-[6px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
+              <div>
+                <span className="text-[13px] font-medium text-slate-800 dark:text-slate-200 block">
+                  Работаю на себя
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Для частных специалистов, врачей и мастеров
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isSoleProprietor}
+                  onChange={(e) => {
+                    setIsSoleProprietor(e.target.checked);
+                    if (e.target.checked && !companyName) {
+                      setCompanyName(`Частный специалист (${ownerName})`);
+                    }
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#DC2626]" />
+              </label>
+            </div>
+
+            {/* 3. Single Accessible Select: Сфера деятельности */}
+            <div>
+              <label className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5">
+                Сфера деятельности
+              </label>
+              <select
+                value={niche}
+                onChange={(e) => setNiche(e.target.value)}
+                required
+                className="w-full h-[48px] px-3.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-[15px] text-slate-900 dark:text-white focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626]"
+              >
+                <option value="" disabled>
+                  Выберите сферу бизнеса
+                </option>
+                {NICHE_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 4. Phone & Timezone in 2 columns (stacked on mobile) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5">
+                  Рабочий телефон
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={ownerPhone}
+                  onChange={(e) => setOwnerPhone(e.target.value)}
+                  placeholder="+998 90 123 45 67"
+                  className="w-full h-[48px] px-3.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5">
+                  Часовой пояс
+                </label>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full h-[48px] px-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-[14px] text-slate-900 dark:text-white focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626]"
+                >
+                  <option value="Asia/Tashkent">Ташкент · UTC+5</option>
+                  <option value="Asia/Almaty">Алматы · UTC+5</option>
+                  <option value="Asia/Bishkek">Бишкек · UTC+6</option>
+                  <option value="Europe/Moscow">Москва · UTC+3</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 5. Compact Logo Row: "Логотип компании · Необязательно" + "Загрузить" */}
+            <div className="pt-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLogoUpload}
+                className="hidden"
+              />
+
+              {logoPreview ? (
+                <div className="flex items-center justify-between p-3 rounded-[6px] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={logoPreview}
+                      alt="Logo preview"
+                      className="w-10 h-10 object-contain rounded border border-slate-200 dark:border-slate-700 bg-white p-0.5"
+                    />
+                    <div>
+                      <span className="text-[13px] font-medium text-slate-900 dark:text-white block">
+                        Логотип прикреплен
+                      </span>
+                      <span className="text-[11px] text-slate-400">Файл готов к загрузке</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-2.5 py-1 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+                    >
+                      Заменить
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      className="p-1 text-slate-400 hover:text-[#DC2626] transition cursor-pointer"
+                      title="Удалить"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 rounded-[6px] border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/40">
+                  <div>
+                    <span className="text-[13px] font-medium text-slate-800 dark:text-slate-200 block">
+                      Логотип компании · <span className="text-slate-400 font-normal">Необязательно</span>
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      PNG, JPG или SVG до 2 МБ
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer shadow-2xs"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Загрузить</span>
                   </button>
                 </div>
               )}
+            </div>
 
-              {/* Confirm Code Button */}
+            {/* Navigation Buttons: "Назад" & "Продолжить" */}
+            <div className="flex items-center justify-between pt-5 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
-                onClick={handleConfirmOtp}
-                disabled={isVerifyingOtp || otpDigits.join('').length < 6}
-                className="w-full min-h-[44px] flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-semibold py-2.5 rounded-[6px] transition-all shadow-2xs cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
+                onClick={() => transitionToStep(1)}
+                className="px-4 h-[48px] rounded-[6px] border border-slate-300 dark:border-slate-700 text-[14px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <span>{isVerifyingOtp ? 'Проверяем код...' : 'Подтвердить и продолжить'}</span>
+                <ArrowLeft className="w-4 h-4" />
+                <span>Назад</span>
+              </button>
+
+              <button
+                type="submit"
+                className="px-6 h-[48px] rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white text-[15px] font-medium transition-all inline-flex items-center gap-2 shadow-xs cursor-pointer"
+              >
+                <span>Продолжить</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ========================================================================= */}
+        {/* STEP 3: TARIFF (Compact 4-row list with Trial + Plans)                    */}
+        {/* ========================================================================= */}
+        {currentStep === 3 && (
+          <div className="space-y-4 animate-fade-in" style={{ animationDuration: '200ms' }}>
+            <div
+              role="radiogroup"
+              aria-label="Выберите тарифный план"
+              className="space-y-2.5"
+            >
+              {/* Row 1: TRIAL (3 days, 100 tokens free) */}
+              <div
+                role="radio"
+                aria-checked={selectedPlan === 'trial'}
+                tabIndex={0}
+                onClick={() => setSelectedPlan('trial')}
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') setSelectedPlan('trial');
+                }}
+                className={`p-3.5 sm:p-4 rounded-[8px] border transition-all duration-150 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] ${
+                  selectedPlan === 'trial'
+                    ? 'border-[#DC2626] bg-[#FFF5F5] dark:bg-rose-950/25 shadow-xs'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                        selectedPlan === 'trial'
+                          ? 'border-[#DC2626] bg-[#DC2626]'
+                          : 'border-slate-300 dark:border-slate-600'
+                      }`}
+                    >
+                      {selectedPlan === 'trial' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[15px] font-bold text-slate-900 dark:text-white">
+                          TRIAL
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400">
+                          Бесплатно
+                        </span>
+                      </div>
+                      <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        3 дня и 100 токенов после подтверждения email · Без привязки карты
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-[16px] font-bold text-slate-900 dark:text-white">$0</span>
+                    <span className="text-[12px] text-slate-400 block">3 дня</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rows 2–4: START, BUSINESS, PRO */}
+              {PLANS_LIST.map((plan) => {
+                const isSelected = selectedPlan === plan.id;
+                return (
+                  <div
+                    key={plan.id}
+                    role="radio"
+                    aria-checked={isSelected}
+                    tabIndex={0}
+                    onClick={() => setSelectedPlan(plan.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.key === 'Enter') setSelectedPlan(plan.id);
+                    }}
+                    className={`p-3.5 sm:p-4 rounded-[8px] border transition-all duration-150 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] ${
+                      isSelected
+                        ? 'border-[#DC2626] bg-[#FFF5F5] dark:bg-rose-950/25 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                            isSelected
+                              ? 'border-[#DC2626] bg-[#DC2626]'
+                              : 'border-slate-300 dark:border-slate-600'
+                          }`}
+                        >
+                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[15px] font-bold text-slate-900 dark:text-white">
+                              {plan.name}
+                            </span>
+                            {plan.badge && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-[#DC2626] dark:bg-rose-950/40 dark:text-rose-300">
+                                {plan.badge}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            {plan.tokensFormatted} · До {plan.maxAgents} ИИ-сотрудников · {plan.audience}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[16px] font-bold text-slate-900 dark:text-white">
+                          {plan.usdPriceFormatted}
+                        </span>
+                        <span className="text-[11px] text-slate-400 block">
+                          / мес ({plan.uzsPriceFormatted})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Compare Plans Link */}
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                onClick={() => setShowCompareModal(!showCompareModal)}
+                className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline cursor-pointer"
+              >
+                {showCompareModal ? 'Скрыть сравнение' : 'Сравнить тарифы подробно'}
+              </button>
+            </div>
+
+            {/* Collapsible Comparison Summary */}
+            {showCompareModal && (
+              <div className="p-4 rounded-[8px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs space-y-3 animate-fade-in">
+                <div className="font-semibold text-slate-900 dark:text-white">
+                  Подробное сравнение лимитов:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
+                    <span className="font-bold block text-slate-900 dark:text-white">START</span>
+                    <span className="text-slate-500 block">2 000 токенов</span>
+                    <span className="text-slate-400 block text-[11px]">1 сотрудник, базовый календарь</span>
+                  </div>
+                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
+                    <span className="font-bold block text-slate-900 dark:text-white">BUSINESS</span>
+                    <span className="text-slate-500 block">6 000 токенов</span>
+                    <span className="text-slate-400 block text-[11px]">До 3 сотрудников, воронка лидов</span>
+                  </div>
+                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
+                    <span className="font-bold block text-slate-900 dark:text-white">PRO</span>
+                    <span className="text-slate-500 block">15 000 токенов</span>
+                    <span className="text-slate-400 block text-[11px]">До 10 сотрудников, мульти-отделы</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons: "Назад" & "Начать бесплатно" / "Продолжить" */}
+            <div className="flex items-center justify-between pt-5 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => transitionToStep(2)}
+                className="px-4 h-[48px] rounded-[6px] border border-slate-300 dark:border-slate-700 text-[14px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Назад</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTariffSubmit}
+                className="px-6 h-[48px] rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white text-[15px] font-medium transition-all inline-flex items-center gap-2 shadow-xs cursor-pointer"
+              >
+                <span>{selectedPlan === 'trial' ? 'Начать бесплатно' : 'Продолжить'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* STEP 4: FIRST AI AGENT (Proposed scenario based on chosen niche)         */}
+        {/* ========================================================================= */}
+        {currentStep === 4 && (
+          <div className="space-y-5 animate-fade-in" style={{ animationDuration: '200ms' }}>
+            {/* Context Notice with Selected Niche */}
+            <div className="p-4 rounded-[8px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Предложенный сценарий
+                </span>
+                <button
+                  type="button"
+                  onClick={() => transitionToStep(2)}
+                  className="text-xs text-[#DC2626] hover:underline cursor-pointer"
+                >
+                  Изменить нишу компании
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <div className="w-10 h-10 rounded-[6px] bg-[#DC2626] text-white flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">
+                    {NICHE_OPTIONS.find((n) => n.id === niche)?.label || 'Учебный центр'}
+                  </h3>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Квалификация входящих обращений, ответы по услугам и запись в Google Календарь
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Primary Action Button: "Перейти к настройке" */}
+            <div className="pt-2 space-y-3">
+              <button
+                type="button"
+                onClick={() => handleFinishRegistration(false)}
+                disabled={isLoading || isSubmittingFinal}
+                className="w-full h-[48px] flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                <span>{isLoading ? 'Сохраняем рабочее пространство…' : 'Перейти к настройке'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              {/* Resend Code Button */}
+              {/* Secondary Action: "Настроить позже" */}
               <div className="text-center">
-                {resendCooldown > 0 ? (
-                  <span className="text-xs text-[var(--text-muted)]">
-                    Повторный код через {resendCooldown} сек.
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResendCode}
-                    className="text-xs text-[#DC2626] hover:underline font-medium cursor-pointer"
-                  >
-                    Отправить код повторно
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* STEP 2: COMPANY PROFILE & PREVIEW */}
-          {/* ========================================================================= */}
-          {currentStep === 2 && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-[fadeIn_240ms_ease-out]">
-              {/* Form (7 cols) */}
-              <div className="lg:col-span-7 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-6 sm:p-8 shadow-xs space-y-5">
-                <form onSubmit={handleCompanySubmit} className="space-y-4">
-                  {/* Sole proprietor toggle */}
-                  <div className="p-3 rounded-[6px] bg-[var(--surface-secondary)] border border-[var(--border)] flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-semibold text-[var(--text-primary)] block">
-                        Работаю на себя
-                      </span>
-                      <span className="text-[11px] text-[var(--text-muted)]">
-                        Для частных преподавателей, врачей и мастеров
-                      </span>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isSoleProprietor}
-                        onChange={(e) => {
-                          setIsSoleProprietor(e.target.checked);
-                          if (e.target.checked && !companyName) {
-                            setCompanyName(`Частный специалист (${ownerName})`);
-                          }
-                        }}
-                        className="sr-only peer"
-                      />
-                      <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#DC2626]" />
-                    </label>
-                  </div>
-
-                  {/* Company Name */}
-                  {!isSoleProprietor && (
-                    <div>
-                      <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
-                        Название компании
-                      </label>
-                      <input
-                        type="text"
-                        required={!isSoleProprietor}
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        placeholder="Например: Учебный центр Oxford"
-                        className="w-full px-3.5 py-2.5 min-h-[44px] sm:min-h-[40px] bg-[var(--surface)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[#DC2626] transition-all"
-                      />
-                    </div>
-                  )}
-
-                  {/* Niche */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
-                      Сфера деятельности
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {COMPANY_NICHES.map((n) => {
-                        const Icon = n.icon;
-                        const isSelected = niche === n.id;
-                        return (
-                          <div
-                            key={n.id}
-                            onClick={() => setNiche(n.id)}
-                            className={`p-3 rounded-[6px] border text-left cursor-pointer transition-all ${
-                              isSelected
-                                ? 'bg-[#FEF2F2] dark:bg-[rgba(220,38,38,0.14)] border-[#DC2626] text-[#DC2626] dark:text-[#FCA5A5]'
-                                : 'bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-secondary)] text-[var(--text-primary)]'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[#DC2626]' : 'text-[var(--text-muted)]'}`} />
-                              <span className="text-xs font-semibold">{n.title}</span>
-                            </div>
-                            <p className="text-[10px] text-[var(--text-muted)] mt-1 truncate">
-                              {n.desc}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Phone & Timezone */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
-                        Рабочий телефон
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        value={ownerPhone}
-                        onChange={(e) => setOwnerPhone(e.target.value)}
-                        placeholder="+998 90 123 45 67"
-                        className="w-full px-3.5 py-2.5 min-h-[44px] sm:min-h-[40px] bg-[var(--surface)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[#DC2626] transition-all font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
-                        Часовой пояс
-                      </label>
-                      <select
-                        value={timezone}
-                        onChange={(e) => setTimezone(e.target.value)}
-                        className="w-full px-3 py-2.5 min-h-[44px] sm:min-h-[40px] bg-[var(--surface)] border border-[var(--border)] rounded-[6px] text-xs text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[#DC2626]"
-                      >
-                        <option value="Asia/Tashkent">Ташкент · UTC+5 (рекомендуется)</option>
-                        <option value="Asia/Almaty">Алматы · UTC+5</option>
-                        <option value="Asia/Bishkek">Бишкек · UTC+6</option>
-                        <option value="Europe/Moscow">Москва · UTC+3</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Logo Upload (Optional) */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
-                      Логотип компании (необязательно)
-                    </label>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                    />
-
-                    {logoPreview ? (
-                      <div className="flex items-center gap-3 p-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface-secondary)]">
-                        <img
-                          src={logoPreview}
-                          alt="Logo"
-                          className="w-10 h-10 object-contain rounded border border-[var(--border)] bg-white"
-                        />
-                        <div className="flex-1 text-xs">
-                          <span className="font-medium text-[var(--text-primary)] block">Логотип прикреплен</span>
-                          <span className="text-[11px] text-[var(--text-muted)]">Будет отображаться в диалогах</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="text-xs text-[#DC2626] hover:underline cursor-pointer"
-                        >
-                          Заменить
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleRemoveLogo}
-                          className="p-1.5 text-[var(--text-muted)] hover:text-[#DC2626] transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full p-4 border border-dashed border-[var(--border)] rounded-[6px] hover:border-[#DC2626] transition-colors text-center cursor-pointer flex flex-col items-center justify-center gap-1.5"
-                      >
-                        <Upload className="w-4 h-4 text-[var(--text-muted)]" />
-                        <span className="text-xs text-[var(--text-primary)] font-medium">
-                          Загрузить файл логотипа
-                        </span>
-                        <span className="text-[10px] text-[var(--text-muted)]">
-                          PNG, JPG или SVG до 2 МБ
-                        </span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Navigation Buttons */}
-                  <div className="flex items-center justify-between pt-4 border-t border-[var(--border)]">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentStep(1)}
-                      className="px-4 py-2 rounded-[6px] border border-[var(--border)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Назад</span>
-                    </button>
-
-                    <button
-                      type="submit"
-                      className="px-5 py-2.5 rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white text-xs sm:text-sm font-semibold transition-all inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                    >
-                      <span>Продолжить</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Compact Preview Card (5 cols) */}
-              <div className="lg:col-span-5 space-y-3">
-                <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider px-1">
-                  Предпросмотр профиля
-                </div>
-
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 shadow-xs space-y-4">
-                  {/* Top Company Badge */}
-                  <div className="flex items-center gap-3.5">
-                    {logoPreview ? (
-                      <img
-                        src={logoPreview}
-                        alt="Preview"
-                        className="w-12 h-12 rounded-[6px] object-contain border border-[var(--border)] bg-white p-1 shrink-0"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-[6px] bg-[#18232D] text-white flex items-center justify-center font-bold text-base shrink-0">
-                        {companyName.trim() ? companyName[0].toUpperCase() : 'C'}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="text-sm font-bold text-[var(--text-primary)] truncate">
-                        {companyName.trim() || (isSoleProprietor ? `Частный специалист (${ownerName})` : 'Название компании')}
-                      </div>
-                      <div className="text-xs text-[var(--text-muted)] mt-0.5">
-                        {COMPANY_NICHES.find((n) => n.id === niche)?.title}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Summary details */}
-                  <div className="space-y-2 pt-2 border-t border-[var(--border)] text-xs text-[var(--text-secondary)]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[var(--text-muted)]">Телефон:</span>
-                      <span className="font-mono text-[var(--text-primary)] font-medium">
-                        {ownerPhone || '+998 ...'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[var(--text-muted)]">Часовой пояс:</span>
-                      <span className="text-[var(--text-primary)] font-medium">{timezone}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[var(--text-muted)]">Владелец:</span>
-                      <span className="text-[var(--text-primary)] font-medium">{ownerName || 'Пользователь'}</span>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-[6px] bg-[var(--surface-secondary)] text-[11px] text-[var(--text-muted)] leading-relaxed">
-                    Этот профиль будет использован для подписи сообщений и формирования расписания при бронировании встреч.
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* STEP 3: TARIFF SELECTION */}
-          {/* ========================================================================= */}
-          {currentStep === 3 && (
-            <div className="space-y-6 animate-[fadeIn_240ms_ease-out]">
-              <PricingSelector
-                mode="registration"
-                selectedPlan={selectedPlan}
-                onSelectPlan={(plan) => setSelectedPlan(plan)}
-                showTrialBanner={true}
-              />
-
-              {/* Navigation */}
-              <div className="flex items-center justify-between pt-4 border-t border-[var(--border)] max-w-4xl mx-auto">
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep(2)}
-                  className="px-4 py-2 rounded-[6px] border border-[var(--border)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Назад к компании</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleTariffSubmit}
-                  className="px-6 py-2.5 rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white text-xs sm:text-sm font-semibold transition-all inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <span>Продолжить</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* STEP 4: FIRST AI AGENT SELECTION */}
-          {/* ========================================================================= */}
-          {currentStep === 4 && (
-            <div className="max-w-2xl mx-auto space-y-6 animate-[fadeIn_240ms_ease-out]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {AGENT_TASKS.map((t) => {
-                  const Icon = t.icon;
-                  const isSelected = selectedAgentTask === t.id;
-                  return (
-                    <div
-                      key={t.id}
-                      onClick={() => setSelectedAgentTask(t.id)}
-                      className={`p-4 rounded-[8px] border text-left cursor-pointer transition-all ${
-                        isSelected
-                          ? 'bg-[#FEF2F2] dark:bg-[rgba(220,38,38,0.14)] border-[#DC2626] shadow-2xs'
-                          : 'bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-secondary)]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className={`w-8 h-8 rounded-[6px] flex items-center justify-center ${isSelected ? 'bg-[#DC2626] text-white' : 'bg-[var(--surface-secondary)] text-[var(--text-primary)]'}`}>
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        {isSelected && (
-                          <span className="w-5 h-5 rounded-full bg-[#DC2626] text-white flex items-center justify-center">
-                            <Check className="w-3 h-3" />
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="text-sm font-bold text-[var(--text-primary)] mb-1">
-                        {t.title}
-                      </div>
-                      <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                        {t.desc}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
                 <button
                   type="button"
                   onClick={() => handleFinishRegistration(true)}
-                  disabled={isLoading}
-                  className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] underline transition-colors cursor-pointer order-2 sm:order-1"
+                  disabled={isLoading || isSubmittingFinal}
+                  className="text-[13px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline transition-colors cursor-pointer"
                 >
-                  Настрою позже (перейти в кабинет)
+                  Настроить позже (перейти в кабинет)
                 </button>
-
-                <div className="flex items-center gap-3 w-full sm:w-auto order-1 sm:order-2">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(3)}
-                    className="px-4 py-2.5 rounded-[6px] border border-[var(--border)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Назад</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleFinishRegistration(false)}
-                    disabled={isLoading}
-                    className="flex-1 sm:flex-none px-6 py-2.5 rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white text-xs sm:text-sm font-semibold transition-all inline-flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer disabled:opacity-50"
-                  >
-                    <span>{isLoading ? 'Сохраняем…' : 'Перейти к настройке'}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
             </div>
-          )}
-        </div>
-      </main>
+
+            {/* Back button */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-start">
+              <button
+                type="button"
+                onClick={() => transitionToStep(3)}
+                className="px-4 h-[44px] rounded-[6px] border border-slate-300 dark:border-slate-700 text-[13px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Назад к тарифу</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
