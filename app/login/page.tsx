@@ -33,8 +33,8 @@ export default function LoginPage() {
   // 1100ms: employee typing indicator appears
   // 1800ms: indicator replaced with employee response
   // 2700ms: client confirmation appears
-  // 3500ms: booking card appears
-  // Up to 4200ms: checkmark appears, "Запись" stage active
+  // 3500ms: booking card appears (opacity + translateY 6px за 220ms)
+  // Up to 4200ms: green checkmark appears and "Запись" step active
   // --------------------------------------------------------------------------
   const [demoStage, setDemoStage] = useState<number>(6); // Default 6 for initial render/SSR
   const timersRef = useRef<NodeJS.Timeout[]>([]);
@@ -158,7 +158,7 @@ export default function LoginPage() {
               <h1 className="text-[36px] xl:text-[46px] font-semibold text-white leading-[1.12] tracking-tight">
                 Ваш следующий клиент<br />уже написал.
               </h1>
-              <p className="text-[15px] sm:text-[16px] text-slate-400 leading-[1.5]">
+              <p className="text-[15px] sm:text-[16px] text-[#AAB3C0] leading-[1.5]">
                 От первого сообщения до записи – в одном месте
               </p>
             </div>
@@ -176,10 +176,16 @@ export default function LoginPage() {
               className="space-y-3 transition-opacity duration-250"
             >
               {/* 3.1 CHAT WINDOW: surface #20262E, border #343D48 1px, radius 8px */}
-              <div className="rounded-[8px] bg-[#20262E] border border-[#343D48] overflow-hidden">
-                {/* Header */}
-                <div className="px-4 py-3 border-b border-[#343D48] flex items-center justify-between bg-[#20262E]">
-                  <span className="text-[13px] font-semibold text-white">
+              <div
+                style={{ backgroundColor: '#20262E', borderColor: '#343D48' }}
+                className="rounded-[8px] border overflow-hidden"
+              >
+                {/* Header with border #303842 */}
+                <div
+                  style={{ backgroundColor: '#20262E', borderColor: '#303842' }}
+                  className="px-4 py-3 border-b flex items-center justify-between"
+                >
+                  <span className="text-[13px] font-semibold text-[#F3F4F6]">
                     Диалог с клиентом
                   </span>
                   <div className="flex items-center gap-2">
@@ -192,7 +198,7 @@ export default function LoginPage() {
                         className="w-4 h-4 object-contain"
                       />
                     </div>
-                    <span className="text-[12px] font-medium text-slate-400">
+                    <span className="text-[12px] font-medium text-[#AAB3C0]">
                       Курсы английского
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-white/10 text-slate-300">
@@ -203,14 +209,17 @@ export default function LoginPage() {
 
                 {/* Messages Body (fixed min-height to reserve space and prevent shifts) */}
                 <div className="p-4 sm:p-5 space-y-3 min-h-[195px] flex flex-col justify-start">
-                  {/* 1. Client message */}
+                  {/* 1. Client message: bg #2A313B, no border */}
                   <div
                     className={`flex justify-start transition-all duration-200 ${
                       demoStage >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5 pointer-events-none'
                     }`}
                   >
-                    <div className="max-w-[85%] rounded-[6px] bg-[#2A333D] px-3.5 py-2.5 text-slate-100 text-[14px] leading-snug">
-                      <span className="block text-[12px] font-medium text-slate-400 mb-0.5">
+                    <div
+                      style={{ backgroundColor: '#2A313B' }}
+                      className="max-w-[85%] rounded-[6px] px-3.5 py-2.5 text-[#F3F4F6] text-[14px] leading-snug"
+                    >
+                      <span className="block text-[12px] font-medium text-[#AAB3C0] mb-0.5">
                         Клиент
                       </span>
                       Есть пробный урок в субботу?
@@ -220,7 +229,10 @@ export default function LoginPage() {
                   {/* 2. Employee typing indicator or reply */}
                   {demoStage === 2 && (
                     <div className="flex justify-end transition-opacity duration-150">
-                      <div className="rounded-[6px] bg-[#3B1E22] border border-[#DC2626]/20 px-3.5 py-2 flex items-center gap-1.5 text-xs text-rose-300">
+                      <div
+                        style={{ backgroundColor: '#48272D' }}
+                        className="rounded-[6px] px-3.5 py-2 flex items-center gap-1.5 text-xs text-rose-200"
+                      >
                         <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse" />
                         <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse [animation-delay:150ms]" />
                         <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse [animation-delay:300ms]" />
@@ -235,7 +247,11 @@ export default function LoginPage() {
                         demoStage >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5'
                       }`}
                     >
-                      <div className="max-w-[88%] rounded-[6px] bg-[#3B1E22] border border-[#DC2626]/25 px-3.5 py-2.5 text-slate-100 text-[14px] leading-snug">
+                      {/* Employee message: bg #48272D, no border */}
+                      <div
+                        style={{ backgroundColor: '#48272D' }}
+                        className="max-w-[88%] rounded-[6px] px-3.5 py-2.5 text-[#F3F4F6] text-[14px] leading-snug"
+                      >
                         <div className="flex items-center justify-between gap-3 text-[12px] text-rose-300 font-medium mb-0.5">
                           <span>ИИ-сотрудник</span>
                           <span className="text-[11px] text-rose-300/70 font-mono">10:14</span>
@@ -245,14 +261,17 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* 3. Client confirmation */}
+                  {/* 3. Client confirmation: bg #2A313B, no border */}
                   <div
                     className={`flex justify-start transition-all duration-200 ${
                       demoStage >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5 pointer-events-none'
                     }`}
                   >
-                    <div className="max-w-[85%] rounded-[6px] bg-[#2A333D] px-3.5 py-2.5 text-slate-100 text-[14px] leading-snug">
-                      <span className="block text-[12px] font-medium text-slate-400 mb-0.5">
+                    <div
+                      style={{ backgroundColor: '#2A313B' }}
+                      className="max-w-[85%] rounded-[6px] px-3.5 py-2.5 text-[#F3F4F6] text-[14px] leading-snug"
+                    >
+                      <span className="block text-[12px] font-medium text-[#AAB3C0] mb-0.5">
                         Клиент
                       </span>
                       Да, спасибо.
@@ -261,60 +280,82 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* 3.2 SEPARATE BOOKING CARD (gap 12px) */}
+              {/* 3.2 SEPARATE BOOKING CARD (gap 12px, bg #252D38, border #343D48 1px, radius 8px, padding 16px) */}
               <div
-                className={`rounded-[8px] bg-[#20262E] border border-[#343D48] p-3 sm:p-3.5 flex items-center justify-between gap-3 transition-all duration-200 ${
+                style={{ backgroundColor: '#252D38', borderColor: '#343D48' }}
+                className={`rounded-[8px] border p-4 transition-all duration-220 ${
                   demoStage >= 5 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5 pointer-events-none'
                 }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-[6px] bg-white/10 flex items-center justify-center p-1 shrink-0">
-                    <Image
-                      src="/images/brands/google-calendar.svg"
-                      alt="Google Calendar"
-                      width={24}
-                      height={24}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[14px] font-semibold text-white leading-tight truncate">
-                      Пробный урок
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-[14px] min-w-0">
+                    {/* Google Calendar Logo Container: 48x48px, light neutral background, radius 8px */}
+                    <div
+                      style={{ backgroundColor: '#FFFFFF' }}
+                      className="w-[48px] h-[48px] rounded-[8px] flex items-center justify-center shrink-0 shadow-2xs overflow-hidden"
+                    >
+                      <Image
+                        src="/brands/google-calendar.webp"
+                        alt="Google Calendar"
+                        width={40}
+                        height={40}
+                        className="w-[40px] h-[40px] object-contain shrink-0"
+                        priority
+                      />
                     </div>
-                    <div className="text-[12px] text-slate-400">
-                      Суббота · 14:30–15:15
-                    </div>
-                  </div>
-                </div>
 
-                {/* Result indicator: Green checkmark and "Запись создана" */}
-                <div
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-emerald-950/70 border border-emerald-800/50 text-emerald-400 text-[12px] font-medium transition-opacity duration-200 shrink-0 ${
-                    demoStage >= 6 ? 'opacity-100' : 'opacity-0'
-                  }`}
-                >
-                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Запись создана</span>
+                    {/* Information column:
+                        - Google Calendar: secondary text 12-13px
+                        - Пробный урок: primary text 16px font-semibold
+                        - Время: secondary text 14px
+                    */}
+                    <div className="min-w-0">
+                      <div className="text-[12px] sm:text-[13px] font-medium text-[#AAB3C0] leading-none mb-1">
+                        Google Calendar
+                      </div>
+                      <div className="text-[16px] font-semibold text-[#F3F4F6] leading-tight truncate mb-0.5">
+                        Пробный урок
+                      </div>
+                      <div className="text-[14px] text-[#AAB3C0] leading-normal">
+                        Суббота · 14:30–15:15
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status indicator: Small green checkmark + text, NO heavy box border, NO button styling */}
+                  <div
+                    className={`flex items-center gap-1.5 pt-0.5 text-emerald-400 text-[13px] font-medium transition-opacity duration-200 shrink-0 ${
+                      demoStage >= 6 ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  >
+                    <Check className="w-4 h-4 stroke-[2.5] text-emerald-400" />
+                    <span>Запись создана</span>
+                  </div>
                 </div>
               </div>
 
               {/* 3.3 COMPACT STAGES: «Обращение» → «Ответ» → «Запись» */}
+              {/* Completed stages: neutral (#AAB3C0 / white), current stage: red #DC2626 */}
               <div className="pt-1 flex items-center justify-center gap-2 text-xs">
                 {/* Stage 1: Обращение */}
                 <div
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${
-                    demoStage >= 1 ? 'text-white' : 'text-slate-500'
+                    demoStage === 1 || demoStage === 2
+                      ? 'text-white font-medium'
+                      : demoStage >= 3
+                      ? 'text-[#AAB3C0]'
+                      : 'text-slate-600'
                   }`}
                 >
-                  {demoStage >= 3 ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        demoStage >= 1 ? 'bg-[#DC2626]' : 'bg-slate-600'
-                      }`}
-                    />
-                  )}
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      demoStage === 1 || demoStage === 2
+                        ? 'bg-[#DC2626]'
+                        : demoStage >= 3
+                        ? 'bg-slate-400'
+                        : 'bg-slate-700'
+                    }`}
+                  />
                   <span>Обращение</span>
                 </div>
 
@@ -323,18 +364,22 @@ export default function LoginPage() {
                 {/* Stage 2: Ответ */}
                 <div
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${
-                    demoStage >= 3 ? 'text-white' : 'text-slate-500'
+                    demoStage === 3 || demoStage === 4
+                      ? 'text-white font-medium'
+                      : demoStage >= 5
+                      ? 'text-[#AAB3C0]'
+                      : 'text-slate-600'
                   }`}
                 >
-                  {demoStage >= 5 ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        demoStage >= 3 ? 'bg-[#DC2626]' : 'bg-slate-600'
-                      }`}
-                    />
-                  )}
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      demoStage === 3 || demoStage === 4
+                        ? 'bg-[#DC2626]'
+                        : demoStage >= 5
+                        ? 'bg-slate-400'
+                        : 'bg-slate-700'
+                    }`}
+                  />
                   <span>Ответ</span>
                 </div>
 
@@ -343,24 +388,24 @@ export default function LoginPage() {
                 {/* Stage 3: Запись */}
                 <div
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${
-                    demoStage >= 5 ? 'text-white font-medium' : 'text-slate-500'
+                    demoStage >= 5
+                      ? 'text-white font-medium'
+                      : 'text-slate-600'
                   }`}
                 >
-                  {demoStage >= 6 ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        demoStage >= 5 ? 'bg-[#DC2626]' : 'bg-slate-600'
-                      }`}
-                    />
-                  )}
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      demoStage >= 5
+                        ? 'bg-[#DC2626]'
+                        : 'bg-slate-700'
+                    }`}
+                  />
                   <span>Запись</span>
                 </div>
               </div>
 
               {/* 3.4 FOOTER: Disclaimer & Replay */}
-              <div className="pt-2 flex items-center justify-between text-xs text-slate-400">
+              <div className="pt-2 flex items-center justify-between text-xs text-[#AAB3C0]">
                 <span className="text-[12px]">
                   Пример работы – реальная запись не создаётся
                 </span>
