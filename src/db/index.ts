@@ -253,6 +253,9 @@ export async function deleteWorkspace(id: string): Promise<boolean> {
 export async function clearAllTestData(): Promise<void> {
   if (db) {
     try {
+      await db.delete(schema.supportMessages);
+      await db.delete(schema.supportTickets);
+      await db.delete(schema.adminAuditLogs);
       await db.delete(schema.messages);
       await db.delete(schema.conversations);
       await db.delete(schema.appointments);

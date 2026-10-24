@@ -18,6 +18,10 @@ import {
   Menu,
   X,
   AlertTriangle,
+  Trash2,
+  Lock,
+  Loader2,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -33,6 +37,51 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [adminRole, setAdminRole] = useState<'super_admin' | 'support' | 'finance'>('super_admin');
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+
+  // DB Reset Modal State
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
+  const handleOpenResetModal = () => {
+    setIsResetModalOpen(true);
+    setResetPassword('');
+    setResetError(null);
+    setResetSuccess(null);
+  };
+
+  const handleExecuteReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError(null);
+    if (!resetPassword) {
+      setResetError('Введите пароль администратора');
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const res = await fetch('/api/admin/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: resetPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Неверный пароль или сбой очистки БД');
+      }
+
+      setResetSuccess('База данных успешно очищена! Перезагрузка страницы…');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
+    } catch (err: any) {
+      setResetError(err.message || 'Ошибка при очистке базы данных');
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   // Check admin session
   useEffect(() => {
@@ -194,6 +243,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="text-white font-medium truncate" title={adminEmail}>
             {adminEmail}
           </div>
+          {adminRole === 'super_admin' && (
+            <button
+              type="button"
+              onClick={handleOpenResetModal}
+              className="mt-2 w-full h-7 px-2 flex items-center justify-center gap-1.5 rounded-[4px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-[10px] font-semibold transition-colors cursor-pointer"
+              title="Очистить тестовые данные в базе данных"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Очистить БД</span>
+            </button>
+          )}
         </div>
 
         {/* Back to Client App */}
@@ -278,6 +338,108 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Confirmation Password Modal for Database Wipe */}
+      {isResetModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
+          style={{ animationDuration: '180ms' }}
+        >
+          <div
+            className="w-full max-w-[440px] bg-white dark:bg-[#111C2E] border border-slate-200 dark:border-slate-800 rounded-[8px] p-6 shadow-2xl relative"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reset-modal-title"
+          >
+            <button
+              type="button"
+              onClick={() => setIsResetModalOpen(false)}
+              className="absolute right-4 top-4 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-[4px] cursor-pointer"
+              aria-label="Закрыть"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-[6px] bg-red-100 dark:bg-red-950/60 text-[#DC2626] flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 id="reset-modal-title" className="text-base font-bold text-slate-900 dark:text-white">
+                  Полная очистка базы данных
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Необратимое действие суперадминистратора
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
+              Будут удалены все организации, лиды, агенты, переписка, тикеты поддержки и балансы токенов в Neon Postgres. Для подтверждения введите пароль основателя.
+            </p>
+
+            {resetSuccess ? (
+              <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-[6px] text-center space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+                  {resetSuccess}
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleExecuteReset} className="space-y-4">
+                {resetError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-[6px] text-xs text-red-600 dark:text-red-400">
+                    {resetError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Пароль подтверждения</span>
+                  </label>
+                  <input
+                    type="password"
+                    autoFocus
+                    required
+                    value={resetPassword}
+                    onChange={(e) => setResetPassword(e.target.value)}
+                    placeholder="Введите пароль..."
+                    className="w-full h-10 px-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsResetModalOpen(false)}
+                    className="px-3.5 h-9 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-[6px] cursor-pointer"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isResetting || !resetPassword}
+                    className="px-4 h-9 bg-[#DC2626] hover:bg-[#B91C1C] text-white font-medium text-xs rounded-[6px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isResetting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Очистка…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Подтвердить и очистить</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
