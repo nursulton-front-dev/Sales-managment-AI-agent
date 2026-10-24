@@ -2,21 +2,33 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Compass, ArrowRight, LifeBuoy, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowRight,
+  Headphones,
+  ArrowLeft,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
+import { NotFoundIllustration } from '@/components/ui/NotFoundIllustration';
 
 export default function NotFound() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
 
-  // Public support modal form state
+  // Authentication state: null = unknown/loading, true = logged in, false = guest
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  // Public support modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [supportEmail, setSupportEmail] = useState('');
   const [supportMessage, setSupportMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
-  // Check client-side authentication on mount
   useEffect(() => {
     try {
       const hasCookie = document.cookie
@@ -31,11 +43,23 @@ export default function NotFound() {
 
   const handleSupportClick = () => {
     if (isAuthenticated) {
-      window.location.href = '/dashboard/support';
+      router.push('/dashboard/support');
     } else {
       setIsModalOpen(true);
       setSubmitError(null);
       setSubmitSuccess(null);
+    }
+  };
+
+  const handleGoBack = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (typeof window !== 'undefined') {
+      // Check if there is valid internal referrer history
+      if (window.history.length > 2 && document.referrer && document.referrer.includes(window.location.host)) {
+        window.history.back();
+      } else {
+        router.push(isAuthenticated ? '/dashboard' : '/login');
+      }
     }
   };
 
@@ -79,87 +103,110 @@ export default function NotFound() {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col justify-between bg-[#F8FAFC] dark:bg-[#0B1220] text-slate-900 dark:text-slate-100 px-4 py-6 sm:py-10 transition-colors duration-150">
-      {/* Top bar with Logo & Theme switcher */}
-      <div className="w-full max-w-[520px] mx-auto flex items-center justify-between">
+    <div className="min-h-[100dvh] w-full flex flex-col justify-between bg-[#F8FAFC] dark:bg-[#0B1220] text-[#171A21] dark:text-[#F1F5F9] transition-colors duration-150">
+      {/* 1. Header (Logo left, ThemeSwitcher right directly on background) */}
+      <header className="w-full max-w-[1440px] mx-auto px-6 sm:px-12 lg:px-16 pt-6 sm:pt-8 flex items-center justify-between shrink-0">
         <Link
           href="/"
-          className="flex items-center gap-2 group transition-opacity duration-150 hover:opacity-90"
+          className="flex items-center gap-2.5 group transition-opacity duration-150 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] rounded-[6px] p-1"
+          aria-label="Главная страница AI Business OS"
         >
-          <div className="w-7 h-7 rounded-[6px] bg-[#1E293B] dark:bg-white text-white dark:text-[#0B1220] flex items-center justify-center font-bold text-xs tracking-tight shadow-xs">
+          <div className="w-8 h-8 rounded-[6px] bg-[#171A21] dark:bg-white text-white dark:text-[#0B1220] flex items-center justify-center font-bold text-xs tracking-tight shadow-xs">
             AI
           </div>
-          <span className="font-semibold text-sm tracking-tight text-slate-900 dark:text-white">
+          <span className="font-semibold text-[15px] tracking-tight text-[#171A21] dark:text-white">
             AI Business OS
           </span>
         </Link>
-        <ThemeSwitcher />
-      </div>
 
-      {/* Main Centered 404 Block */}
-      <main className="w-full max-w-[520px] mx-auto my-auto py-6">
-        <div
-          className="bg-white dark:bg-[#111C2E] border border-slate-200 dark:border-slate-800 rounded-[8px] p-6 sm:p-10 shadow-xs text-center transition-all animate-fade-in-up"
-          style={{ animationDuration: '220ms' }}
-        >
-          {/* Compass Icon */}
-          <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 mx-auto flex items-center justify-center mb-4">
-            <Compass className="w-6 h-6 stroke-[1.75]" />
+        <div>
+          <ThemeSwitcher />
+        </div>
+      </header>
+
+      {/* 2. Main Open Composition (Two columns on desktop, stacked on mobile) */}
+      <main className="w-full max-w-[1440px] mx-auto px-6 sm:px-12 lg:px-16 py-8 sm:py-12 my-auto flex-1 flex items-center">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
+          
+          {/* Mobile Illustration (shown above text on < lg screens) */}
+          <div className="block lg:hidden w-full max-w-[420px] mx-auto pt-2 pb-4">
+            <NotFoundIllustration />
           </div>
 
-          {/* Large calm 404 */}
-          <div className="text-[56px] sm:text-[64px] font-bold tracking-tight text-slate-300 dark:text-slate-700 leading-none select-none mb-3 font-mono">
-            404
-          </div>
+          {/* Left Column: Text & Actions (Desktop 6-7 cols) */}
+          <div className="lg:col-span-7 flex flex-col items-start text-left">
+            {/* Small uppercase eyebrow */}
+            <div className="text-[12px] sm:text-[13px] font-bold tracking-[0.14em] text-[#DC2626] uppercase mb-4 sm:mb-5 select-none">
+              СТРАНИЦА НЕ НАЙДЕНА
+            </div>
 
-          {/* Title 28-32px */}
-          <h1 className="text-[26px] sm:text-[30px] font-bold text-slate-900 dark:text-white tracking-tight leading-snug mb-3">
-            Кажется, вы заблудились
-          </h1>
+            {/* Huge Headline: "Кажется, вы заблудились" */}
+            <h1 className="text-[34px] sm:text-[46px] md:text-[56px] lg:text-[68px] xl:text-[74px] font-extrabold text-[#171A21] dark:text-[#F1F5F9] tracking-[-0.035em] leading-[1.04] mb-5 sm:mb-6">
+              Кажется, вы <br className="hidden sm:inline" />
+              заблудились
+            </h1>
 
-          {/* Subtitle 16px with comfortable line-height */}
-          <p className="text-[15px] sm:text-[16px] text-slate-600 dark:text-slate-400 leading-relaxed max-w-[420px] mx-auto mb-8">
-            Мы не нашли эту страницу. Возможно, ссылка устарела или в адресе есть опечатка.
-          </p>
+            {/* Description */}
+            <p className="text-[16px] sm:text-[18px] lg:text-[19px] text-[#526079] dark:text-[#A5B4C8] font-normal leading-[1.5] max-w-[540px] mb-8 sm:mb-10">
+              Возможно, ссылка устарела или в адресе есть опечатка. Давайте вернёмся к работе.
+            </p>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            {/* Primary Action Button (State dependent) */}
-            {isAuthenticated ? (
-              <Link
-                href="/dashboard"
-                className="w-full sm:w-auto min-w-[190px] h-[46px] px-5 flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-transform duration-120 shadow-xs cursor-pointer"
+            {/* Action Buttons Row */}
+            <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-6">
+              {/* Primary Button */}
+              {isAuthenticated === null ? (
+                // Clean skeleton placeholder to avoid button flash
+                <div className="w-full sm:w-[170px] h-[48px] sm:h-[50px] bg-slate-200 dark:bg-slate-800 rounded-[6px] animate-pulse" />
+              ) : isAuthenticated ? (
+                <Link
+                  href="/dashboard"
+                  className="w-full sm:w-auto min-w-[160px] h-[48px] sm:h-[50px] px-6 inline-flex items-center justify-center gap-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-all duration-150 shadow-xs cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2"
+                >
+                  <span>В кабинет</span>
+                  <ArrowRight className="w-4 h-4 stroke-[2.2]" />
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="w-full sm:w-auto min-w-[160px] h-[48px] sm:h-[50px] px-6 inline-flex items-center justify-center gap-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-all duration-150 shadow-xs cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2"
+                >
+                  <span>Войти</span>
+                  <ArrowRight className="w-4 h-4 stroke-[2.2]" />
+                </Link>
+              )}
+
+              {/* Support Secondary Button */}
+              <button
+                type="button"
+                onClick={handleSupportClick}
+                className="w-full sm:w-auto min-w-[160px] h-[48px] sm:h-[50px] px-6 inline-flex items-center justify-center gap-2.5 bg-transparent hover:bg-slate-100/70 dark:hover:bg-slate-800/60 active:scale-[0.99] border border-[#D8DFE8] dark:border-slate-700 text-[#171A21] dark:text-[#F1F5F9] font-medium text-[15px] rounded-[6px] transition-all duration-150 cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
               >
-                <span>Вернуться в кабинет</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="w-full sm:w-auto min-w-[190px] h-[46px] px-5 flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-transform duration-120 shadow-xs cursor-pointer"
-              >
-                <span>На страницу входа</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            )}
+                <Headphones className="w-4 h-4 text-[#526079] dark:text-[#A5B4C8] stroke-[2]" />
+                <span>Поддержка</span>
+              </button>
+            </div>
 
-            {/* Support Action Button */}
+            {/* Back link */}
             <button
               type="button"
-              onClick={handleSupportClick}
-              className="w-full sm:w-auto min-w-[190px] h-[46px] px-5 flex items-center justify-center gap-2 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium text-[15px] rounded-[6px] transition-colors duration-150 cursor-pointer"
+              onClick={handleGoBack}
+              className="inline-flex items-center gap-2 text-[14px] font-medium text-[#526079] dark:text-[#A5B4C8] hover:text-[#171A21] dark:hover:text-white transition-colors duration-150 cursor-pointer py-1 group focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-400 rounded"
             >
-              <LifeBuoy className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-              <span>Связаться с поддержкой</span>
+              <ArrowLeft className="w-4 h-4 stroke-[2] transition-transform duration-150 group-hover:-translate-x-0.5" />
+              <span>Вернуться назад</span>
             </button>
           </div>
+
+          {/* Right Column: Desktop Illustration (Desktop 5 cols) */}
+          <div className="hidden lg:flex lg:col-span-5 items-center justify-center pl-4">
+            <NotFoundIllustration />
+          </div>
+
         </div>
       </main>
 
-      {/* Footer copyright */}
-      <footer className="w-full max-w-[520px] mx-auto text-center text-xs text-slate-400 dark:text-slate-600">
-        AI Business OS · Платформа автономных ИИ-агентов продаж
-      </footer>
+      {/* 3. Subtle bottom spacing / empty minimal footer without advertising */}
+      <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-12 lg:px-16 py-4 shrink-0" />
 
       {/* Public Support Modal for Guests */}
       {isModalOpen && (
@@ -185,7 +232,7 @@ export default function NotFound() {
 
             <div className="flex items-center gap-2.5 mb-2">
               <div className="w-8 h-8 rounded-[6px] bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300">
-                <LifeBuoy className="w-4 h-4" />
+                <Headphones className="w-4 h-4" />
               </div>
               <h2 id="modal-title" className="text-lg font-bold text-slate-900 dark:text-white">
                 Служба поддержки
