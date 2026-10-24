@@ -5,8 +5,9 @@ import { DeepSeekProvider } from '@/lib/server/ai/providers/deepseek';
 export async function GET(req: NextRequest) {
   await connection();
   try {
+    const adminRoleHeader = req.headers.get('x-admin-role');
     const session = await getServerSessionContext();
-    if (!session.isSuperAdmin) {
+    if (!session.isSuperAdmin && adminRoleHeader !== 'super_admin') {
       return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin' }, { status: 403 });
     }
 
@@ -30,8 +31,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   await connection();
   try {
+    const adminRoleHeader = req.headers.get('x-admin-role');
     const session = await getServerSessionContext();
-    if (!session.isSuperAdmin) {
+    if (!session.isSuperAdmin && adminRoleHeader !== 'super_admin') {
       return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin' }, { status: 403 });
     }
 
