@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
@@ -15,18 +15,14 @@ import {
   ArrowLeft,
   Check,
   Calendar,
-  Send,
   FileText,
   Info,
   CheckCircle2,
-  Terminal,
-  Bot,
-  Target,
   Clock,
+  Target,
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  Plus,
 } from 'lucide-react';
 
 interface NicheTemplate {
@@ -41,14 +37,14 @@ interface NicheTemplate {
   defaultName: string;
 }
 
-const NICHES: NicheTemplate[] = [
+const PRIMARY_NICHES: NicheTemplate[] = [
   {
     id: 'courses',
-    title: 'Учебный центр / Курсы',
-    target: 'Узнать возраст/уровень и записать на пробный урок',
+    title: 'Учебный центр',
+    target: 'Ответы о курсах и запись на пробный урок',
     image: '/images/niches/education.jpg',
     icon: GraduationCap,
-    description: 'Для языковых школ, IT-академий, подготовки к экзаменам и детских центров.',
+    description: 'Ответы о курсах и запись на пробный урок.',
     defaultPrice: `Прайс-лист обучения:
 - Групповые занятия (8 уроков/мес): $75 / мес
 - Интенсивный курс (12 уроков/мес): $110 / мес
@@ -63,11 +59,11 @@ const NICHES: NicheTemplate[] = [
   },
   {
     id: 'clinic',
-    title: 'Клиника / Стоматология',
-    target: 'Уточнить симптом/услугу и записать к врачу',
+    title: 'Клиника',
+    target: 'Информация об услугах и запись на приём',
     image: '/images/niches/clinic.jpg',
     icon: Stethoscope,
-    description: 'Для стоматологий, медицинских центров, косметологий и врачей.',
+    description: 'Информация об услугах и запись на приём.',
     defaultPrice: `Прайс-лист клиники:
 - Первичный осмотр и консультация врача: 120 000 сум
 - Компьютерная диагностика: 180 000 сум
@@ -82,11 +78,11 @@ const NICHES: NicheTemplate[] = [
   },
   {
     id: 'beauty',
-    title: 'Салон красоты / Услуги',
-    target: 'Подобрать мастера и свободное окошко',
+    title: 'Салон красоты',
+    target: 'Подбор услуги, мастера и времени визита',
     image: '/images/niches/salon.jpg',
     icon: Scissors,
-    description: 'Для барбершопов, студий маникюра, SPA, стилистов и массажных кабинетов.',
+    description: 'Подбор услуги, мастера и времени визита.',
     defaultPrice: `Прайс-лист салона:
 - Стрижка и укладка (Топ-стилист): 220 000 сум
 - Маникюр с покрытием гель-лак: 190 000 сум
@@ -101,11 +97,11 @@ const NICHES: NicheTemplate[] = [
   },
   {
     id: 'ecommerce',
-    title: 'Instagram / Telegram магазин',
-    target: 'Проверить наличие по каталогу и оформить заказ',
+    title: 'Магазин',
+    target: 'Ответы по каталогу и помощь с оформлением заказа',
     image: '/images/niches/store.jpg',
     icon: ShoppingBag,
-    description: 'Для шоурумов одежды, магазинов электроники, косметики и подарков.',
+    description: 'Ответы по каталогу и помощь с оформлением заказа.',
     defaultPrice: `Каталог и условия:
 - Базовые модели (в наличии S, M, L): от 280 000 сум
 - Премиум коллекция: от 450 000 сум
@@ -117,39 +113,50 @@ const NICHES: NicheTemplate[] = [
       'Какой способ оплаты для вас удобнее (перевод, наличные или терминал)?'
     ],
     defaultName: 'ИИ-Консультант Магазина'
-  },
-  {
-    id: 'other',
-    title: 'Другая ниша (Свой бизнес)',
-    target: 'Выявить запрос, сориентировать по прайсу и записать на встречу',
-    icon: Briefcase,
-    description: 'Для автосервисов, недвижимости, юристов, консалтинга, туризма и ремонта.',
-    defaultPrice: `Прайс-лист и условия услуг:
+  }
+];
+
+const OTHER_NICHE: NicheTemplate = {
+  id: 'other',
+  title: 'Другая сфера бизнеса',
+  target: 'Настройте сценарий под свои услуги',
+  icon: Briefcase,
+  description: 'Настройте сценарий под свои услуги.',
+  defaultPrice: `Прайс-лист и условия услуг:
 - Первичная консультация специалиста: Бесплатно (20 мин)
 - Базовый пакет услуг: от 500 000 сум
 - Комплексное обслуживание под ключ: от 1 500 000 сум
 - График работы: Понедельник–Суббота с 09:00 до 19:00`,
-    defaultQuestions: [
-      'Какая конкретно услуга или задача вас интересует?',
-      'Какой у вас ориентировочный бюджет или желаемые сроки реализации?',
-      'В какой день и время вам удобно принять звонок или встретиться с экспертом?'
-    ],
-    defaultName: 'ИИ-Менеджер по работе с клиентами'
-  }
+  defaultQuestions: [
+    'Какая конкретно услуга или задача вас интересует?',
+    'Какой у вас ориентировочный бюджет или желаемые сроки реализации?',
+    'В какой день и время вам удобно принять звонок или встретиться с экспертом?'
+  ],
+  defaultName: 'ИИ-Менеджер по работе с клиентами'
+};
+
+const ALL_NICHES = [...PRIMARY_NICHES, OTHER_NICHE];
+
+const STEP_TITLES = [
+  'Сфера бизнеса',
+  'Прайс и вопросы',
+  'Подключения',
+  'Запуск'
 ];
 
 export default function NewAgentWizardPage() {
   const router = useRouter();
-  const { createAgent, openSandbox, showToast, user } = useApp();
+  const { createAgent, openSandbox, showToast } = useApp();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
-  const [selectedNiche, setSelectedNiche] = useState<NicheTemplate>(NICHES[0]);
+  // Do NOT select first niche automatically. Allow null or restore from draft
+  const [selectedNiche, setSelectedNiche] = useState<NicheTemplate | null>(null);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [customBusinessName, setCustomBusinessName] = useState<string>('');
 
   // Step 2 state
-  const [priceList, setPriceList] = useState<string>(NICHES[0].defaultPrice);
-  const [questions, setQuestions] = useState<string[]>(NICHES[0].defaultQuestions);
+  const [priceList, setPriceList] = useState<string>('');
+  const [questions, setQuestions] = useState<string[]>([]);
 
   // Step 3 state
   const [botToken, setBotToken] = useState<string>('');
@@ -157,9 +164,50 @@ export default function NewAgentWizardPage() {
   const [autoReminderEnabled, setAutoReminderEnabled] = useState<boolean>(true);
 
   // Step 4 state
-  const [agentName, setAgentName] = useState<string>(NICHES[0].defaultName);
+  const [agentName, setAgentName] = useState<string>('');
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [savedAgentId, setSavedAgentId] = useState<string | null>(null);
+
+  // Restore draft if user returns or has existing draft in session
+  useEffect(() => {
+    try {
+      const savedDraft = sessionStorage.getItem('ai_agent_wizard_draft');
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.nicheId) {
+          const matched = ALL_NICHES.find((n) => n.id === parsed.nicheId);
+          if (matched) {
+            setSelectedNiche(matched);
+            setPriceList(parsed.priceList || matched.defaultPrice);
+            setQuestions(parsed.questions || matched.defaultQuestions);
+            setAgentName(parsed.agentName || matched.defaultName);
+            if (parsed.customBusinessName) setCustomBusinessName(parsed.customBusinessName);
+            if (parsed.botToken) setBotToken(parsed.botToken);
+            return;
+          }
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Save draft whenever key states change
+  useEffect(() => {
+    if (selectedNiche) {
+      try {
+        sessionStorage.setItem(
+          'ai_agent_wizard_draft',
+          JSON.stringify({
+            nicheId: selectedNiche.id,
+            priceList,
+            questions,
+            agentName,
+            customBusinessName,
+            botToken,
+          })
+        );
+      } catch {}
+    }
+  }, [selectedNiche, priceList, questions, agentName, customBusinessName, botToken]);
 
   const handleSelectNiche = (niche: NicheTemplate) => {
     setSelectedNiche(niche);
@@ -194,11 +242,11 @@ export default function NewAgentWizardPage() {
   };
 
   // Compile auto-generated system prompt
-  const generatedSystemPrompt = `Ты — профессиональный ИИ-сотрудник по продажам для компании "${selectedNiche.title}".
-Твое главное имя: "${agentName}".
+  const generatedSystemPrompt = `Ты — профессиональный ИИ-сотрудник по продажам для компании "${selectedNiche?.title || 'Компания'}".
+Твое имя: "${agentName}".
 
 БИЗНЕС-ЦЕЛЬ:
-${selectedNiche.target}.
+${selectedNiche?.target || 'Квалифицировать запрос и записать клиента'}.
 
 ПРАВИЛА КВАЛИФИКАЦИИ КЛИЕНТА:
 Перед записью в календарь последовательно уточни следующие 3 вопроса:
@@ -225,8 +273,10 @@ ${
 Вежливая, деловая, лаконичная. Не пиши простыни текста, общайся живыми короткими сообщениями.`;
 
   const handleSaveAgent = async () => {
+    if (!selectedNiche) return;
+
     const newAgent = createAgent({
-      name: agentName,
+      name: agentName || selectedNiche.defaultName,
       niche: selectedNiche.title,
       nicheId: selectedNiche.id,
       systemPrompt: generatedSystemPrompt,
@@ -246,7 +296,7 @@ ${
           if (authUser) {
             await (supabase.from('agents') as any).insert({
               user_id: authUser.id,
-              name: agentName,
+              name: agentName || selectedNiche.defaultName,
               niche: selectedNiche.title,
               niche_id: selectedNiche.id,
               system_prompt: generatedSystemPrompt,
@@ -264,197 +314,240 @@ ${
 
     setSavedAgentId(newAgent.id);
     setIsSaved(true);
+    try {
+      sessionStorage.removeItem('ai_agent_wizard_draft');
+    } catch {}
+  };
+
+  // Keyboard navigation for radio group
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextIndex = (index + 1) % ALL_NICHES.length;
+      handleSelectNiche(ALL_NICHES[nextIndex]);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevIndex = (index - 1 + ALL_NICHES.length) % ALL_NICHES.length;
+      handleSelectNiche(ALL_NICHES[prevIndex]);
+    }
   };
 
   return (
-    <div className="max-w-4xl space-y-6">
-      {/* Page Title */}
-      <div className="pb-3 border-b border-[var(--border)]">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-          Мастер создания ИИ-сотрудника
-        </h1>
-        <p className="text-xs text-[var(--text-muted)] mt-0.5">
-          Настройка сценария квалификации, прайса и каналов в 4 шага
-        </p>
-      </div>
-
-      {/* Educational Collapsible Banner */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-4 text-xs text-[var(--text-secondary)] space-y-3 shadow-2xs">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-[6px] bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center shrink-0">
-              <Bot className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="font-semibold text-[var(--text-primary)] block leading-tight">
-                Как работает ИИ-сотрудник в AI Business OS?
-              </span>
-              <span className="text-[11px] text-[var(--text-muted)]">
-                Автономный консультант на базе нейросети для диалогов 24/7
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsGuideOpen(!isGuideOpen)}
-            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1 font-medium cursor-pointer min-h-[36px] px-2"
-          >
-            <span>{isGuideOpen ? 'Скрыть' : 'Подробнее'}</span>
-            {isGuideOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
+    <div className="w-full max-w-[1120px] mx-auto px-4 sm:px-6 md:px-8 pb-24 space-y-6">
+      {/* ------------------------------------------------------------- */}
+      {/* 1. Header: Clean title + "Как это работает" button              */}
+      {/* ------------------------------------------------------------- */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--border)]">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+            Создание ИИ-сотрудника
+          </h1>
+          <p className="text-sm text-[var(--text-secondary)] mt-0.5">
+            Выберите сферу бизнеса – мы предложим подходящий сценарий.
+          </p>
         </div>
 
-        {isGuideOpen && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-[var(--border)] text-xs text-[var(--text-secondary)]">
+        <button
+          type="button"
+          onClick={() => setIsGuideOpen(!isGuideOpen)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-secondary)] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors self-start sm:self-auto cursor-pointer"
+        >
+          <Info className="w-3.5 h-3.5 text-[#DC2626]" />
+          <span>Как это работает</span>
+          {isGuideOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      {/* Guide explanation popup / collapsible card */}
+      {isGuideOpen && (
+        <div className="p-4 rounded-[8px] bg-[var(--surface)] border border-[var(--border)] shadow-xs animate-fade-in space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-[var(--text-secondary)]">
             <div className="p-3 rounded-[6px] bg-[var(--surface-secondary)] border border-[var(--border)] space-y-1">
               <div className="font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <Clock className="w-3.5 h-3.5 text-[#DC2626]" />
                 <span>1. Ответы 24/7</span>
               </div>
-              <p className="text-[11px] text-[var(--text-muted)] leading-snug">
-                Мгновенно отвечает на русском и узбекском языках в Telegram и на сайте, консультирует по ценам.
+              <p className="text-[12px] text-[var(--text-muted)] leading-snug">
+                Мгновенно отвечает на русском и узбекском языках в Telegram, консультирует по ценам и каталогу.
               </p>
             </div>
 
             <div className="p-3 rounded-[6px] bg-[var(--surface-secondary)] border border-[var(--border)] space-y-1">
               <div className="font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                <Target className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <Target className="w-3.5 h-3.5 text-[#DC2626]" />
                 <span>2. Квалификация</span>
               </div>
-              <p className="text-[11px] text-[var(--text-muted)] leading-snug">
+              <p className="text-[12px] text-[var(--text-muted)] leading-snug">
                 Задает 3 обязательных вопроса (потребность, уровень, время) перед внесением записи.
               </p>
             </div>
 
             <div className="p-3 rounded-[6px] bg-[var(--surface-secondary)] border border-[var(--border)] space-y-1">
               <div className="font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <Calendar className="w-3.5 h-3.5 text-[#DC2626]" />
                 <span>3. Запись в календарь</span>
               </div>
-              <p className="text-[11px] text-[var(--text-muted)] leading-snug">
+              <p className="text-[12px] text-[var(--text-muted)] leading-snug">
                 Сверяется с графиком (10:00–18:00) и бронирует свободный слот в Google Календаре.
               </p>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* 4-Step Stepper */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-2 sm:p-2.5">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {[
-            { step: 1, title: '1. Ниша бизнеса' },
-            { step: 2, title: '2. Прайс и вопросы' },
-            { step: 3, title: '3. Подключения' },
-            { step: 4, title: '4. Проверка и запуск' }
-          ].map((s) => (
-            <div
-              key={s.step}
-              className={`flex items-center gap-2 p-2 rounded-[6px] transition-colors ${
-                currentStep === s.step
-                  ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-semibold'
-                  : currentStep > s.step
-                  ? 'text-[var(--text-primary)]'
-                  : 'text-[var(--text-muted)]'
-              }`}
-            >
+      {/* ------------------------------------------------------------- */}
+      {/* 2. Compact Stepper (Desktop: 4 items; Mobile: Step X of 4)     */}
+      {/* ------------------------------------------------------------- */}
+      <nav aria-label="Прогресс создания сотрудника" className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-2.5 shadow-2xs">
+        {/* Desktop indicator */}
+        <div className="hidden sm:grid sm:grid-cols-4 gap-2">
+          {STEP_TITLES.map((title, idx) => {
+            const stepNum = idx + 1;
+            const isCurrent = currentStep === stepNum;
+            const isCompleted = currentStep > stepNum;
+
+            return (
               <div
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-xs shrink-0 font-medium ${
-                  currentStep === s.step
-                    ? 'bg-[var(--accent)] text-[var(--accent-text)]'
-                    : currentStep > s.step
-                    ? 'bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-primary)]'
-                    : 'bg-[var(--surface-secondary)] text-[var(--text-muted)]'
+                key={stepNum}
+                className={`flex items-center gap-2 p-2 rounded-[6px] transition-colors ${
+                  isCurrent
+                    ? 'bg-[#FFF5F5] dark:bg-rose-950/30 text-[#DC2626] font-semibold'
+                    : isCompleted
+                    ? 'text-[var(--text-primary)]'
+                    : 'text-[var(--text-muted)]'
                 }`}
               >
-                {currentStep > s.step ? <Check className="w-3 h-3" /> : s.step}
+                <div
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-xs shrink-0 font-medium ${
+                    isCurrent
+                      ? 'bg-[#DC2626] text-white'
+                      : isCompleted
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-muted)]'
+                  }`}
+                >
+                  {isCompleted ? <Check className="w-3 h-3 stroke-[2.5]" /> : stepNum}
+                </div>
+                <span className="text-xs truncate">{stepNum}. {title}</span>
               </div>
-              <span className="text-xs truncate">{s.title}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      </div>
 
-      {/* Wizard Content Body */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-4 sm:p-6 space-y-6 shadow-2xs">
-        {/* ================= STEP 1: Ниша ================= */}
+        {/* Mobile indicator */}
+        <div className="sm:hidden flex items-center justify-between px-2 py-1 text-xs">
+          <span className="font-semibold text-[var(--text-primary)]">
+            Шаг {currentStep} из 4: <span className="text-[#DC2626]">{STEP_TITLES[currentStep - 1]}</span>
+          </span>
+          <span className="text-[var(--text-muted)] font-mono">{Math.round((currentStep / 4) * 100)}%</span>
+        </div>
+      </nav>
+
+      {/* ------------------------------------------------------------- */}
+      {/* 3. STEP CONTENT                                               */}
+      {/* ------------------------------------------------------------- */}
+      <div className="transition-all duration-200">
+        {/* ================= STEP 1: Выбор сферы бизнеса ================= */}
         {currentStep === 1 && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                Шаг 1. Выберите сферу вашего бизнеса
-              </h2>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                ИИ применит готовый шаблон квалификационных вопросов и формат прайса
-              </p>
-            </div>
-
-            {/* Niche Cards with Real Photos */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {NICHES.map((niche) => {
-                const Icon = niche.icon;
-                const isSelected = selectedNiche.id === niche.id;
+          <div className="space-y-4 animate-fade-in" style={{ animationDuration: '200ms' }}>
+            {/* 4 Primary Niches Grid: 2 columns x 2 rows on desktop */}
+            <div
+              role="radiogroup"
+              aria-label="Выберите сферу вашего бизнеса"
+              className="grid grid-cols-1 md:grid-cols-2 gap-3.5"
+            >
+              {PRIMARY_NICHES.map((niche, idx) => {
+                const isSelected = selectedNiche?.id === niche.id;
 
                 return (
                   <div
                     key={niche.id}
+                    role="radio"
+                    aria-checked={isSelected}
+                    tabIndex={0}
                     onClick={() => handleSelectNiche(niche)}
-                    className={`rounded-[8px] border overflow-hidden transition-all cursor-pointer flex flex-col justify-between bg-[var(--surface)] ${
+                    onKeyDown={(e) => handleKeyDown(e, idx)}
+                    style={{ animationDelay: `${idx * 35}ms` }}
+                    className={`rounded-[8px] p-4 sm:p-5 flex items-center gap-4 transition-all duration-150 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2 ${
                       isSelected
-                        ? 'border-[var(--accent)] ring-1 ring-[var(--accent)] shadow-2xs'
-                        : 'border-[var(--border)] hover:border-[var(--border-strong)]'
+                        ? 'bg-[#FFF5F5] dark:bg-rose-950/25 border-2 border-[#DC2626] shadow-xs'
+                        : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-strong)]'
                     }`}
                   >
-                    {/* Real Photo at top (Text strictly below photo) */}
-                    {niche.image ? (
-                      <div className="relative w-full aspect-[16/9] bg-[var(--surface-secondary)] overflow-hidden">
-                        <Image
-                          src={niche.image}
-                          alt={niche.title}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 100vw, 50vw"
-                        />
+                    {/* Photo on left: ~112x88px on desktop, ~80x72px on mobile */}
+                    <div className="w-[80px] h-[72px] sm:w-[112px] sm:h-[88px] relative rounded-[6px] overflow-hidden bg-[var(--surface-secondary)] shrink-0">
+                      <Image
+                        src={niche.image || '/images/niches/education.jpg'}
+                        alt={niche.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 80px, 112px"
+                      />
+                    </div>
+
+                    {/* Text on right */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <h3 className="text-[16px] font-semibold text-[var(--text-primary)] leading-tight truncate">
+                          {niche.title}
+                        </h3>
                         {isSelected && (
-                          <div className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-[var(--accent)] text-[var(--accent-text)] flex items-center justify-center shadow-xs">
-                            <Check className="w-3.5 h-3.5" />
-                          </div>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#DC2626] text-white shrink-0 animate-fade-in">
+                            <Check className="w-3 h-3 stroke-[2.5]" />
+                            <span>Выбрано</span>
+                          </span>
                         )}
                       </div>
-                    ) : (
-                      <div className="w-full aspect-[16/9] bg-[var(--surface-secondary)] flex items-center justify-center relative">
-                        <Icon className="w-8 h-8 text-[var(--text-muted)]" />
-                        {isSelected && (
-                          <div className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-[var(--accent)] text-[var(--accent-text)] flex items-center justify-center shadow-xs">
-                            <Check className="w-3.5 h-3.5" />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Content below photo */}
-                    <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-semibold text-[var(--text-primary)] text-xs">{niche.title}</h3>
-                        <p className="text-xs text-[var(--text-muted)] mt-1 leading-snug">
-                          {niche.description}
-                        </p>
-                      </div>
-
-                      <div className="pt-2 border-t border-[var(--border)] text-[11px] text-[var(--accent)] font-medium">
-                        Цель: {niche.target}
-                      </div>
+                      <p className="text-[14px] sm:text-[15px] text-[var(--text-secondary)] leading-snug">
+                        {niche.description}
+                      </p>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Custom Business Name if "other" is selected */}
-            {selectedNiche.id === 'other' && (
-              <div className="p-4 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] space-y-2">
-                <label className="block text-xs font-medium text-[var(--text-secondary)]">
+            {/* 5th Option: Full-width compact row for "Другая сфера бизнеса" */}
+            <div
+              role="radio"
+              aria-checked={selectedNiche?.id === 'other'}
+              tabIndex={0}
+              onClick={() => handleSelectNiche(OTHER_NICHE)}
+              onKeyDown={(e) => handleKeyDown(e, 4)}
+              className={`rounded-[8px] p-4 sm:p-4.5 flex items-center justify-between gap-4 transition-all duration-150 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2 ${
+                selectedNiche?.id === 'other'
+                  ? 'bg-[#FFF5F5] dark:bg-rose-950/25 border-2 border-[#DC2626] shadow-xs'
+                  : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-strong)]'
+              }`}
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-[6px] bg-[var(--surface-secondary)] border border-[var(--border)] flex items-center justify-center shrink-0 text-[var(--text-muted)]">
+                  <Briefcase className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-[16px] font-semibold text-[var(--text-primary)] leading-tight">
+                    Другая сфера бизнеса
+                  </h3>
+                  <p className="text-[14px] text-[var(--text-secondary)] leading-snug">
+                    Настройте сценарий под свои услуги
+                  </p>
+                </div>
+              </div>
+
+              {selectedNiche?.id === 'other' ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#DC2626] text-white shrink-0 animate-fade-in">
+                  <Check className="w-3 h-3 stroke-[2.5]" />
+                  <span>Выбрано</span>
+                </span>
+              ) : (
+                <div className="w-5 h-5 rounded-full border border-[var(--border)] shrink-0" />
+              )}
+            </div>
+
+            {/* Custom Business Input if "other" selected */}
+            {selectedNiche?.id === 'other' && (
+              <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] space-y-2 animate-fade-in">
+                <label className="block text-xs font-semibold text-[var(--text-secondary)]">
                   Уточните сферу или название бизнеса:
                 </label>
                 <input
@@ -462,7 +555,7 @@ ${
                   value={customBusinessName}
                   onChange={(e) => handleCustomBusinessNameChange(e.target.value)}
                   placeholder="Например: Автосервис, Юридическая фирма, Недвижимость"
-                  className="w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] focus:border-[var(--accent)] min-h-[44px] sm:min-h-[38px]"
+                  className="w-full h-[48px] px-3.5 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#DC2626] focus:border-[#DC2626]"
                 />
               </div>
             )}
@@ -471,10 +564,10 @@ ${
 
         {/* ================= STEP 2: Прайс и вопросы ================= */}
         {currentStep === 2 && (
-          <div className="space-y-5">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 sm:p-6 space-y-5 animate-fade-in">
             <div>
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                Шаг 2. Прайс-лист и вопросы квалификации
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                Прайс-лист и вопросы квалификации
               </h2>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
                 ИИ-сотрудник отвечает клиентам строго на основании этого прайс-листа
@@ -491,13 +584,13 @@ ${
                   <button
                     type="button"
                     onClick={handleAppendFAQ}
-                    className="text-xs text-[var(--accent)] hover:underline cursor-pointer"
+                    className="text-xs text-[#DC2626] hover:underline cursor-pointer"
                   >
                     + Добавить блок FAQ
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPriceList(selectedNiche.defaultPrice)}
+                    onClick={() => setPriceList(selectedNiche?.defaultPrice || '')}
                     className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
                   >
                     Сбросить к шаблону
@@ -510,7 +603,7 @@ ${
                 value={priceList}
                 onChange={(e) => setPriceList(e.target.value)}
                 placeholder="Вставьте текстовый прайс-лист, тарифы и базовые ответы на частые вопросы..."
-                className="w-full p-3 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] focus:border-[var(--accent)] leading-relaxed"
+                className="w-full p-3 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-[#DC2626] focus:border-[#DC2626] leading-relaxed"
               />
             </div>
 
@@ -530,7 +623,7 @@ ${
                     value={q}
                     onChange={(e) => handleQuestionChange(idx, e.target.value)}
                     placeholder={`Вопрос #${idx + 1}`}
-                    className="flex-1 px-3 py-1.5 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] focus:border-[var(--accent)] min-h-[44px] sm:min-h-[38px]"
+                    className="flex-1 h-[44px] px-3 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#DC2626] focus:border-[#DC2626]"
                   />
                 </div>
               ))}
@@ -540,10 +633,10 @@ ${
 
         {/* ================= STEP 3: Подключения ================= */}
         {currentStep === 3 && (
-          <div className="space-y-5">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 sm:p-6 space-y-5 animate-fade-in">
             <div>
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                Шаг 3. Подключение каналов и Календаря
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                Подключение каналов и Календаря
               </h2>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
                 Привяжите Telegram бота и включите синхронизацию со слотами
@@ -567,7 +660,7 @@ ${
                   href="https://t.me/BotFather"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-0.5"
+                  className="text-[11px] text-[#DC2626] hover:underline flex items-center gap-0.5"
                 >
                   <span>Открыть @BotFather</span>
                   <ExternalLink className="w-3 h-3" />
@@ -579,7 +672,7 @@ ${
                 value={botToken}
                 onChange={(e) => setBotToken(e.target.value)}
                 placeholder="123456789:ABCdefGHIjkl... (можно оставить пустым для теста в песочнице)"
-                className="w-full px-3 py-2 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] focus:border-[var(--accent)] min-h-[44px] sm:min-h-[38px]"
+                className="w-full h-[48px] px-3.5 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#DC2626] focus:border-[#DC2626]"
               />
 
               <p className="text-[11px] text-[var(--text-muted)]">
@@ -612,7 +705,7 @@ ${
                   type="checkbox"
                   checked={googleCalendarEnabled}
                   onChange={(e) => setGoogleCalendarEnabled(e.target.checked)}
-                  className="h-4 w-4 text-[var(--accent)] rounded border-[var(--border)] focus:ring-[var(--focus-ring)] cursor-pointer"
+                  className="h-4 w-4 text-[#DC2626] rounded border-[var(--border)] focus:ring-[#DC2626] cursor-pointer"
                 />
               </div>
 
@@ -622,7 +715,7 @@ ${
                   id="autoReminder"
                   checked={autoReminderEnabled}
                   onChange={(e) => setAutoReminderEnabled(e.target.checked)}
-                  className="h-4 w-4 text-[var(--accent)] rounded border-[var(--border)] focus:ring-[var(--focus-ring)] cursor-pointer"
+                  className="h-4 w-4 text-[#DC2626] rounded border-[var(--border)] focus:ring-[#DC2626] cursor-pointer"
                 />
                 <label htmlFor="autoReminder" className="text-xs text-[var(--text-secondary)] cursor-pointer">
                   Отправлять напоминание клиенту за 2 часа до визита (1 токен)
@@ -634,12 +727,12 @@ ${
 
         {/* ================= STEP 4: Проверка и запуск ================= */}
         {currentStep === 4 && (
-          <div className="space-y-5">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 sm:p-6 space-y-5 animate-fade-in">
             {!isSaved ? (
               <>
                 <div>
-                  <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                    Шаг 4. Проверка и сохранение
+                  <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                    Проверка и сохранение
                   </h2>
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">
                     Системный промпт автоматически сформирован на основе указанных данных
@@ -648,20 +741,20 @@ ${
 
                 {/* Employee Name */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
                     Имя ИИ-сотрудника
                   </label>
                   <input
                     type="text"
                     value={agentName}
                     onChange={(e) => setAgentName(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] font-medium focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] focus:border-[var(--accent)] min-h-[44px] sm:min-h-[38px]"
+                    className="w-full h-[48px] px-3.5 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] font-medium focus:outline-none focus:ring-1 focus:ring-[#DC2626] focus:border-[#DC2626]"
                   />
                 </div>
 
                 {/* Prompt Preview */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
                     Сформированная инструкция (System Prompt):
                   </label>
                   <pre className="p-3.5 bg-[#0B1220] text-slate-100 rounded-[6px] text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-52 overflow-y-auto border border-slate-800">
@@ -673,7 +766,7 @@ ${
                   <button
                     type="button"
                     onClick={handleSaveAgent}
-                    className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:opacity-90 text-[var(--accent-text)] font-semibold py-2.5 rounded-[6px] transition-colors cursor-pointer text-xs min-h-[44px]"
+                    className="w-full h-[48px] flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] text-white font-semibold rounded-[6px] transition-colors cursor-pointer text-sm"
                   >
                     <Check className="w-4 h-4" />
                     <span>Сохранить и запустить сотрудника</span>
@@ -683,12 +776,12 @@ ${
             ) : (
               /* Success confirmation */
               <div className="py-6 text-center space-y-4">
-                <div className="w-10 h-10 bg-[var(--success-bg)] text-[var(--success-text)] rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-5 h-5" />
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-6 h-6" />
                 </div>
 
                 <div>
-                  <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
                     ИИ-сотрудник успешно создан!
                   </h3>
                   <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto mt-1 leading-relaxed">
@@ -696,16 +789,16 @@ ${
                   </p>
                 </div>
 
-                <div className="flex items-center justify-center gap-2.5 pt-2 flex-wrap">
+                <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
                   <button
                     onClick={() => openSandbox(savedAgentId || undefined)}
-                    className="px-4 py-2 text-xs font-medium text-[var(--accent-text)] bg-[var(--accent)] hover:opacity-90 rounded-[6px] transition-colors cursor-pointer min-h-[44px] sm:min-h-[38px]"
+                    className="px-5 py-2.5 text-xs font-semibold text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-[6px] transition-colors cursor-pointer min-h-[44px]"
                   >
                     Открыть песочницу
                   </button>
                   <button
                     onClick={() => router.push('/dashboard/agents')}
-                    className="px-4 py-2 text-xs font-medium text-[var(--text-secondary)] bg-[var(--surface)] hover:bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] transition-colors cursor-pointer min-h-[44px] sm:min-h-[38px]"
+                    className="px-5 py-2.5 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--surface)] hover:bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] transition-colors cursor-pointer min-h-[44px]"
                   >
                     Список сотрудников
                   </button>
@@ -714,33 +807,56 @@ ${
             )}
           </div>
         )}
+      </div>
 
-        {/* Wizard Navigation Controls */}
-        {!isSaved && (
-          <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between">
+      {/* ------------------------------------------------------------- */}
+      {/* 4. Action Panel: Always visible at bottom of content layout     */}
+      {/* ------------------------------------------------------------- */}
+      {!isSaved && (
+        <div className="sticky bottom-0 z-20 py-3 px-4 sm:px-6 -mx-4 sm:-mx-6 md:-mx-8 bg-[var(--surface)]/95 backdrop-blur-xs border-t border-[var(--border)] flex items-center justify-between gap-3 shadow-sm">
+          {/* Back button (only starting from step 2) */}
+          {currentStep > 1 ? (
             <button
               type="button"
-              disabled={currentStep === 1}
               onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--border)] rounded-[6px] text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer min-h-[44px] sm:min-h-[38px]"
+              className="inline-flex items-center gap-1.5 px-4 h-[44px] border border-[var(--border)] rounded-[6px] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] transition-colors cursor-pointer"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="w-4 h-4" />
               <span>Назад</span>
             </button>
+          ) : (
+            <div className="text-xs text-[var(--text-muted)]">
+              {selectedNiche ? (
+                <span className="text-slate-600 dark:text-slate-300">
+                  Выбрано: <b>{selectedNiche.title}</b>
+                </span>
+              ) : (
+                'Выберите сферу бизнеса'
+              )}
+            </div>
+          )}
 
-            {currentStep < 4 && (
+          {/* Forward / Save button */}
+          {currentStep < 4 ? (
+            <div className="flex items-center gap-3">
+              {currentStep === 1 && !selectedNiche && (
+                <span className="hidden sm:inline text-xs text-[var(--text-muted)]">
+                  Выберите сферу бизнеса
+                </span>
+              )}
               <button
                 type="button"
+                disabled={currentStep === 1 && !selectedNiche}
                 onClick={() => setCurrentStep((prev) => Math.min(4, prev + 1))}
-                className="inline-flex items-center gap-1.5 bg-[var(--accent)] hover:opacity-90 text-[var(--accent-text)] px-4 py-1.5 rounded-[6px] text-xs font-medium transition-colors cursor-pointer min-h-[44px] sm:min-h-[38px]"
+                className="inline-flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] text-white px-6 h-[44px] rounded-[6px] text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
               >
-                <span>Далее</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Продолжить</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
