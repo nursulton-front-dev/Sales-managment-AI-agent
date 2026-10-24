@@ -27,18 +27,16 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // --------------------------------------------------------------------------
-  // Sequential Demo Animation (~4.2s sequence)
-  // Stages:
-  // 0: Initial container visible
-  // 1 (600ms): Client message 1 appears
-  // 2 (1100ms): Employee typing indicator appears
-  // 3 (1800ms): Employee typing replaced by response
-  // 4 (2700ms): Client confirmation appears
-  // 5 (3500ms): Google Calendar card appears
-  // 6 (4200ms): Confirmation checkmark displays
+  // Sequential Controlled Demo Animation:
+  // 0–250ms: demo window appears
+  // 600ms: client message 1 appears
+  // 1100ms: employee typing indicator appears
+  // 1800ms: indicator replaced with employee response
+  // 2700ms: client confirmation appears
+  // 3500ms: booking card appears
+  // Up to 4200ms: checkmark appears, "Запись" stage active
   // --------------------------------------------------------------------------
-  const [demoStage, setDemoStage] = useState<number>(6); // Default 6 for SSR / instant
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(false);
+  const [demoStage, setDemoStage] = useState<number>(6); // Default 6 for initial render/SSR
   const timersRef = useRef<NodeJS.Timeout[]>([]);
 
   const clearDemoTimers = () => {
@@ -50,7 +48,6 @@ export default function LoginPage() {
     clearDemoTimers();
 
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setPrefersReducedMotion(true);
       setDemoStage(6);
       return;
     }
@@ -136,15 +133,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col lg:flex-row bg-[#FAFAFA] dark:bg-[#0B1220] text-slate-900 dark:text-slate-100 selection:bg-rose-500/20 selection:text-rose-900">
-      {/* ------------------------------------------------------------------ */}
-      {/* 1. LEFT PRESENTATION PANEL (~52% on desktop, hidden on <1024px)   */}
-      {/* ------------------------------------------------------------------ */}
+      {/* ------------------------------------------------------------- */}
+      {/* 1. LEFT PRESENTATION PANEL (~53% on desktop, hidden < 1024px)  */}
+      {/* ------------------------------------------------------------- */}
       <section
-        aria-label="Презентация возможностей AI Business OS"
-        className="hidden lg:flex lg:w-[52%] bg-[#15191F] text-slate-100 flex-col justify-between p-8 xl:p-14 relative overflow-y-auto"
+        aria-label="Демонстрация AI Business OS"
+        className="hidden lg:flex lg:w-[53%] bg-[#15191F] text-slate-100 flex-col justify-between p-8 xl:p-14 relative overflow-y-auto"
       >
-        <div className="w-full max-w-[540px] mx-auto flex-1 flex flex-col justify-between my-auto py-6">
-          {/* Logo header: authentic red mark + AI Business OS */}
+        <div className="w-full max-w-[560px] mx-auto flex-1 flex flex-col justify-between my-auto py-6">
+          {/* Logo header: Existing red mark + AI Business OS */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-[6px] bg-[#DC2626] flex items-center justify-center text-white font-bold shadow-sm shrink-0">
               <Building2 className="w-5 h-5 text-white" />
@@ -154,165 +151,229 @@ export default function LoginPage() {
             </span>
           </div>
 
-          {/* Main content block: Title, Subtitle, Demo */}
-          <div className="my-auto py-8 space-y-7">
+          {/* Central content block */}
+          <div className="my-auto py-7 space-y-6">
             {/* Title & Subtitle */}
-            <div className="space-y-3">
-              <h1 className="text-[40px] xl:text-[46px] font-semibold text-white leading-[1.12] tracking-tight">
+            <div className="space-y-2.5">
+              <h1 className="text-[36px] xl:text-[46px] font-semibold text-white leading-[1.12] tracking-tight">
                 Ваш следующий клиент<br />уже написал.
               </h1>
-              <p className="text-[16px] text-[#B7BEC8] leading-[1.6]">
-                Ответьте вовремя. Помогите выбрать услугу.<br />
-                Доведите разговор до записи.
+              <p className="text-[15px] sm:text-[16px] text-slate-400 leading-[1.5]">
+                От первого сообщения до записи – в одном месте
               </p>
             </div>
 
-            {/* Accessible screenreader description */}
+            {/* Static description for screen readers */}
             <div className="sr-only">
-              Пример работы ИИ-сотрудника: клиент в Telegram спрашивает о пробном уроке в субботу.
-              ИИ-сотрудник мгновенно отвечает, что есть время в 14:30 и предлагает записаться.
-              После согласия клиента слот автоматически бронируется в Google Календаре.
+              Демонстрация работы диалога: клиент в Telegram интересуется пробным уроком в субботу.
+              ИИ-сотрудник предлагает время в 14:30. После подтверждения клиента автоматически формируется запись
+              в Google Календаре.
             </div>
 
-            {/* WHITE DEMO WINDOW (width max 540px, fixed min-height to prevent layout shifts) */}
+            {/* MAIN DEMO CONTAINER */}
             <div
               aria-hidden="true"
-              className="w-full rounded-[8px] bg-white text-slate-900 shadow-xl overflow-hidden transition-opacity duration-300"
+              className="space-y-3 transition-opacity duration-250"
             >
-              {/* Window Header */}
-              <div className="px-5 py-3.5 border-b border-[#E5E7EB] flex items-center justify-between bg-white">
-                <span className="text-[13px] font-semibold text-[#20242B]">
-                  Диалог с клиентом
-                </span>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 relative shrink-0">
-                    <Image
-                      src="/images/brands/telegram.svg"
-                      alt="Telegram"
-                      width={16}
-                      height={16}
-                      className="w-4 h-4 object-contain"
-                    />
-                  </div>
-                  <span className="text-[12px] font-medium text-slate-500">
-                    Курсы английского · Онлайн
+              {/* 3.1 CHAT WINDOW: surface #20262E, border #343D48 1px, radius 8px */}
+              <div className="rounded-[8px] bg-[#20262E] border border-[#343D48] overflow-hidden">
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-[#343D48] flex items-center justify-between bg-[#20262E]">
+                  <span className="text-[13px] font-semibold text-white">
+                    Диалог с клиентом
                   </span>
-                </div>
-              </div>
-
-              {/* Chat body with reserved height (260px) to prevent layout shifts */}
-              <div className="p-5 space-y-3 min-h-[260px] flex flex-col justify-start bg-white">
-                {/* 1. Client message */}
-                <div
-                  className={`flex justify-start transition-all duration-200 ${
-                    demoStage >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'
-                  }`}
-                >
-                  <div className="max-w-[85%] rounded-[8px] bg-[#F1F3F5] px-3.5 py-2.5 text-[#20242B] text-[14px] leading-snug">
-                    <span className="block text-[11px] font-medium text-slate-500 mb-0.5">
-                      Клиент
-                    </span>
-                    Здравствуйте! Есть пробный урок в субботу?
-                  </div>
-                </div>
-
-                {/* 2. Employee AI typing indicator OR response */}
-                {demoStage === 2 && (
-                  <div className="flex justify-end transition-opacity duration-150">
-                    <div className="rounded-[8px] bg-[#FFF1F2] px-3.5 py-2 flex items-center gap-1.5 text-xs text-[#DC2626]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse [animation-delay:150ms]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse [animation-delay:300ms]" />
-                      <span className="text-[11px] ml-1 text-slate-400">печатает ответ…</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 relative shrink-0">
+                      <Image
+                        src="/images/brands/telegram.svg"
+                        alt="Telegram"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4 object-contain"
+                      />
                     </div>
+                    <span className="text-[12px] font-medium text-slate-400">
+                      Курсы английского
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-white/10 text-slate-300">
+                      ДЕМО
+                    </span>
                   </div>
-                )}
+                </div>
 
-                {demoStage >= 3 && (
+                {/* Messages Body (fixed min-height to reserve space and prevent shifts) */}
+                <div className="p-4 sm:p-5 space-y-3 min-h-[195px] flex flex-col justify-start">
+                  {/* 1. Client message */}
                   <div
-                    className={`flex justify-end transition-all duration-200 ${
-                      demoStage >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
+                    className={`flex justify-start transition-all duration-200 ${
+                      demoStage >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5 pointer-events-none'
                     }`}
                   >
-                    <div className="max-w-[88%] rounded-[8px] bg-[#FFF1F2] px-3.5 py-2.5 text-[#20242B] text-[14px] leading-snug">
-                      <div className="flex items-center justify-between gap-3 text-[11px] text-[#DC2626] font-medium mb-0.5">
-                        <span>ИИ-сотрудник</span>
-                        <span className="text-[10px] text-slate-400 font-mono">10:14</span>
-                      </div>
-                      Да, в 14:30 есть свободное время. Записать вас?
+                    <div className="max-w-[85%] rounded-[6px] bg-[#2A333D] px-3.5 py-2.5 text-slate-100 text-[14px] leading-snug">
+                      <span className="block text-[12px] font-medium text-slate-400 mb-0.5">
+                        Клиент
+                      </span>
+                      Есть пробный урок в субботу?
                     </div>
                   </div>
-                )}
 
-                {/* 3. Client agreement */}
-                <div
-                  className={`flex justify-start transition-all duration-200 ${
-                    demoStage >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'
-                  }`}
-                >
-                  <div className="max-w-[85%] rounded-[8px] bg-[#F1F3F5] px-3.5 py-2.5 text-[#20242B] text-[14px] leading-snug">
-                    <span className="block text-[11px] font-medium text-slate-500 mb-0.5">
-                      Клиент
-                    </span>
-                    Да, спасибо.
-                  </div>
-                </div>
-
-                {/* 4. Google Calendar Booking Card */}
-                <div
-                  className={`mt-2 pt-1 transition-all duration-240 ${
-                    demoStage >= 5 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'
-                  }`}
-                >
-                  <div className="rounded-[6px] bg-[#FAFAFA] border border-[#E5E7EB] p-3 flex items-center justify-between gap-3 shadow-2xs">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-[4px] bg-white border border-[#E5E7EB] flex items-center justify-center p-1.5 shrink-0">
-                        <Image
-                          src="/images/brands/google-calendar.png"
-                          alt="Google Calendar"
-                          width={20}
-                          height={20}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-[14px] font-semibold text-[#20242B] leading-tight truncate">
-                          Пробный урок
-                        </div>
-                        <div className="text-[12px] text-slate-500">
-                          Суббота · 14:30–15:15
-                        </div>
+                  {/* 2. Employee typing indicator or reply */}
+                  {demoStage === 2 && (
+                    <div className="flex justify-end transition-opacity duration-150">
+                      <div className="rounded-[6px] bg-[#3B1E22] border border-[#DC2626]/20 px-3.5 py-2 flex items-center gap-1.5 text-xs text-rose-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse [animation-delay:150ms]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse [animation-delay:300ms]" />
+                        <span className="text-[11px] ml-1 text-rose-200/80">печатает ответ…</span>
                       </div>
                     </div>
+                  )}
 
-                    {/* Result indicator: Green checkmark only for result */}
+                  {demoStage >= 3 && (
                     <div
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-[4px] bg-[#DCFCE7] text-[#15803D] text-[12px] font-medium transition-opacity duration-200 shrink-0 ${
-                        demoStage >= 6 ? 'opacity-100' : 'opacity-0'
+                      className={`flex justify-end transition-all duration-200 ${
+                        demoStage >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5'
                       }`}
                     >
-                      <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-                      <span>Записан</span>
+                      <div className="max-w-[88%] rounded-[6px] bg-[#3B1E22] border border-[#DC2626]/25 px-3.5 py-2.5 text-slate-100 text-[14px] leading-snug">
+                        <div className="flex items-center justify-between gap-3 text-[12px] text-rose-300 font-medium mb-0.5">
+                          <span>ИИ-сотрудник</span>
+                          <span className="text-[11px] text-rose-300/70 font-mono">10:14</span>
+                        </div>
+                        Да, в 14:30. Записать вас?
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. Client confirmation */}
+                  <div
+                    className={`flex justify-start transition-all duration-200 ${
+                      demoStage >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5 pointer-events-none'
+                    }`}
+                  >
+                    <div className="max-w-[85%] rounded-[6px] bg-[#2A333D] px-3.5 py-2.5 text-slate-100 text-[14px] leading-snug">
+                      <span className="block text-[12px] font-medium text-slate-400 mb-0.5">
+                        Клиент
+                      </span>
+                      Да, спасибо.
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Outside Demo: Explicit disclaimer & Replay button */}
-            <div className="flex items-center justify-between text-xs text-[#B7BEC8]">
-              <span className="text-[12px]">
-                Пример работы – реальная запись не создаётся
-              </span>
-              <button
-                type="button"
-                onClick={startDemoSequence}
-                className="inline-flex items-center gap-1.5 text-[12px] text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer focus:outline-none focus:underline"
-                title="Повторить демонстрацию"
+              {/* 3.2 SEPARATE BOOKING CARD (gap 12px) */}
+              <div
+                className={`rounded-[8px] bg-[#20262E] border border-[#343D48] p-3 sm:p-3.5 flex items-center justify-between gap-3 transition-all duration-200 ${
+                  demoStage >= 5 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5 pointer-events-none'
+                }`}
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Повторить</span>
-              </button>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-[6px] bg-white/10 flex items-center justify-center p-1 shrink-0">
+                    <Image
+                      src="/images/brands/google-calendar.svg"
+                      alt="Google Calendar"
+                      width={24}
+                      height={24}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[14px] font-semibold text-white leading-tight truncate">
+                      Пробный урок
+                    </div>
+                    <div className="text-[12px] text-slate-400">
+                      Суббота · 14:30–15:15
+                    </div>
+                  </div>
+                </div>
+
+                {/* Result indicator: Green checkmark and "Запись создана" */}
+                <div
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-emerald-950/70 border border-emerald-800/50 text-emerald-400 text-[12px] font-medium transition-opacity duration-200 shrink-0 ${
+                    demoStage >= 6 ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Запись создана</span>
+                </div>
+              </div>
+
+              {/* 3.3 COMPACT STAGES: «Обращение» → «Ответ» → «Запись» */}
+              <div className="pt-1 flex items-center justify-center gap-2 text-xs">
+                {/* Stage 1: Обращение */}
+                <div
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${
+                    demoStage >= 1 ? 'text-white' : 'text-slate-500'
+                  }`}
+                >
+                  {demoStage >= 3 ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        demoStage >= 1 ? 'bg-[#DC2626]' : 'bg-slate-600'
+                      }`}
+                    />
+                  )}
+                  <span>Обращение</span>
+                </div>
+
+                <span className="text-slate-600">→</span>
+
+                {/* Stage 2: Ответ */}
+                <div
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${
+                    demoStage >= 3 ? 'text-white' : 'text-slate-500'
+                  }`}
+                >
+                  {demoStage >= 5 ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        demoStage >= 3 ? 'bg-[#DC2626]' : 'bg-slate-600'
+                      }`}
+                    />
+                  )}
+                  <span>Ответ</span>
+                </div>
+
+                <span className="text-slate-600">→</span>
+
+                {/* Stage 3: Запись */}
+                <div
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${
+                    demoStage >= 5 ? 'text-white font-medium' : 'text-slate-500'
+                  }`}
+                >
+                  {demoStage >= 6 ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        demoStage >= 5 ? 'bg-[#DC2626]' : 'bg-slate-600'
+                      }`}
+                    />
+                  )}
+                  <span>Запись</span>
+                </div>
+              </div>
+
+              {/* 3.4 FOOTER: Disclaimer & Replay */}
+              <div className="pt-2 flex items-center justify-between text-xs text-slate-400">
+                <span className="text-[12px]">
+                  Пример работы – реальная запись не создаётся
+                </span>
+                <button
+                  type="button"
+                  onClick={startDemoSequence}
+                  className="inline-flex items-center gap-1.5 text-[12px] text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer focus:outline-none focus:underline"
+                  title="Повторить демонстрацию"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Повторить</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -321,12 +382,12 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* 2. RIGHT LOGIN FORM PANEL (~48% on desktop)                         */}
-      {/* ------------------------------------------------------------------ */}
+      {/* ------------------------------------------------------------- */}
+      {/* 2. RIGHT LOGIN FORM PANEL (~47% on desktop)                    */}
+      {/* ------------------------------------------------------------- */}
       <main
-        aria-label="Форма входа в AI Business OS"
-        className="flex-1 lg:w-[48%] flex flex-col justify-between p-6 sm:p-10 lg:p-12 xl:p-16 overflow-y-auto"
+        aria-label="Авторизация в рабочем пространстве"
+        className="flex-1 lg:w-[47%] flex flex-col justify-between p-6 sm:p-10 lg:p-12 xl:p-16 overflow-y-auto"
       >
         {/* Top bar with Mobile Brand & Theme Switcher */}
         <div className="w-full max-w-[420px] mx-auto flex items-center justify-between mb-6 lg:mb-0">
@@ -343,7 +404,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Center Form Container (400-420px max-width, no heavy outer card) */}
+        {/* Center Form Container (max-width: 420px) */}
         <div
           className="w-full max-w-[420px] mx-auto my-auto py-4 space-y-6 animate-fade-in"
           style={{ animationDuration: '240ms' }}
@@ -369,16 +430,16 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Google Continue Button (Height 48px, thin neutral border, authentic logo) */}
+          {/* Google Continue Button (Height 48px, thin neutral border, authentic multi-color logo) */}
           <button
             type="button"
             onClick={handleGoogleLogin}
             disabled={isGoogleLoading}
-            className="w-full h-[48px] flex items-center justify-center gap-3 px-4 rounded-[6px] border border-[#DCE0E5] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-[15px] font-medium text-slate-800 dark:text-slate-200 transition-colors duration-150 cursor-pointer shadow-2xs disabled:opacity-50"
+            className="w-full h-[48px] flex items-center justify-center gap-3 px-4 rounded-[6px] border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:bg-slate-50 dark:hover:bg-slate-700/60 text-[15px] font-medium text-slate-800 dark:text-slate-200 transition-colors duration-150 cursor-pointer shadow-2xs disabled:opacity-50"
           >
             <div className="w-[18px] h-[18px] relative shrink-0">
               <Image
-                src="/images/brands/google-g.png"
+                src="/images/brands/google-g.svg"
                 alt="Google"
                 width={18}
                 height={18}
@@ -415,7 +476,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@company.com"
-                className="w-full h-[50px] px-3.5 bg-white dark:bg-slate-800 border border-[#DCE0E5] dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
+                className="w-full h-[50px] px-3.5 bg-white dark:bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
               />
             </div>
 
@@ -444,7 +505,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder=""
-                  className="w-full h-[50px] pl-3.5 pr-11 bg-white dark:bg-slate-800 border border-[#DCE0E5] dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
+                  className="w-full h-[50px] pl-3.5 pr-11 bg-white dark:bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
                 />
                 <button
                   type="button"
