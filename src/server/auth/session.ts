@@ -2,7 +2,10 @@ import { cookies } from 'next/headers';
 import { getWorkspaceById, getAllWorkspaces, getActiveSupportSession } from '@/src/db';
 import { Workspace } from '@/src/db/schema';
 
-export const FOUNDER_SUPERADMIN_EMAIL = 'maxramovnursulton1@gmail.com';
+export const FOUNDER_SUPERADMIN_EMAIL =
+  process.env.ADMIN_EMAIL ||
+  process.env.SUPERADMIN_EMAIL ||
+  'maxramovnursulton1@gmail.com';
 
 export interface UserSessionContext {
   workspace: Workspace | null;
