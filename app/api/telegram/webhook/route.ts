@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   await connection();
   return NextResponse.json({
     status: 'online',
-    service: 'AI Business OS Telegram Webhook Router',
+    service: 'Chorla AI Telegram Webhook Router',
     timestamp: new Date().toISOString(),
   });
 }

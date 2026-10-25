@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import {
   TrendingUp,
   Users2,
@@ -103,18 +104,12 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
     <div className="flex flex-col h-full min-h-0 bg-[var(--surface)] text-[var(--text-primary)]">
       {/* 1. Fixed Top Brand Header */}
       <div className="h-16 shrink-0 flex items-center justify-between px-5 border-b border-[var(--border)]">
-        <Link
+        <BrandLogo
+          variant="full"
+          width={150}
           href="/dashboard"
-          onClick={onMobileClose}
-          className="flex items-center gap-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] rounded-[6px]"
-        >
-          <div className="w-8 h-8 rounded-[6px] bg-[#DC2626] flex items-center justify-center text-white font-bold text-sm shadow-2xs shrink-0">
-            <Building2 className="w-4 h-4" />
-          </div>
-          <span className="font-bold text-[var(--text-primary)] text-sm tracking-tight">
-            AI Business OS
-          </span>
-        </Link>
+          ariaLabel="Chorla AI"
+        />
 
         {/* Close button on mobile */}
         {onMobileClose && (

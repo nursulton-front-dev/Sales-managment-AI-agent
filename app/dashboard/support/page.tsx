@@ -462,7 +462,7 @@ export default function SupportPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-xs text-[var(--text-primary)]">
-                            {isStaff ? 'Служба заботы AI Business OS' : msg.senderName || 'Вы'}
+                            {isStaff ? 'Служба заботы Chorla AI' : msg.senderName || 'Вы'}
                           </span>
                           {isStaff && (
                             <Badge variant="danger">

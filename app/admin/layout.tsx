@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import {
   Shield,
   LayoutDashboard,
@@ -171,17 +172,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <Link
           href="/admin"
           onClick={() => setMobileMenuOpen(false)}
-          className="flex items-center gap-2.5 focus:outline-none"
+          className="flex items-center gap-3 focus:outline-none"
         >
-          <div className="w-8 h-8 rounded-[6px] bg-[#DC2626] flex items-center justify-center text-white font-bold text-sm shadow-2xs shrink-0">
-            <Shield className="w-4 h-4" />
-          </div>
+          <BrandLogo variant="mark" width={28} theme="white" ariaLabel="Chorla AI" />
           <div>
             <span className="font-bold text-white text-sm tracking-tight block leading-tight">
               Панель платформы
             </span>
             <span className="text-[10px] text-slate-400 font-mono">
-              AI Business OS Admin
+              Chorla AI Admin
             </span>
           </div>
         </Link>
@@ -309,7 +308,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </span>
               <span className="text-[var(--text-muted)]">/</span>
               <span className="text-xs font-bold text-[var(--text-primary)]">
-                AI Business OS Platform
+                Chorla AI Platform
               </span>
             </div>
           </div>

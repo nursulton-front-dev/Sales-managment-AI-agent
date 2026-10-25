@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import {
   Building2,
   Eye,
@@ -137,19 +138,12 @@ export default function LoginPage() {
       {/* 1. LEFT PRESENTATION PANEL (~53% on desktop, hidden < 1024px)  */}
       {/* ------------------------------------------------------------- */}
       <section
-        aria-label="Демонстрация AI Business OS"
+        aria-label="Демонстрация Chorla AI"
         className="hidden lg:flex lg:w-[53%] bg-[#15191F] text-slate-100 flex-col justify-between p-8 xl:p-14 relative overflow-y-auto"
       >
         <div className="w-full max-w-[560px] mx-auto flex-1 flex flex-col justify-between my-auto py-6">
-          {/* Logo header: Existing red mark + AI Business OS */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-[6px] bg-[#DC2626] flex items-center justify-center text-white font-bold shadow-sm shrink-0">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-semibold text-lg text-white tracking-tight">
-              AI Business OS
-            </span>
-          </div>
+          {/* Logo header: Chorla AI brand logo for dark presentation background */}
+          <BrandLogo variant="full" width={180} theme="dark" href="/" ariaLabel="Chorla AI" />
 
           {/* Central content block */}
           <div className="my-auto py-7 space-y-6">
@@ -436,13 +430,8 @@ export default function LoginPage() {
       >
         {/* Top bar with Mobile Brand & Theme Switcher */}
         <div className="w-full max-w-[420px] mx-auto flex items-center justify-between mb-6 lg:mb-0">
-          <div className="lg:hidden flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-[6px] bg-[#DC2626] flex items-center justify-center text-white font-bold shrink-0">
-              <Building2 className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-semibold text-base tracking-tight text-slate-900 dark:text-white">
-              AI Business OS
-            </span>
+          <div className="lg:hidden">
+            <BrandLogo variant="full" width={140} href="/" ariaLabel="Chorla AI" />
           </div>
           <div className="ml-auto">
             <ThemeSwitcher />
@@ -589,7 +578,7 @@ export default function LoginPage() {
 
         {/* Footer: Quiet copyright info */}
         <div className="w-full max-w-[420px] mx-auto pt-6 text-center text-xs text-slate-400 dark:text-slate-500">
-          © 2026 AI Business OS
+          © 2026 Chorla AI
         </div>
       </main>
     </div>

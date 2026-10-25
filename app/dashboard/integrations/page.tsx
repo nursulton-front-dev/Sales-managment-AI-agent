@@ -137,7 +137,7 @@ export default function IntegrationsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          summary: 'Консультация клиента — AI Business OS',
+          summary: 'Консультация клиента — Chorla AI',
           clientName: 'Алишер Умаров',
           clientPhone: '+998 90 123 45 67',
         }),

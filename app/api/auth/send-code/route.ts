@@ -44,16 +44,16 @@ export async function POST(req: NextRequest) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         await resend.emails.send({
-          from: 'AI Business OS <onboarding@resend.dev>',
+          from: 'Chorla AI <onboarding@resend.dev>',
           to: email,
-          subject: `${code} — ваш код подтверждения в AI Business OS`,
+          subject: `${code} — ваш код подтверждения в Chorla AI`,
           html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #E2E8F0; border-radius: 16px; background: #FFFFFF;">
-              <div style="margin-bottom: 20px;">
-                <span style="font-weight: 800; font-size: 18px; color: #0F172A;">AI Business OS</span>
+              <div style="margin-bottom: 20px; text-align: center;">
+                <img src="https://chorla-ai.vercel.app/brand/chorla-ai-logo-light.png" alt="Chorla AI" width="160" style="display: inline-block; max-width: 160px; height: auto;" />
               </div>
-              <h2 style="font-size: 20px; font-weight: 700; color: #0F172A; margin: 0 0 8px 0;">Подтверждение Email адреса</h2>
-              <p style="font-size: 14px; color: #475569; line-height: 1.5; margin: 0 0 20px 0;">
+              <h2 style="font-size: 20px; font-weight: 700; color: #0F172A; margin: 0 0 8px 0; text-align: center;">Подтверждение Email адреса</h2>
+              <p style="font-size: 14px; color: #475569; line-height: 1.5; margin: 0 0 20px 0; text-align: center;">
                 Используйте этот 6-значный код для активации вашей организации и начисления <strong>100 бонусных токенов</strong>:
               </p>
               <div style="background: #F8FAFC; border: 2px dashed #2563EB; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 20px;">

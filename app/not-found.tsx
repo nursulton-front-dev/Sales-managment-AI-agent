@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
 import { NotFoundIllustration } from '@/components/ui/NotFoundIllustration';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 
 export default function NotFound() {
   const router = useRouter();
@@ -106,18 +107,12 @@ export default function NotFound() {
     <div className="min-h-[100dvh] w-full flex flex-col justify-between bg-[#F8FAFC] dark:bg-[#0B1220] text-[#171A21] dark:text-[#F1F5F9] transition-colors duration-150">
       {/* 1. Header (Logo left, ThemeSwitcher right directly on background) */}
       <header className="w-full max-w-[1440px] mx-auto px-6 sm:px-12 lg:px-16 pt-6 sm:pt-8 flex items-center justify-between shrink-0">
-        <Link
+        <BrandLogo
+          variant="full"
+          width={150}
           href="/"
-          className="flex items-center gap-2.5 group transition-opacity duration-150 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] rounded-[6px] p-1"
-          aria-label="Главная страница AI Business OS"
-        >
-          <div className="w-8 h-8 rounded-[6px] bg-[#171A21] dark:bg-white text-white dark:text-[#0B1220] flex items-center justify-center font-bold text-xs tracking-tight shadow-xs">
-            AI
-          </div>
-          <span className="font-semibold text-[15px] tracking-tight text-[#171A21] dark:text-white">
-            AI Business OS
-          </span>
-        </Link>
+          ariaLabel="Chorla AI"
+        />
 
         <div>
           <ThemeSwitcher />

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import { TRIAL_PLAN, PLANS, PLANS_LIST, PlanOrTrialId } from '@/lib/pricing';
 import {
   Building2,
@@ -409,7 +410,7 @@ export default function RegisterWizardPage() {
       // Clear draft
       sessionStorage.removeItem('ai_os_reg_draft_v2');
 
-      showToast('Рабочее пространство создано', 'Добро пожаловать в AI Business OS', 'success');
+      showToast('Рабочее пространство создано', 'Добро пожаловать в Chorla AI', 'success');
 
       if (skipAgent) {
         router.push('/dashboard');
@@ -431,16 +432,9 @@ export default function RegisterWizardPage() {
       {/* SINGLE UNIFIED REGISTRATION CARD (max-width: 640px, NO upper header)     */}
       {/* ========================================================================= */}
       <div className="w-full max-w-[640px] bg-white dark:bg-[#111827] border border-[#E2E8F0] dark:border-slate-800 rounded-[8px] p-6 sm:p-10 shadow-sm transition-all duration-200">
-        {/* Top Header inside Card: Compact Logo + Theme Switcher */}
+        {/* Top Header inside Card: Compact BrandLogo + Theme Switcher */}
         <div className="flex items-center justify-between pb-5 border-b border-slate-100 dark:border-slate-800/80">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-[6px] bg-[#DC2626] flex items-center justify-center text-white font-bold shrink-0 shadow-xs">
-              <Building2 className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-semibold text-base tracking-tight text-slate-900 dark:text-white">
-              AI Business OS
-            </span>
-          </div>
+          <BrandLogo variant="full" width={145} href="/" ariaLabel="Chorla AI" />
           <ThemeSwitcher />
         </div>
 

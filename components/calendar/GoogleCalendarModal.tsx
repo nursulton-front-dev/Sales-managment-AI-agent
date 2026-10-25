@@ -65,7 +65,7 @@ export function GoogleCalendarModal() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          summary: 'Тестовая запись — AI Business OS',
+          summary: 'Тестовая запись — Chorla AI',
           clientName: 'Тестовый Клиент',
           clientPhone: '+998 90 123 45 67',
         }),

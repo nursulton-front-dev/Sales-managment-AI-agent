@@ -64,7 +64,7 @@ export async function POST(
         ticketId: id,
         senderRole: 'support',
         senderEmail: session.userEmail || 'support@aibusiness.os',
-        senderName: session.userName || 'Команда поддержки AI Business OS',
+        senderName: session.userName || 'Команда заботы Chorla AI',
         text,
         isInternalNote: Boolean(isInternalNote),
         attachments: attachments || [],
