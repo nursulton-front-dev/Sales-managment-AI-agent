@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import {
-  Calendar,
   Check,
   CheckCircle2,
   AlertCircle,
@@ -17,13 +16,15 @@ import {
   Clock,
   ArrowRight,
   ChevronRight,
-  Building2,
   Bot,
-  MessageCircle,
   Power,
   ShieldCheck,
   AlertTriangle,
+  Headphones,
+  Settings,
+  X,
 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface InstagramStatusResponse {
   success: boolean;
@@ -49,8 +50,11 @@ export default function IntegrationsPage() {
 }
 
 function IntegrationsContent() {
-  const { isGoogleCalendarConnected, connectGoogleCalendar, disconnectGoogleCalendar, showToast } = useApp();
+  const { agents, isGoogleCalendarConnected, connectGoogleCalendar, disconnectGoogleCalendar, showToast } = useApp();
   const searchParams = useSearchParams();
+
+  // Active filter tab: 'all' | 'messengers' | 'calendars'
+  const [activeTab, setActiveTab] = useState<'all' | 'messengers' | 'calendars'>('all');
 
   // Calendar state
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
@@ -73,9 +77,14 @@ function IntegrationsContent() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
   const [autoReplyEnabled, setAutoReplyEnabled] = useState<boolean>(false);
 
-  // Schedule setup form state
+  // Telegram modal state
+  const [isTgModalOpen, setIsTgModalOpen] = useState(false);
+  const [tgTokenInput, setTgTokenInput] = useState('');
+  const [isSavingTg, setIsSavingTg] = useState(false);
+
+  // Calendar settings modal / drawer
+  const [isCalSettingsOpen, setIsCalSettingsOpen] = useState(false);
   const [selectedCalendar, setSelectedCalendar] = useState('primary');
-  const [timezone, setTimezone] = useState('Asia/Tashkent');
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('18:00');
   const [slotDuration, setSlotDuration] = useState('45');
@@ -151,7 +160,6 @@ function IntegrationsContent() {
     loadCalendarStatus();
     loadInstagramStatus();
 
-    // Check query params for notifications
     const igConnected = searchParams.get('instagram_connected');
     const igUsername = searchParams.get('username');
     const igError = searchParams.get('instagram_error');
@@ -164,73 +172,26 @@ function IntegrationsContent() {
     }
   }, []);
 
-  const isConnected = isGoogleCalendarConnected || Boolean(statusData?.connected);
-  const isConfigured = Boolean(statusData?.configured);
+  const isCalendarConnected = isGoogleCalendarConnected || Boolean(statusData?.connected);
+
+  // Active Telegram bot attached to first agent
+  const activeTgAgent = agents.find((a) => Boolean(a.telegramToken));
+  const isTgConnected = Boolean(activeTgAgent);
 
   const handleConnectCalendar = () => {
     setIsConnecting(true);
     window.location.href = '/api/calendar/auth';
   };
 
-  const handleConnectInstagram = () => {
-    setIsConnectingIg(true);
-    window.location.href = '/api/instagram/auth';
-  };
-
-  const handleDisconnectInstagram = async () => {
-    if (!confirm('Вы уверены, что хотите отключить Instagram? Все токены будут удалены, а автоответы остановлены.')) {
-      return;
-    }
-
+  const handleDisconnectCalendar = async () => {
+    if (!confirm('Вы уверены, что хотите отключить Google Календарь?')) return;
     try {
-      setIsDisconnectingIg(true);
-      const res = await fetch('/api/instagram/disconnect', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        showToast('Instagram отключен', data.message, 'info');
-        await loadInstagramStatus();
-      } else {
-        showToast('Ошибка', data.error || 'Не удалось отключить', 'error');
-      }
-    } catch (err: any) {
-      showToast('Ошибка', err.message, 'error');
-    } finally {
-      setIsDisconnectingIg(false);
-    }
-  };
-
-  const handleUpdateInstagramSettings = async (newAgentId?: string, newAutoReply?: boolean) => {
-    const targetAgentId = newAgentId !== undefined ? newAgentId : selectedAgentId;
-    const targetAutoReply = newAutoReply !== undefined ? newAutoReply : autoReplyEnabled;
-
-    try {
-      setIsUpdatingIgSettings(true);
-      const res = await fetch('/api/instagram/status', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agentId: targetAgentId,
-          autoReply: targetAutoReply,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSelectedAgentId(data.instagramAgentId || '');
-        setAutoReplyEnabled(Boolean(data.instagramAutoReply));
-        showToast('Настройки обновлены', 'Параметры работы агента сохранены', 'success');
-        await loadInstagramStatus();
-      } else {
-        showToast('Ошибка обновления', data.error || 'Не удалось обновить настройки', 'error');
-        // Revert UI state if rejected
-        if (igData) {
-          setSelectedAgentId(igData.agentId || '');
-          setAutoReplyEnabled(Boolean(igData.autoReply));
-        }
-      }
-    } catch (err: any) {
-      showToast('Ошибка', err.message, 'error');
-    } finally {
-      setIsUpdatingIgSettings(false);
+      await fetch('/api/calendar/disconnect', { method: 'POST' });
+      disconnectGoogleCalendar();
+      setStatusData((prev) => (prev ? { ...prev, connected: false, email: null } : null));
+      showToast('Календарь отключен', 'Доступ отозван', 'info');
+    } catch {
+      disconnectGoogleCalendar();
     }
   };
 
@@ -251,6 +212,7 @@ function IntegrationsContent() {
       const data = await res.json();
       if (data.success) {
         showToast('Настройки сохранены', `Расписание: ${workingHours}, длительность: ${slotDuration} мин`, 'success');
+        setIsCalSettingsOpen(false);
       } else {
         showToast('Ошибка', data.error || 'Не удалось сохранить настройки', 'error');
       }
@@ -284,304 +246,336 @@ function IntegrationsContent() {
     }
   };
 
-  const handleDisconnectCalendar = async () => {
-    if (!confirm('Вы уверены, что хотите отключить Google Календарь?')) return;
+  const handleConnectInstagram = () => {
+    setIsConnectingIg(true);
+    window.location.href = '/api/instagram/auth';
+  };
+
+  const handleDisconnectInstagram = async () => {
+    if (!confirm('Вы уверены, что хотите отключить Instagram? Все токены будут удалены, а автоответы остановлены.')) {
+      return;
+    }
     try {
-      await fetch('/api/calendar/disconnect', { method: 'POST' });
-      disconnectGoogleCalendar();
-      setStatusData((prev) => (prev ? { ...prev, connected: false, email: null } : null));
-      showToast('Календарь отключен', 'Доступ отозван', 'info');
-    } catch {
-      disconnectGoogleCalendar();
+      setIsDisconnectingIg(true);
+      const res = await fetch('/api/instagram/disconnect', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Instagram отключен', data.message, 'info');
+        await loadInstagramStatus();
+      } else {
+        showToast('Ошибка', data.error || 'Не удалось отключить', 'error');
+      }
+    } catch (err: any) {
+      showToast('Ошибка', err.message, 'error');
+    } finally {
+      setIsDisconnectingIg(false);
+    }
+  };
+
+  const handleSaveTelegram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tgTokenInput.trim()) return;
+    setIsSavingTg(true);
+    try {
+      const targetAgent = agents[0];
+      if (!targetAgent) {
+        showToast('Сначала создайте сотрудника', 'Для привязки бота нужен хотя бы один ИИ-сотрудник', 'error');
+        return;
+      }
+      const res = await fetch('/api/agents', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentId: targetAgent.id,
+          tgBotToken: tgTokenInput.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Telegram подключен', 'Бот успешно привязан к сотруднику', 'success');
+        setIsTgModalOpen(false);
+        setTgTokenInput('');
+        window.location.reload();
+      } else {
+        showToast('Ошибка сохранения', data.error || 'Не удалось сохранить токен', 'error');
+      }
+    } catch (err: any) {
+      showToast('Ошибка', err.message, 'error');
+    } finally {
+      setIsSavingTg(false);
     }
   };
 
   return (
-    <div className="space-y-8 text-left max-w-6xl">
-      {/* Header */}
-      <div className="pb-4 border-b border-[var(--border)]">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+    <div className="space-y-6 text-left max-w-6xl">
+      {/* Top Header */}
+      <div className="pb-3 border-b border-[var(--border)]">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] leading-tight">
           Интеграции
         </h1>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">
-          Подключите каналы общения Instagram, Telegram и календарь для автономной работы ИИ-агентов
+        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
+          Подключите каналы, в которых вам пишут клиенты.
         </p>
       </div>
 
-      {/* 1. INSTAGRAM DIRECT INTEGRATION CARD */}
-      <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-7 shadow-xs">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 relative shrink-0 p-1.5 rounded-[12px] bg-[var(--surface-secondary)] border border-[var(--border)] flex items-center justify-center">
-              <Image
-                src="/images/brands/instagram.svg"
-                alt="Instagram"
-                width={44}
-                height={44}
-                className="object-contain"
-              />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-[var(--text-primary)]">
-                  Instagram Direct
-                </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
-                  Official API v21.0
-                </span>
-              </div>
-              <div className="mt-1 flex items-center gap-2">
-                {isLoadingIg ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                    <Loader2 className="w-3 h-3 animate-spin" /> Проверка статуса...
-                  </span>
-                ) : igData?.status === 'connected' ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[4px] text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                    <Check className="w-3 h-3 stroke-[3]" />
-                    <span>Подключён: @{igData.username || igData.userId}</span>
-                  </span>
-                ) : igData?.status === 'needs_reconnect' ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[4px] text-xs font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                    <AlertTriangle className="w-3 h-3" />
-                    <span>Нужно переподключить</span>
-                  </span>
-                ) : igData?.status === 'error' ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[4px] text-xs font-semibold bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
-                    <AlertCircle className="w-3 h-3" />
-                    <span>Ошибка подключения</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-[4px] text-xs font-medium bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)]">
-                    Не подключён
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {igData?.status === 'connected' ? (
-              <button
-                type="button"
-                onClick={handleDisconnectInstagram}
-                disabled={isDisconnectingIg}
-                className="w-full sm:w-auto h-10 px-4 rounded-[6px] border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isDisconnectingIg ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )}
-                <span>Отключить интеграцию</span>
-              </button>
-            ) : igData?.status === 'needs_reconnect' ? (
-              <button
-                type="button"
-                onClick={handleConnectInstagram}
-                disabled={isConnectingIg}
-                className="w-full sm:w-auto h-10 px-5 rounded-[6px] bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-              >
-                {isConnectingIg ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
-                )}
-                <span>Переподключить аккаунт</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleConnectInstagram}
-                disabled={isConnectingIg}
-                className="w-full sm:w-auto h-10 px-5 rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60"
-              >
-                {isConnectingIg ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Power className="w-4 h-4" />
-                )}
-                <span>Подключить Instagram</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-4 leading-relaxed">
-          Официальное подключение через Meta Instagram Login (API v21.0). ИИ-сотрудник обрабатывает входящие Direct-сообщения, ведёт диалог в рамках 24-часового окна, квалифицирует клиентов и передаёт диалог оператору при включении ручного перехвата.
-        </p>
-
-        {igData?.lastError && (
-          <div className="mt-3 p-3 rounded-[6px] bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-xs text-red-700 dark:text-red-400">
-            <strong>Причина ошибки:</strong> {igData.lastError}
-          </div>
-        )}
-
-        {/* Connected state controls: Agent picker and AutoReply toggle */}
-        {igData?.status === 'connected' && (
-          <div className="mt-6 pt-5 border-t border-[var(--border)] grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Agent Selector */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                Ответственный ИИ-агент
-              </label>
-              <select
-                value={selectedAgentId}
-                onChange={(e) => {
-                  setSelectedAgentId(e.target.value);
-                  handleUpdateInstagramSettings(e.target.value, undefined);
-                }}
-                disabled={isUpdatingIgSettings}
-                className="w-full h-10 px-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:ring-2 focus:ring-[#DC2626]"
-              >
-                <option value="">-- Выберите агента --</option>
-                {igData.agents.map((ag) => (
-                  <option key={ag.id} value={ag.id}>
-                    {ag.name} {ag.isActive ? '(Активен)' : '(Неактивен)'}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-[var(--text-secondary)]">
-                Этот агент будет отвечать клиентам с использованием базы знаний компании
-              </p>
-            </div>
-
-            {/* Auto-reply toggle */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                Автоматические ответы
-              </label>
-              <div className="flex items-center justify-between p-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-secondary)]">
-                <span className="text-xs text-[var(--text-primary)] font-medium">
-                  {autoReplyEnabled ? 'Автоответы включены' : 'Автоответы выключены'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextVal = !autoReplyEnabled;
-                    setAutoReplyEnabled(nextVal);
-                    handleUpdateInstagramSettings(undefined, nextVal);
-                  }}
-                  disabled={isUpdatingIgSettings || !selectedAgentId}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    autoReplyEnabled ? 'bg-[#DC2626]' : 'bg-gray-300 dark:bg-gray-700'
-                  } disabled:opacity-50`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      autoReplyEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-              <p className="text-[11px] text-[var(--text-secondary)]">
-                При ручном перехвате оператором в разделе «Диалоги» автоответы блокируются на сервере
-              </p>
-            </div>
-          </div>
-        )}
+      {/* Tabs: Все, Мессенджеры, Календари */}
+      <div className="flex items-center gap-6 border-b border-[var(--border)] text-xs sm:text-sm font-semibold -mt-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('all')}
+          className={`pb-2.5 transition-all cursor-pointer border-b-2 ${
+            activeTab === 'all'
+              ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
+              : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          Все
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('messengers')}
+          className={`pb-2.5 transition-all cursor-pointer border-b-2 ${
+            activeTab === 'messengers'
+              ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
+              : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          Мессенджеры
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('calendars')}
+          className={`pb-2.5 transition-all cursor-pointer border-b-2 ${
+            activeTab === 'calendars'
+              ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
+              : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          Календари
+        </button>
       </div>
 
-      {/* 2. GOOGLE CALENDAR & SCHEDULE SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Google Calendar Card (7 cols) */}
-        <div className="lg:col-span-7 space-y-5">
-          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-7 shadow-xs">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 relative shrink-0">
-                  <Image
-                    src="/images/brands/google-calendar.png"
-                    alt="Google Calendar"
-                    width={56}
-                    height={56}
-                    className="object-contain"
-                  />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[var(--text-primary)]">
-                    Google Календарь
-                  </h2>
-                  <div className="mt-1">
-                    {isConnected ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[4px] text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                        <span>Подключён {statusData?.email ? `(${statusData.email})` : ''}</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-[4px] text-xs font-medium bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)]">
-                        Не подключён
-                      </span>
-                    )}
+      {/* SECTION 1: Каналы общения (Telegram, Instagram, WhatsApp) */}
+      {(activeTab === 'all' || activeTab === 'messengers') && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold text-[var(--text-primary)]">
+            Каналы общения
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* 1. Telegram Card */}
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 shadow-2xs flex flex-col justify-between hover:border-[var(--border-strong)] transition-all">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="w-12 h-12 rounded-full relative shrink-0 flex items-center justify-center">
+                    <Image
+                      src="/integrations/telegram.svg"
+                      alt="Telegram"
+                      width={48}
+                      height={48}
+                      className="object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-[var(--text-primary)]">Telegram</h3>
+                    <div className="mt-1">
+                      {isTgConnected ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                          Подключён
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)]">
+                          Не подключён
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed pt-1">
+                  Принимайте сообщения клиентов через вашего бота.
+                </p>
+              </div>
+
+              <div className="pt-5">
+                {isTgConnected ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsTgModalOpen(true)}
+                    className="w-full inline-flex items-center justify-center text-xs font-semibold px-4 py-2 border border-[var(--border)] text-[var(--text-primary)] rounded-[6px] hover:bg-[var(--surface-secondary)] transition-colors cursor-pointer"
+                  >
+                    Настроить бота
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsTgModalOpen(true)}
+                    className="w-full inline-flex items-center justify-center bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-text)] text-xs font-semibold px-4 py-2.5 rounded-[6px] transition-colors cursor-pointer shadow-2xs"
+                  >
+                    Подключить Telegram
+                  </button>
+                )}
               </div>
             </div>
 
-            <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-4 leading-relaxed">
-              Агент проверит свободное время и запишет клиента в ваш календарь.
-            </p>
+            {/* 2. Instagram Card */}
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 shadow-2xs flex flex-col justify-between hover:border-[var(--border-strong)] transition-all">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="w-12 h-12 rounded-full relative shrink-0 flex items-center justify-center">
+                    <Image
+                      src="/integrations/instagram.svg"
+                      alt="Instagram"
+                      width={48}
+                      height={48}
+                      className="object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-[var(--text-primary)]">Instagram</h3>
+                    <div className="mt-1">
+                      {isLoadingIg ? (
+                        <span className="text-[11px] text-[var(--text-muted)]">Загрузка...</span>
+                      ) : igData?.status === 'connected' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                          @{igData.username || 'connected'}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)]">
+                          Не подключён
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-            <div className="my-5 border-t border-[var(--border)]" />
-
-            <div className="space-y-3.5">
-              <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] flex items-center justify-center shrink-0">
-                  1
-                </span>
-                <span className="text-xs sm:text-sm font-medium text-[var(--text-primary)]">
-                  Выберите Google-аккаунт
-                </span>
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed pt-1">
+                  Отвечайте клиентам в Direct и передавайте диалоги команде.
+                </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] flex items-center justify-center shrink-0">
-                  2
-                </span>
-                <span className="text-xs sm:text-sm font-medium text-[var(--text-primary)]">
-                  Укажите календарь для записей
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] flex items-center justify-center shrink-0">
-                  3
-                </span>
-                <span className="text-xs sm:text-sm font-medium text-[var(--text-primary)]">
-                  Настройте рабочие часы и дни недели
-                </span>
+              <div className="pt-5">
+                {igData?.status === 'connected' ? (
+                  <button
+                    type="button"
+                    onClick={handleDisconnectInstagram}
+                    disabled={isDisconnectingIg}
+                    className="w-full inline-flex items-center justify-center text-xs font-semibold px-4 py-2 border border-[var(--border)] text-red-600 rounded-[6px] hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                  >
+                    {isDisconnectingIg ? 'Отключение...' : 'Отключить Instagram'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConnectInstagram}
+                    disabled={isConnectingIg}
+                    className="w-full inline-flex items-center justify-center text-xs font-semibold px-4 py-2.5 border border-[var(--accent)] text-[var(--accent)] rounded-[6px] hover:bg-[var(--accent-soft)] transition-colors cursor-pointer"
+                  >
+                    {isConnectingIg ? 'Переход к Meta...' : 'Подключить Instagram'}
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              {isConnected ? (
+            {/* 3. WhatsApp Card */}
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 shadow-2xs flex flex-col justify-between hover:border-[var(--border-strong)] transition-all">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="w-12 h-12 rounded-full relative shrink-0 flex items-center justify-center">
+                    <Image
+                      src="/integrations/whatsapp.svg"
+                      alt="WhatsApp"
+                      width={48}
+                      height={48}
+                      className="object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-[var(--text-primary)]">WhatsApp</h3>
+                    <div className="mt-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)]">
+                        Скоро доступно
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed pt-1">
+                  Обрабатывайте обращения в WhatsApp Business.
+                </p>
+              </div>
+
+              <div className="pt-5">
+                <button
+                  type="button"
+                  onClick={() => showToast('WhatsApp Business API', 'Интеграция находится в стадии закрытого тестирования Meta Cloud API', 'info')}
+                  className="w-full inline-flex items-center justify-center text-xs font-semibold px-4 py-2.5 border border-[var(--accent)] text-[var(--accent)] rounded-[6px] hover:bg-[var(--accent-soft)] transition-colors cursor-pointer"
+                >
+                  Подключить WhatsApp
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 2: Календари и запись (Google Календарь) */}
+      {(activeTab === 'all' || activeTab === 'calendars') && (
+        <div className="space-y-3 pt-2">
+          <h2 className="text-sm font-bold text-[var(--text-primary)]">
+            Календари и запись
+          </h2>
+
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-4">
+              <div className="w-12 h-12 relative shrink-0 flex items-center justify-center">
+                <Image
+                  src="/integrations/google-calendar.png"
+                  alt="Google Calendar"
+                  width={44}
+                  height={44}
+                  className="object-contain"
+                />
+              </div>
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <h3 className="font-bold text-sm sm:text-base text-[var(--text-primary)]">
+                    Google Календарь
+                  </h3>
+                  {isCalendarConnected ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                      Подключён {statusData?.email ? `(${statusData.email})` : ''}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)]">
+                      Не подключён
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                  Проверяйте свободное время и записывайте клиентов.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              {isCalendarConnected ? (
                 <>
+                  <button
+                    type="button"
+                    onClick={() => setIsCalSettingsOpen(!isCalSettingsOpen)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 border border-[var(--border)] text-[var(--text-primary)] rounded-[6px] hover:bg-[var(--surface-secondary)] transition-colors cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Расписание</span>
+                  </button>
                   <button
                     type="button"
                     onClick={handleCreateTestEvent}
                     disabled={isCreatingTestEvent}
-                    className="flex-1 h-11 rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 border border-[var(--accent)] text-[var(--accent)] rounded-[6px] hover:bg-[var(--accent-soft)] transition-colors cursor-pointer"
                   >
-                    {isCreatingTestEvent ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Создание записи...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Calendar className="w-4 h-4" />
-                        <span>Проверить запись (тест)</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleDisconnectCalendar}
-                    className="h-11 px-4 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-secondary)] text-[var(--text-secondary)] hover:text-red-600 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Отключить</span>
+                    <span>Тест записи</span>
                   </button>
                 </>
               ) : (
@@ -589,172 +583,180 @@ function IntegrationsContent() {
                   type="button"
                   onClick={handleConnectCalendar}
                   disabled={isConnecting}
-                  className="w-full h-11 rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60"
+                  className="inline-flex items-center justify-center text-xs font-semibold px-5 py-2 border border-[var(--accent)] text-[var(--accent)] rounded-[6px] hover:bg-[var(--accent-soft)] transition-colors cursor-pointer"
                 >
-                  {isConnecting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Подключение...</span>
-                    </>
-                  ) : (
-                    <span>Подключить Google Календарь</span>
-                  )}
+                  {isConnecting ? 'Подключение...' : 'Подключить'}
                 </button>
               )}
             </div>
+          </div>
 
-            {testResult && (
-              <div className="mt-4 p-3.5 rounded-[6px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+          {/* Inline Calendar Schedule Config if open */}
+          {isCalendarConnected && isCalSettingsOpen && (
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+                <div>
+                  <h4 className="font-bold text-xs text-[var(--text-primary)]">Настройка расписания и слотов</h4>
+                  <p className="text-[11px] text-[var(--text-secondary)]">Единое место настройки рабочих часов для всех ИИ-сотрудников</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCalSettingsOpen(false)}
+                  className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveSchedule} className="space-y-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <p className="font-semibold">{testResult.message}</p>
-                    <p className="text-[11px] opacity-80 mt-0.5">Встреча добавлена на завтра в 14:00.</p>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                      Рабочие часы
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        className="w-full text-xs p-2 rounded-[6px] bg-[var(--surface-secondary)] border border-[var(--border)]"
+                      >
+                        <option value="08:00">08:00</option>
+                        <option value="09:00">09:00</option>
+                        <option value="10:00">10:00</option>
+                      </select>
+                      <span>—</span>
+                      <select
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        className="w-full text-xs p-2 rounded-[6px] bg-[var(--surface-secondary)] border border-[var(--border)]"
+                      >
+                        <option value="18:00">18:00</option>
+                        <option value="19:00">19:00</option>
+                        <option value="20:00">20:00</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                      Длительность приёма
+                    </label>
+                    <select
+                      value={slotDuration}
+                      onChange={(e) => setSlotDuration(e.target.value)}
+                      className="w-full text-xs p-2 rounded-[6px] bg-[var(--surface-secondary)] border border-[var(--border)]"
+                    >
+                      <option value="30">30 минут</option>
+                      <option value="45">45 минут</option>
+                      <option value="60">60 минут</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <button
+                      type="submit"
+                      disabled={isSavingSchedule}
+                      className="w-full bg-[var(--accent)] text-[var(--accent-text)] text-xs font-semibold py-2 rounded-[6px] hover:bg-[var(--accent-hover)] transition-colors"
+                    >
+                      {isSavingSchedule ? 'Сохранение...' : 'Сохранить'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDisconnectCalendar}
+                      className="px-3 py-2 text-xs font-medium text-red-600 border border-red-200 dark:border-red-900/50 rounded-[6px] hover:bg-red-50"
+                    >
+                      Отключить
+                    </button>
                   </div>
                 </div>
-                {testResult.htmlLink && (
-                  <a
-                    href={testResult.htmlLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 font-semibold underline hover:no-underline shrink-0 text-emerald-700 dark:text-emerald-300"
-                  >
-                    <span>Открыть</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-              </div>
-            )}
+              </form>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SECTION 3: Helper Footer Banner according to 05-integrations.png */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-secondary)] flex items-center justify-center shrink-0">
+            <Headphones className="w-5 h-5 text-[var(--text-primary)]" />
+          </div>
+          <div>
+            <div className="text-xs sm:text-sm font-semibold text-[var(--text-primary)]">
+              Нужна помощь с подключением?
+            </div>
+            <Link
+              href="/dashboard/support"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--accent)] hover:underline mt-0.5"
+            >
+              <span>Открыть инструкцию</span>
+              <span>→</span>
+            </Link>
           </div>
         </div>
 
-        {/* Right Column: Schedule Settings (5 cols) */}
-        <div className="lg:col-span-5 space-y-5">
-          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-7 shadow-xs">
-            <h3 className="text-base font-bold text-[var(--text-primary)]">
-              Настройка расписания
-            </h3>
-            <p className="text-xs text-[var(--text-secondary)] mt-1">
-              Укажите время, в которое ИИ имеет право предлагать слоты клиентам
+        <div className="text-xs text-[var(--text-secondary)] sm:border-l sm:border-[var(--border)] sm:pl-6">
+          После подключения выберите ИИ-сотрудника для канала.
+        </div>
+      </div>
+
+      {/* Telegram Token Modal */}
+      {isTgModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] max-w-md w-full p-5 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+              <h3 className="font-bold text-sm text-[var(--text-primary)]">
+                Подключение Telegram-бота
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsTgModalOpen(false)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              Создайте бота в <strong>@BotFather</strong> в Telegram, скопируйте API Token и вставьте его ниже. Бот сразу свяжется с выбранным сотрудником.
             </p>
 
-            <form onSubmit={handleSaveSchedule} className="mt-5 space-y-4">
-              {/* Field 1: Calendar */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                  Календарь
+            <form onSubmit={handleSaveTelegram} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                  HTTP API Token
                 </label>
-                <select
-                  value={selectedCalendar}
-                  onChange={(e) => setSelectedCalendar(e.target.value)}
-                  className="w-full h-10 px-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:ring-2 focus:ring-[#DC2626]"
+                <input
+                  type="text"
+                  placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                  value={tgTokenInput}
+                  onChange={(e) => setTgTokenInput(e.target.value)}
+                  className="w-full p-2.5 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border)]">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsTgModalOpen(false)}
                 >
-                  <option value="primary">Основной календарь ({statusData?.email || 'Google'})</option>
-                  <option value="business">Рабочий / Записи клиентов</option>
-                </select>
-              </div>
-
-              {/* Field 2: Working Days */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                  Рабочие дни
-                </label>
-                <div className="grid grid-cols-7 gap-1">
-                  {daysOfWeek.map((day) => {
-                    const isSelected = workingDays.includes(day);
-                    return (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() => toggleDay(day)}
-                        className={`h-9 rounded-[6px] text-xs font-semibold transition-all cursor-pointer border ${
-                          isSelected
-                            ? 'bg-[#DC2626] text-white border-[#DC2626]'
-                            : 'bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--border-strong)]'
-                        }`}
-                      >
-                        {day}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Field 3: Working Hours */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                  Рабочие часы
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full h-10 px-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:ring-2 focus:ring-[#DC2626]"
-                  >
-                    <option value="08:00">08:00</option>
-                    <option value="09:00">09:00</option>
-                    <option value="10:00">10:00</option>
-                    <option value="11:00">11:00</option>
-                  </select>
-
-                  <select
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full h-10 px-3 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:ring-2 focus:ring-[#DC2626]"
-                  >
-                    <option value="17:00">17:00</option>
-                    <option value="18:00">18:00</option>
-                    <option value="19:00">19:00</option>
-                    <option value="20:00">20:00</option>
-                    <option value="21:00">21:00</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Field 4: Slot Duration */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                  Длительность приёма
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['30', '45', '60'].map((mins) => (
-                    <button
-                      key={mins}
-                      type="button"
-                      onClick={() => setSlotDuration(mins)}
-                      className={`h-9 rounded-[6px] text-xs font-semibold transition-all cursor-pointer border ${
-                        slotDuration === mins
-                          ? 'bg-[#DC2626] text-white border-[#DC2626]'
-                          : 'bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--border-strong)]'
-                      }`}
-                    >
-                      {mins} мин
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-2">
-                <button
+                  Отмена
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isSavingSchedule}
-                  className="w-full h-11 rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60"
+                  size="sm"
+                  isLoading={isSavingTg}
+                  disabled={!tgTokenInput.trim()}
                 >
-                  {isSavingSchedule ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Сохранение...</span>
-                    </>
-                  ) : (
-                    <span>Сохранить расписание</span>
-                  )}
-                </button>
+                  Сохранить токен
+                </Button>
               </div>
             </form>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

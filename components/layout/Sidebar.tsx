@@ -33,7 +33,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
 
   const isSuperAdmin = user?.email?.toLowerCase() === 'maxramovnursulton1@gmail.com';
 
-  const navItems = [
+  const workItems = [
     {
       title: 'Обзор',
       href: '/dashboard',
@@ -60,6 +60,9 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       href: '/dashboard/integrations',
       icon: Plug,
     },
+  ];
+
+  const companyItems = [
     {
       title: 'Тарифы и баланс',
       href: '/dashboard/billing',
@@ -69,11 +72,6 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       title: 'Компания и команда',
       href: '/dashboard/company',
       icon: Building2,
-    },
-    {
-      title: 'Поддержка и идеи',
-      href: '/dashboard/support',
-      icon: LifeBuoy,
     },
   ];
 
@@ -125,40 +123,80 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       </div>
 
       {/* 2. Scrollable Middle Navigation Menu (takes available space, scrollable if height is small) */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
-        <nav aria-label="Основная навигация">
-          {navItems.map((item) => {
-            const isActive = item.exact
-              ? pathname === item.href
-              : pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4">
+        {/* Section: РАБОТА */}
+        <div>
+          <div className="px-3 pb-1.5 text-[11px] font-semibold text-[var(--text-muted)] tracking-wider uppercase select-none">
+            Работа
+          </div>
+          <nav aria-label="Раздел Работа" className="space-y-0.5">
+            {workItems.map((item) => {
+              const isActive = item.exact
+                ? pathname === item.href
+                : pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
 
-            const Icon = item.icon;
+              const Icon = item.icon;
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onMobileClose}
-                className={`h-10 px-3 flex items-center gap-3 rounded-[6px] text-sm transition-colors cursor-pointer ${
-                  isActive
-                    ? 'bg-[#FEF2F2] dark:bg-[rgba(220,38,38,0.16)] text-[#DC2626] dark:text-[#FCA5A5] font-semibold'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] font-normal'
-                }`}
-              >
-                <Icon
-                  className={`w-[18px] h-[18px] shrink-0 ${
-                    isActive ? 'text-[#DC2626] dark:text-[#FCA5A5]' : 'text-[var(--text-muted)]'
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onMobileClose}
+                  className={`h-9 px-3 flex items-center gap-3 rounded-[6px] text-xs font-medium transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-[var(--accent-soft)] text-[var(--accent-soft-text)] font-semibold'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] font-normal'
                   }`}
-                />
-                <span className="truncate">{item.title}</span>
-              </Link>
-            );
-          })}
-        </nav>
+                >
+                  <Icon
+                    className={`w-[17px] h-[17px] shrink-0 ${
+                      isActive ? 'text-[var(--accent-soft-text)]' : 'text-[var(--text-muted)]'
+                    }`}
+                  />
+                  <span className="truncate">{item.title}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Section: КОМПАНИЯ */}
+        <div>
+          <div className="px-3 pb-1.5 text-[11px] font-semibold text-[var(--text-muted)] tracking-wider uppercase select-none">
+            Компания
+          </div>
+          <nav aria-label="Раздел Компания" className="space-y-0.5">
+            {companyItems.map((item) => {
+              const isActive =
+                pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onMobileClose}
+                  className={`h-9 px-3 flex items-center gap-3 rounded-[6px] text-xs font-medium transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-[var(--accent-soft)] text-[var(--accent-soft-text)] font-semibold'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] font-normal'
+                  }`}
+                >
+                  <Icon
+                    className={`w-[17px] h-[17px] shrink-0 ${
+                      isActive ? 'text-[var(--accent-soft-text)]' : 'text-[var(--text-muted)]'
+                    }`}
+                  />
+                  <span className="truncate">{item.title}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
       </div>
 
-      {/* 3. Fixed Bottom Actions: Test-drive, Profile, Platform (pinned to bottom) */}
-      <div className="p-3 shrink-0 border-t border-[var(--border)] space-y-1 bg-[var(--surface)]">
+      {/* 3. Fixed Bottom Actions: Test-drive, Support, Profile, Admin */}
+      <div className="p-3 shrink-0 border-t border-[var(--border)] space-y-0.5 bg-[var(--surface)]">
         {/* Test-Drive (Sandbox) trigger */}
         <button
           type="button"
@@ -166,46 +204,66 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
             if (onMobileClose) onMobileClose();
             openSandbox(activeAgent?.id);
           }}
-          className="w-full h-10 px-3 flex items-center gap-3 rounded-[6px] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] transition-colors text-left cursor-pointer"
+          className="w-full h-9 px-3 flex items-center gap-3 rounded-[6px] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] transition-colors text-left cursor-pointer"
         >
-          <Play className="w-[18px] h-[18px] shrink-0 text-[var(--text-muted)]" />
+          <Play className="w-[17px] h-[17px] shrink-0 text-[var(--text-muted)]" />
           <span className="truncate">Тест-драйв</span>
         </button>
 
-        {/* Profile (replacing generic Settings) */}
+        {/* Support */}
+        <Link
+          href="/dashboard/support"
+          onClick={onMobileClose}
+          className={`h-9 px-3 flex items-center gap-3 rounded-[6px] text-xs font-medium transition-colors cursor-pointer ${
+            pathname === '/dashboard/support'
+              ? 'bg-[var(--accent-soft)] text-[var(--accent-soft-text)] font-semibold'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] font-normal'
+          }`}
+        >
+          <LifeBuoy
+            className={`w-[17px] h-[17px] shrink-0 ${
+              pathname === '/dashboard/support'
+                ? 'text-[var(--accent-soft-text)]'
+                : 'text-[var(--text-muted)]'
+            }`}
+          />
+          <span className="truncate">Поддержка</span>
+        </Link>
+
+        {/* Profile */}
         <Link
           href="/dashboard/profile"
           onClick={onMobileClose}
-          className={`h-10 px-3 flex items-center gap-3 rounded-[6px] text-sm transition-colors cursor-pointer ${
+          className={`h-9 px-3 flex items-center gap-3 rounded-[6px] text-xs font-medium transition-colors cursor-pointer ${
             pathname === '/dashboard/profile'
-              ? 'bg-[#FEF2F2] dark:bg-[rgba(220,38,38,0.16)] text-[#DC2626] dark:text-[#FCA5A5] font-semibold'
+              ? 'bg-[var(--accent-soft)] text-[var(--accent-soft-text)] font-semibold'
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] font-normal'
           }`}
         >
           <User
-            className={`w-[18px] h-[18px] shrink-0 ${
+            className={`w-[17px] h-[17px] shrink-0 ${
               pathname === '/dashboard/profile'
-                ? 'text-[#DC2626] dark:text-[#FCA5A5]'
+                ? 'text-[var(--accent-soft-text)]'
                 : 'text-[var(--text-muted)]'
             }`}
           />
           <span className="truncate">Профиль</span>
         </Link>
 
-        {/* SuperAdmin Access Platform block */}
+        {/* SuperAdmin Access Platform link */}
         {isSuperAdmin && (
           <div className="pt-2 mt-1 border-t border-[var(--border)]">
             <Link
               href="/admin"
               onClick={onMobileClose}
-              className={`h-10 px-3 flex items-center justify-between rounded-[6px] text-sm transition-colors cursor-pointer ${
+              className={`h-9 px-3 flex items-center justify-between rounded-[6px] text-xs transition-colors cursor-pointer ${
                 pathname === '/admin' || pathname?.startsWith('/admin/')
                   ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)] font-medium'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] font-normal'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Shield className="w-[18px] h-[18px] shrink-0 text-[#DC2626]" />
+                <Shield className="w-[17px] h-[17px] shrink-0 text-[var(--accent)]" />
                 <span className="truncate font-medium">Платформа</span>
               </div>
               <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[var(--surface-secondary)] text-[var(--text-muted)] border border-[var(--border)]">

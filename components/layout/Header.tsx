@@ -58,20 +58,29 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
 
       {/* Right side: Token balance, ThemeSwitcher, User profile */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-        {/* Token Balance */}
-        <Link
-          href="/dashboard/billing"
-          title="Тарифы и баланс токенов"
-          className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-[6px] hover:bg-[var(--surface-secondary)] transition-colors text-xs"
-        >
-          <span className="text-[var(--text-secondary)] hidden md:inline">Баланс:</span>
-          <span className="font-semibold text-[var(--text-primary)] font-mono text-xs sm:text-sm">
-            {formattedTokens}
-            <span className="text-[10px] sm:text-[11px] font-sans font-normal text-[var(--text-muted)] ml-1">
-              ток.
+        {/* Token Balance with Topup button */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <Link
+            href="/dashboard/billing"
+            title="Тарифы и баланс токенов"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-[6px] hover:bg-[var(--surface-secondary)] transition-colors text-xs"
+          >
+            <span className="text-[var(--text-secondary)] hidden md:inline">Баланс:</span>
+            <span className="font-semibold text-[var(--text-primary)] font-mono text-xs sm:text-sm">
+              {formattedTokens}
+              <span className="text-[10px] sm:text-[11px] font-sans font-normal text-[var(--text-muted)] ml-1">
+                ток.
+              </span>
             </span>
-          </span>
-        </Link>
+          </Link>
+
+          <Link
+            href="/dashboard/billing"
+            className="hidden sm:inline-flex items-center justify-center h-7 px-2.5 rounded-[4px] bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[11px] font-medium transition-colors shadow-xs"
+          >
+            Пополнить
+          </Link>
+        </div>
 
         {/* Theme Switcher: available on desktop & mobile */}
         <ThemeSwitcher compact={true} />

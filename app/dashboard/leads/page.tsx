@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -117,102 +118,93 @@ export default function LeadsCalendarPage() {
   return (
     <div className="space-y-5 text-left">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[var(--border)]">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-[var(--border)]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--text-primary)] leading-tight">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] leading-tight">
             Лиды и записи
           </h1>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
-            Квалифицированные обращения и расписание визитов
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
+            Клиенты, этапы продаж и запланированные встречи.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="w-3.5 h-3.5" />
-            <span>Новый лид</span>
+            <Plus className="w-4 h-4" />
+            <span>Добавить лида</span>
           </Button>
-
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-[var(--surface-secondary)] p-0.5 rounded-[6px] text-xs font-semibold border border-[var(--border)]">
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] transition-all cursor-pointer ${
-                viewMode === 'table'
-                  ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-2xs font-bold'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <TableIcon className="w-3.5 h-3.5" />
-              <span>Таблица ({leads.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] transition-all cursor-pointer ${
-                viewMode === 'kanban'
-                  ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-2xs font-bold'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Канбан</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('calendar')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] transition-all cursor-pointer ${
-                viewMode === 'calendar'
-                  ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-2xs font-bold'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <CalendarDays className="w-3.5 h-3.5 text-[var(--accent)]" />
-              <span>Календарь</span>
-            </button>
-          </div>
         </div>
+      </div>
+
+      {/* Tabs / View Switcher */}
+      <div className="flex items-center gap-6 border-b border-[var(--border)] text-xs sm:text-sm font-semibold -mt-2">
+        <button
+          type="button"
+          onClick={() => setViewMode('table')}
+          className={`pb-2.5 transition-all cursor-pointer border-b-2 ${
+            viewMode === 'table'
+              ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
+              : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          Таблица
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('kanban')}
+          className={`pb-2.5 transition-all cursor-pointer border-b-2 ${
+            viewMode === 'kanban'
+              ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
+              : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          Канбан
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('calendar')}
+          className={`pb-2.5 transition-all cursor-pointer border-b-2 ${
+            viewMode === 'calendar'
+              ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
+              : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          Календарь
+        </button>
       </div>
 
       {/* Filter and Search Bar */}
       {viewMode !== 'calendar' && (
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-2.5 sm:p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-2.5">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-2.5 sm:p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Search */}
           <div className="relative w-full md:w-80">
-            <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-3 sm:top-2.5" />
+            <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по имени, номеру или заметке..."
-              className="w-full pl-8 pr-3 py-2 sm:py-1.5 min-h-[40px] sm:min-h-[34px] bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] font-medium"
+              placeholder="Поиск по имени или телефону"
+              className="w-full pl-9 pr-3 py-2 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] font-medium"
             />
           </div>
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <div className="flex items-center gap-1 bg-[var(--surface-secondary)] p-0.5 rounded-[6px] text-xs">
-              {['ALL', 'Новый', 'Квалифицирован', 'Записан в календарь'].map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStatusFilter(s)}
-                  className={`px-2 py-1 rounded-[4px] font-medium transition-all cursor-pointer ${
-                    statusFilter === s
-                      ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-2xs font-bold'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {s === 'ALL' ? 'Все статусы' : s}
-                </button>
-              ))}
-            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] px-3 py-2 text-xs text-[var(--text-primary)] font-medium focus:outline-none cursor-pointer"
+            >
+              <option value="ALL">Все статусы</option>
+              <option value="Новый">Новый</option>
+              <option value="Квалифицирован">Квалифицирован</option>
+              <option value="Записан в календарь">Записан в календарь</option>
+            </select>
 
             <select
               value={channelFilter}
               onChange={(e) => setChannelFilter(e.target.value)}
-              className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] px-2.5 py-1.5 min-h-[38px] sm:min-h-[34px] text-xs text-[var(--text-primary)] font-medium focus:outline-none cursor-pointer"
+              className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] px-3 py-2 text-xs text-[var(--text-primary)] font-medium focus:outline-none cursor-pointer"
             >
               <option value="ALL">Все каналы</option>
               <option value="Telegram">Telegram</option>
@@ -226,18 +218,36 @@ export default function LeadsCalendarPage() {
       {viewMode === 'table' && (
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] shadow-2xs overflow-hidden">
           {filteredLeads.length === 0 ? (
-            <div className="py-12 px-4 text-center">
-              <div className="w-10 h-10 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-muted)] flex items-center justify-center mx-auto mb-2.5">
-                <CalendarCheck className="w-5 h-5" />
+            <div className="py-16 px-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-muted)] flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 stroke-current fill-none" viewBox="0 0 24 24" strokeWidth="1.75">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
               </div>
-              <h4 className="text-sm font-bold text-[var(--text-primary)]">Список лидов пуст</h4>
-              <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
-                Здесь будут отображаться входящие заявки клиентов, результаты квалификации и слоты Google Календаря.
+              <h4 className="text-base font-bold text-[var(--text-primary)]">
+                {searchQuery || statusFilter !== 'ALL' || channelFilter !== 'ALL'
+                  ? 'Ничего не найдено по вашему запросу'
+                  : 'Пока нет лидов'}
+              </h4>
+              <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-sm mx-auto mt-1 mb-5 leading-relaxed">
+                {searchQuery || statusFilter !== 'ALL' || channelFilter !== 'ALL'
+                  ? 'Попробуйте сбросить фильтры или изменить поисковый запрос.'
+                  : 'Подключите канал общения или добавьте первого клиента вручную.'}
               </p>
-              <Button size="sm" variant="outline" onClick={() => setIsAddModalOpen(true)}>
-                <Plus className="w-3.5 h-3.5" />
-                <span>Добавить лид вручную</span>
-              </Button>
+              <div className="flex items-center justify-center gap-3">
+                <Link
+                  href="/dashboard/integrations"
+                  className="inline-flex items-center justify-center text-xs font-semibold px-4 py-2 border border-[var(--accent)] text-[var(--accent)] rounded-[6px] hover:bg-[var(--accent-soft)] transition-colors"
+                >
+                  Подключить канал
+                </Link>
+                <Button size="sm" variant="ghost" onClick={() => setIsAddModalOpen(true)}>
+                  <span className="text-[var(--accent)] font-semibold">Добавить вручную</span>
+                </Button>
+              </div>
             </div>
           ) : (
             <>
@@ -245,13 +255,13 @@ export default function LeadsCalendarPage() {
               <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-[var(--surface-secondary)] border-b border-[var(--border)] text-[var(--text-secondary)] font-semibold uppercase tracking-wider text-[10px]">
+                    <tr className="bg-[var(--surface-secondary)] border-b border-[var(--border)] text-[var(--text-secondary)] font-semibold text-xs">
                       <th className="py-3 px-4">Клиент</th>
                       <th className="py-3 px-3">Канал</th>
-                      <th className="py-3 px-3">Статус воронки</th>
-                      <th className="py-3 px-3">Слот в Google Календаре</th>
-                      <th className="py-3 px-3">Квалификация и заметки</th>
-                      <th className="py-3 px-3 text-right">Токены</th>
+                      <th className="py-3 px-3">Этап</th>
+                      <th className="py-3 px-3">Ответственный</th>
+                      <th className="py-3 px-3">Следующее действие</th>
+                      <th className="py-3 px-3">Создан</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
@@ -263,7 +273,7 @@ export default function LeadsCalendarPage() {
                         </td>
 
                         <td className="py-3 px-3">
-                          <span className="text-[10px] bg-[var(--surface-secondary)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded font-medium border border-[var(--border)]">
+                          <span className="text-[11px] bg-[var(--surface-secondary)] text-[var(--text-secondary)] px-2 py-0.5 rounded font-medium border border-[var(--border)]">
                             {lead.channel}
                           </span>
                         </td>
@@ -272,30 +282,22 @@ export default function LeadsCalendarPage() {
                           {getStatusBadge(lead.status)}
                         </td>
 
-                        <td className="py-3 px-3">
-                          {lead.appointmentDate ? (
-                            <div className="flex items-center gap-1.5 text-[var(--success-text)] font-medium">
-                              <Calendar className="w-3.5 h-3.5 shrink-0" />
-                              <span suppressHydrationWarning>
-                                {new Date(lead.appointmentDate).toLocaleString('ru-RU', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-[var(--text-muted)] text-[11px]">—</span>
-                          )}
+                        <td className="py-3 px-3 text-[var(--text-primary)] font-medium">
+                          ИИ-менеджер
                         </td>
 
                         <td className="py-3 px-3 text-[var(--text-secondary)] max-w-xs truncate">
-                          {lead.notes || '—'}
+                          {lead.appointmentDate ? (
+                            <span className="text-[var(--success-text)] font-medium">
+                              Встреча {new Date(lead.appointmentDate).toLocaleDateString('ru-RU')}
+                            </span>
+                          ) : (
+                            lead.notes || 'Квалификация диалога'
+                          )}
                         </td>
 
-                        <td className="py-3 px-3 text-right font-mono font-bold text-[var(--text-primary)]">
-                          {lead.tokensSpent > 0 ? `-${lead.tokensSpent}` : '0'}
+                        <td className="py-3 px-3 text-[var(--text-muted)] font-mono text-[11px]">
+                          {new Date(lead.createdAt).toLocaleDateString('ru-RU')}
                         </td>
                       </tr>
                     ))}

@@ -1,22 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 import { useApp } from '@/context/AppContext';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
   MessageSquare,
   Search,
-  User,
-  Bot,
   Send,
   PauseCircle,
   PlayCircle,
   Clock,
   ShieldAlert,
   ArrowLeft,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 interface Conversation {
@@ -50,7 +49,8 @@ export default function ConversationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'active' | 'human_takeover'>('ALL');
+  const [tabFilter, setTabFilter] = useState<'all' | 'my' | 'unanswered'>('all');
+  const [selectedChannel, setSelectedChannel] = useState<'all' | 'Telegram' | 'Instagram' | 'WhatsApp'>('all');
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Load conversations
@@ -154,90 +154,153 @@ export default function ConversationsPage() {
   };
 
   const filteredConversations = conversations.filter((c) => {
+    const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
-      c.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.clientPhone.includes(searchQuery) ||
-      (c.lastMessageText || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || c.status === statusFilter;
-    return matchesSearch && matchesStatus;
+      !q ||
+      c.clientName.toLowerCase().includes(q) ||
+      c.clientPhone.includes(q) ||
+      (c.lastMessageText || '').toLowerCase().includes(q);
+
+    const matchesChannel = selectedChannel === 'all' || c.channel.toLowerCase() === selectedChannel.toLowerCase();
+    const matchesTab =
+      tabFilter === 'all'
+        ? true
+        : tabFilter === 'my'
+        ? c.status === 'human_takeover'
+        : c.status === 'active';
+
+    return matchesSearch && matchesChannel && matchesTab;
   });
 
   return (
     <div className="space-y-4 text-left">
-      <PageHeader
-        title="Диалоги"
-        description="Переписка с клиентами и возможность ручного перехвата диалога"
-        badge={
-          <Badge variant="info">
-            {conversations.length} {conversations.length === 1 ? 'диалог' : 'диалогов'}
-          </Badge>
-        }
-      />
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-3 border-b border-[var(--border)]">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] leading-tight">
+            Диалоги
+          </h1>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
+            Сообщения из всех каналов в одном месте.
+          </p>
+        </div>
+
+        <Link
+          href="/dashboard/integrations"
+          className="inline-flex items-center justify-center text-xs font-semibold px-4 py-2 border border-[var(--accent)] text-[var(--accent)] rounded-[6px] hover:bg-[var(--accent-soft)] transition-colors self-start sm:self-auto"
+        >
+          Подключить канал
+        </Link>
+      </div>
 
       {isLoading ? (
         <div className="p-12 text-center text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-[8px]">
           Загрузка диалогов...
         </div>
-      ) : conversations.length === 0 ? (
-        <EmptyState
-          icon={MessageSquare}
-          title="Пока нет ни одного диалога"
-          description="Когда клиенты напишут вашему Telegram-боту, вся история переписки появится здесь."
-        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-[calc(100vh-220px)] min-h-[500px]">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-[calc(100vh-220px)] min-h-[520px]">
           {/* Left Column: Conversations List */}
           <div
-            className={`md:col-span-4 lg:col-span-4 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] flex flex-col overflow-hidden ${
+            className={`md:col-span-5 lg:col-span-4 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] flex flex-col overflow-hidden ${
               mobileView === 'chat' ? 'hidden md:flex' : 'flex'
             }`}
           >
             {/* Search and filters */}
-            <div className="p-3 border-b border-[var(--border)] space-y-2 bg-[var(--surface-secondary)]">
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-3 sm:top-2.5" />
-                <input
-                  type="text"
-                  placeholder="Поиск по имени, номеру..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 sm:py-1.5 min-h-[40px] sm:min-h-[34px] text-base sm:text-xs bg-[var(--surface)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] font-medium"
-                />
+            <div className="p-3 border-b border-[var(--border)] space-y-3 bg-[var(--surface)]">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Поиск диалогов"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-[var(--surface)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] font-medium"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-[var(--border)] rounded-[6px] text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] cursor-pointer"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>Фильтры</span>
+                </button>
               </div>
 
-              <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+              {/* Tabs: Все, Мои, Без ответа */}
+              <div className="flex items-center gap-4 text-xs font-semibold border-b border-[var(--border)] -mb-1 pb-1">
                 <button
                   type="button"
-                  onClick={() => setStatusFilter('ALL')}
-                  className={`text-[11px] font-medium px-2.5 py-1 rounded-[4px] transition-colors cursor-pointer shrink-0 ${
-                    statusFilter === 'ALL'
-                      ? 'bg-[var(--accent)] text-[var(--accent-text)] font-bold'
-                      : 'bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--border)] border border-[var(--border)]'
+                  onClick={() => setTabFilter('all')}
+                  className={`pb-1 cursor-pointer transition-colors border-b-2 ${
+                    tabFilter === 'all'
+                      ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
+                      : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  Все ({conversations.length})
+                  Все <span className="text-[11px] font-normal">{conversations.length}</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setStatusFilter('active')}
-                  className={`text-[11px] font-medium px-2.5 py-1 rounded-[4px] transition-colors cursor-pointer shrink-0 ${
-                    statusFilter === 'active'
-                      ? 'bg-[var(--accent)] text-[var(--accent-text)] font-bold'
-                      : 'bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--border)] border border-[var(--border)]'
+                  onClick={() => setTabFilter('my')}
+                  className={`pb-1 cursor-pointer transition-colors border-b-2 ${
+                    tabFilter === 'my'
+                      ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
+                      : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  Авто-ИИ
+                  Мои <span className="text-[11px] font-normal">{conversations.filter(c => c.status === 'human_takeover').length}</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setStatusFilter('human_takeover')}
-                  className={`text-[11px] font-medium px-2.5 py-1 rounded-[4px] transition-colors cursor-pointer shrink-0 ${
-                    statusFilter === 'human_takeover'
-                      ? 'bg-[var(--accent)] text-[var(--accent-text)] font-bold'
-                      : 'bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--border)] border border-[var(--border)]'
+                  onClick={() => setTabFilter('unanswered')}
+                  className={`pb-1 cursor-pointer transition-colors border-b-2 ${
+                    tabFilter === 'unanswered'
+                      ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
+                      : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  Ручной ответ
+                  Без ответа <span className="text-[11px] font-normal">{conversations.filter(c => c.status === 'active').length}</span>
+                </button>
+              </div>
+
+              {/* Channels filter pills */}
+              <div className="flex items-center gap-2 pt-1 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setSelectedChannel(selectedChannel === 'Telegram' ? 'all' : 'Telegram')}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-medium border cursor-pointer transition-colors ${
+                    selectedChannel === 'Telegram'
+                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent-text)]'
+                      : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
+                  }`}
+                >
+                  <Image src="/integrations/telegram.svg" alt="Telegram" width={14} height={14} />
+                  <span>Telegram</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedChannel(selectedChannel === 'Instagram' ? 'all' : 'Instagram')}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-medium border cursor-pointer transition-colors ${
+                    selectedChannel === 'Instagram'
+                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent-text)]'
+                      : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
+                  }`}
+                >
+                  <Image src="/integrations/instagram.svg" alt="Instagram" width={14} height={14} />
+                  <span>Instagram</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedChannel(selectedChannel === 'WhatsApp' ? 'all' : 'WhatsApp')}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-medium border cursor-pointer transition-colors ${
+                    selectedChannel === 'WhatsApp'
+                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent-text)]'
+                      : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
+                  }`}
+                >
+                  <Image src="/integrations/whatsapp.svg" alt="WhatsApp" width={14} height={14} />
+                  <span>WhatsApp</span>
                 </button>
               </div>
             </div>
@@ -245,8 +308,16 @@ export default function ConversationsPage() {
             {/* List */}
             <div className="flex-1 overflow-y-auto divide-y divide-[var(--border)]">
               {filteredConversations.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[var(--text-muted)]">
-                  По заданным фильтрам диалогов не найдено
+                <div className="p-8 text-center text-xs text-[var(--text-secondary)] space-y-3">
+                  <div className="w-10 h-10 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-muted)] flex items-center justify-center mx-auto">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm text-[var(--text-primary)]">Диалогов пока нет</div>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto leading-relaxed">
+                      Подключите каналы, чтобы начать получать сообщения от клиентов.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 filteredConversations.map((conv) => {
@@ -262,7 +333,7 @@ export default function ConversationsPage() {
                       }}
                       className={`p-3 sm:p-3.5 transition-colors cursor-pointer text-left ${
                         isSelected
-                          ? 'bg-[var(--accent-soft)] border-l-3 border-[var(--accent)]'
+                          ? 'bg-[var(--accent-soft)] border-l-2 border-[var(--accent)]'
                           : 'hover:bg-[var(--surface-secondary)]'
                       }`}
                     >
@@ -308,7 +379,7 @@ export default function ConversationsPage() {
 
           {/* Right Column: Active Conversation Chat Thread */}
           <div
-            className={`md:col-span-8 lg:col-span-8 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] flex flex-col overflow-hidden ${
+            className={`md:col-span-7 lg:col-span-8 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] flex flex-col overflow-hidden ${
               mobileView === 'list' ? 'hidden md:flex' : 'flex'
             }`}
           >
@@ -379,7 +450,7 @@ export default function ConversationsPage() {
                   <div className="p-2.5 px-4 bg-[var(--warning-bg)] border-b border-[var(--warning-border)] text-[var(--warning-text)] text-[11px] flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-medium">
                       <ShieldAlert className="w-3.5 h-3.5 text-[var(--warning)] shrink-0" />
-                      <span>ИИ-автоответчик на паузе. Сообщения отправляются оператором без списания токенов (0 токенов).</span>
+                      <span>ИИ-автоответчик на паузе. Сообщения отправляются оператором без списания токенов.</span>
                     </div>
                   </div>
                 )}
@@ -457,8 +528,24 @@ export default function ConversationsPage() {
                 </form>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center p-8 text-center text-xs text-[var(--text-muted)]">
-                Выберите диалог из списка слева для просмотра
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[var(--surface)]">
+                <div className="w-16 h-16 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-muted)] flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 stroke-current fill-none" viewBox="0 0 24 24" strokeWidth="1.75">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">
+                  Здесь будут сообщения клиентов
+                </h3>
+                <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-sm mx-auto mt-1 mb-6 leading-relaxed">
+                  Подключите Telegram, Instagram или WhatsApp, чтобы начать работу.
+                </p>
+                <Link
+                  href="/dashboard/integrations"
+                  className="inline-flex items-center justify-center bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-text)] text-xs font-semibold px-6 py-2.5 rounded-[6px] transition-colors shadow-2xs"
+                >
+                  Подключить канал
+                </Link>
               </div>
             )}
           </div>
