@@ -6,40 +6,57 @@ interface NotFoundIllustrationProps {
   className?: string;
 }
 
+/**
+ * Pixel-accurate SVG illustration recreating 404-reference.png:
+ * - Ultra-bold 404 graphite numerals with authentic geometry
+ * - Background faint dashed trajectory (#CBD5E1 in light, #334155 in dark) with hollow nodes
+ * - Red route starting with open hollow circle on the left, curving upwards across first '4',
+ *   descending gracefully through '0', and sweeping rightwards through second '4' towards arrowhead and accent dot.
+ * - Underneath the red path is a slightly thicker crisp mask/buffer line (#FFFFFF / dark surface) so the red line pops distinctly over dark numbers.
+ */
 export function NotFoundIllustration({ className = '' }: NotFoundIllustrationProps) {
+  // viewBox: 640 x 420
+  // Digits: 4 (left 75..230), 0 (center 245..395), 4 (right 410..565)
+  // Base line y=330, cap height 240, height 230
+  // Red route:
+  // Starts at x=55, y=210 (hollow circle)
+  // Curves over first '4': control (150, 210) -> peak (250, 155)
+  // Descends through center '0': control (320, 155) -> valley (435, 295)
+  // Sweeps right through second '4': control (490, 360) -> end (585, 345)
+  // Arrowhead at (585, 345) + solid red dot at (608, 342)
+
   return (
     <div
-      className={`relative w-full max-w-[580px] aspect-[580/380] select-none ${className}`}
+      className={`relative w-full max-w-[680px] aspect-[640/420] select-none ${className}`}
       aria-hidden="true"
     >
       <svg
-        viewBox="0 0 580 380"
+        viewBox="0 0 640 420"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="w-full h-full overflow-visible"
         role="presentation"
       >
         <defs>
-          {/* Subtle glow filter or markers if needed */}
           <style>
             {`
               @media (prefers-reduced-motion: no-preference) {
-                .animate-draw-line {
-                  stroke-dasharray: 600;
-                  stroke-dashoffset: 600;
-                  animation: drawLine 850ms cubic-bezier(0.25, 1, 0.5, 1) forwards 200ms;
+                .animate-path-dash {
+                  stroke-dasharray: 850;
+                  stroke-dashoffset: 850;
+                  animation: drawRoute 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards 150ms;
                 }
-                .animate-fade-marker {
+                .animate-point-fade {
                   opacity: 0;
-                  animation: fadeIn 300ms ease forwards 900ms;
+                  animation: fadeInMarker 350ms ease forwards 850ms;
                 }
               }
-              @keyframes drawLine {
+              @keyframes drawRoute {
                 to {
                   stroke-dashoffset: 0;
                 }
               }
-              @keyframes fadeIn {
+              @keyframes fadeInMarker {
                 to {
                   opacity: 1;
                 }
@@ -48,115 +65,164 @@ export function NotFoundIllustration({ className = '' }: NotFoundIllustrationPro
           </style>
         </defs>
 
-        {/* 1. Background subtle dots & decorative trajectory */}
-        <g className="text-slate-200 dark:text-slate-800">
-          {/* Subtle constellation dots */}
-          <circle cx="85" cy="110" r="3" fill="currentColor" opacity="0.6" />
-          <circle cx="160" cy="70" r="2.5" fill="currentColor" opacity="0.5" />
-          <circle cx="390" cy="85" r="3.5" fill="currentColor" opacity="0.7" />
-          <circle cx="495" cy="120" r="2.5" fill="currentColor" opacity="0.5" />
-          <circle cx="515" cy="270" r="3" fill="currentColor" opacity="0.6" />
-          <circle cx="110" cy="310" r="2" fill="currentColor" opacity="0.4" />
-          <circle cx="280" cy="350" r="2.5" fill="currentColor" opacity="0.5" />
-
-          {/* Faint dashed exploratory trajectory */}
+        {/* 1. Background Secondary Trajectory with Hollow Nodes */}
+        <g className="text-[#CBD5E1] dark:text-[#334155] transition-colors duration-150">
+          {/* Dashed curved arc flowing behind the numbers */}
           <path
-            d="M 95 125 C 180 80, 270 90, 360 110 S 490 190, 520 250"
+            d="M 40 310 C 120 180, 240 70, 395 85 C 490 95, 570 180, 600 270"
             stroke="currentColor"
-            strokeWidth="1.5"
-            strokeDasharray="4 6"
+            strokeWidth="2.2"
+            strokeDasharray="6 8"
             strokeLinecap="round"
-            opacity="0.5"
+            fill="none"
+          />
+
+          {/* Secondary subtle branch */}
+          <path
+            d="M 230 380 C 270 330, 350 360, 420 375"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeDasharray="5 7"
+            strokeLinecap="round"
+            fill="none"
+            opacity="0.75"
+          />
+
+          {/* Hollow circular nodes on background trajectory */}
+          {/* Node 1: Top center-right */}
+          <circle
+            cx="395"
+            cy="85"
+            r="8.5"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            fill="#F8FAFC"
+            className="dark:fill-[#0B1220] transition-colors"
+          />
+
+          {/* Node 2: Bottom center */}
+          <circle
+            cx="285"
+            cy="355"
+            r="8"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            fill="#F8FAFC"
+            className="dark:fill-[#0B1220] transition-colors"
+          />
+
+          {/* Node 3: Right exit */}
+          <circle
+            cx="580"
+            cy="245"
+            r="6.5"
+            stroke="currentColor"
+            strokeWidth="2"
+            fill="#F8FAFC"
+            className="dark:fill-[#0B1220] transition-colors"
+          />
+
+          {/* Node 4: Left start */}
+          <circle
+            cx="85"
+            cy="240"
+            r="6"
+            stroke="currentColor"
+            strokeWidth="2"
+            fill="#F8FAFC"
+            className="dark:fill-[#0B1220] transition-colors"
           />
         </g>
 
-        {/* 2. Bold 404 Typography rendered as crisp SVG text/shapes */}
+        {/* 2. Bold 404 Typography rendered as solid crisp SVG geometry */}
         <g
           className="fill-[#171A21] dark:fill-[#F1F5F9] transition-colors duration-150"
           style={{ fontVariantNumeric: 'tabular-nums' }}
         >
           {/* First "4" */}
           <text
-            x="70"
-            y="265"
-            fontSize="210"
+            x="68"
+            y="315"
+            fontSize="248"
             fontWeight="900"
-            fontFamily="var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-            letterSpacing="-8px"
-            className="tracking-tighter"
+            fontFamily="Inter, var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+            letterSpacing="-10px"
           >
             4
           </text>
 
-          {/* Central "0" */}
+          {/* Center "0" */}
           <text
-            x="215"
-            y="265"
-            fontSize="210"
+            x="240"
+            y="315"
+            fontSize="248"
             fontWeight="900"
-            fontFamily="var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-            letterSpacing="-8px"
-            className="tracking-tighter"
+            fontFamily="Inter, var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+            letterSpacing="-10px"
           >
             0
           </text>
 
           {/* Second "4" */}
           <text
-            x="365"
-            y="265"
-            fontSize="210"
+            x="414"
+            y="315"
+            fontSize="248"
             fontWeight="900"
-            fontFamily="var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-            letterSpacing="-8px"
-            className="tracking-tighter"
+            fontFamily="Inter, var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+            letterSpacing="-10px"
           >
             4
           </text>
         </g>
 
-        {/* 3. Foreground Red Dynamic Curved Line (passing across the numbers) */}
-        {/*
-            Starts at (50, 195) with an open circle
-            Curves up through (185, 175) -> peak (250, 150)
-            Dips down through (345, 205) -> valley (435, 280)
-            Rises to endpoint (535, 260) with an arrow and solid dot
-        */}
+        {/* 3. White/Surface Buffer Line under the Red Path for crisp legibility over numbers */}
         <path
-          d="M 54 195 C 130 195, 190 152, 255 152 C 320 152, 365 210, 420 270 C 465 315, 500 290, 532 262"
+          d="M 55 210 C 145 210, 195 155, 260 155 C 335 155, 385 220, 440 295 C 485 350, 535 365, 578 348"
           fill="none"
-          stroke="#DC2626"
-          strokeWidth="3.5"
+          stroke="#F8FAFC"
+          className="dark:stroke-[#0B1220] transition-colors"
+          strokeWidth="9"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="animate-draw-line"
         />
 
-        {/* Start point: Unfilled circle */}
+        {/* 4. Foreground Vibrant Red Route */}
+        <path
+          d="M 55 210 C 145 210, 195 155, 260 155 C 335 155, 385 220, 440 295 C 485 350, 535 365, 578 348"
+          fill="none"
+          stroke="#DC2626"
+          strokeWidth="3.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="animate-path-dash"
+        />
+
+        {/* 5. Start Point: Hollow red circle with background-colored core */}
         <circle
-          cx="54"
-          cy="195"
-          r="5.5"
+          cx="55"
+          cy="210"
+          r="6.5"
           fill="#F8FAFC"
           className="dark:fill-[#0B1220] transition-colors"
           stroke="#DC2626"
-          strokeWidth="3"
+          strokeWidth="3.6"
         />
 
-        {/* End point markers: Solid red dot and directional arrowhead */}
-        <g className="animate-fade-marker">
-          {/* Arrowhead at line end pointing forward-up (angle approx -35 deg) */}
+        {/* 6. End Point: Directional Arrowhead & Accent Red Dot */}
+        <g className="animate-point-fade">
+          {/* Arrowhead chevron pointing forward at exit */}
           <path
-            d="M 524 252 L 535 260 L 526 270"
+            d="M 567 339 L 579 348 L 569 359"
             fill="none"
             stroke="#DC2626"
-            strokeWidth="3"
+            strokeWidth="3.4"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
 
-          {/* Final accent dot ahead of trajectory */}
-          <circle cx="550" cy="250" r="4.5" fill="#DC2626" />
+          {/* Accent red dot placed slightly ahead of the route arrow */}
+          <circle cx="598" cy="345" r="4.8" fill="#DC2626" />
         </g>
       </svg>
     </div>

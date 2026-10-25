@@ -19,10 +19,10 @@ import { BrandLogo } from '@/components/ui/BrandLogo';
 export default function NotFound() {
   const router = useRouter();
 
-  // Authentication state: null = unknown/loading, true = logged in, false = guest
+  // Authentication state: null = checking, true = authenticated, false = guest
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
-  // Public support modal state
+  // Public support modal state for unauthenticated guests
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [supportEmail, setSupportEmail] = useState('');
   const [supportMessage, setSupportMessage] = useState('');
@@ -55,8 +55,12 @@ export default function NotFound() {
   const handleGoBack = (e: React.MouseEvent) => {
     e.preventDefault();
     if (typeof window !== 'undefined') {
-      // Check if there is valid internal referrer history
-      if (window.history.length > 2 && document.referrer && document.referrer.includes(window.location.host)) {
+      // Safe internal referrer check
+      if (
+        window.history.length > 2 &&
+        document.referrer &&
+        document.referrer.includes(window.location.host)
+      ) {
         window.history.back();
       } else {
         router.push(isAuthenticated ? '/dashboard' : '/login');
@@ -69,7 +73,7 @@ export default function NotFound() {
     setSubmitError(null);
 
     if (!supportEmail.trim() || !supportEmail.includes('@')) {
-      setSubmitError('Пожалуйста, укажите корректный адрес электронной почты');
+      setSubmitError('Пожалуйста, укажите корректный email адрес');
       return;
     }
     if (!supportMessage.trim() || supportMessage.trim().length < 5) {
@@ -94,7 +98,7 @@ export default function NotFound() {
         throw new Error(data.error || 'Ошибка при отправке обращения');
       }
 
-      setSubmitSuccess(data.message || 'Ваше обращение зарегистрировано!');
+      setSubmitSuccess(data.message || 'Ваше обращение принято! Мы ответим на ваш email.');
       setSupportMessage('');
     } catch (err: any) {
       setSubmitError(err.message || 'Не удалось отправить обращение. Попробуйте позже.');
@@ -104,9 +108,9 @@ export default function NotFound() {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col justify-between bg-[#F8FAFC] dark:bg-[#0B1220] text-[#171A21] dark:text-[#F1F5F9] transition-colors duration-150">
-      {/* 1. Header (Logo left, ThemeSwitcher right directly on background) */}
-      <header className="w-full max-w-[1440px] mx-auto px-6 sm:px-12 lg:px-16 pt-6 sm:pt-8 flex items-center justify-between shrink-0">
+    <div className="min-h-screen w-full flex flex-col justify-between bg-[#F8FAFC] dark:bg-[#0B1220] text-[#171A21] dark:text-[#F1F5F9] transition-colors duration-150 overflow-x-hidden">
+      {/* 1. Header: BrandLogo left, compact Theme icon button right */}
+      <header className="w-full max-w-[1360px] mx-auto px-6 sm:px-10 lg:px-12 pt-6 sm:pt-8 flex items-center justify-between shrink-0">
         <BrandLogo
           variant="full"
           width={150}
@@ -114,94 +118,96 @@ export default function NotFound() {
           ariaLabel="Chorla AI"
         />
 
-        <div>
-          <ThemeSwitcher />
+        <div className="flex items-center">
+          <ThemeSwitcher compact={true} />
         </div>
       </header>
 
-      {/* 2. Main Open Composition (Two columns on desktop, stacked on mobile) */}
-      <main className="w-full max-w-[1440px] mx-auto px-6 sm:px-12 lg:px-16 py-8 sm:py-12 my-auto flex-1 flex items-center">
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
+      {/* 2. Main Open Composition: 
+          On Desktop: Two balanced columns (left text, right huge 404 illustration)
+          On Mobile: Stacked vertically (illustration first, then text, buttons, back link)
+      */}
+      <main className="w-full max-w-[1360px] mx-auto px-6 sm:px-10 lg:px-12 py-8 sm:py-12 my-auto flex-1 flex items-center">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 xl:gap-16 items-center">
           
-          {/* Mobile Illustration (shown above text on < lg screens) */}
-          <div className="block lg:hidden w-full max-w-[420px] mx-auto pt-2 pb-4">
-            <NotFoundIllustration />
+          {/* Mobile Illustration (placed above text on screens < lg) */}
+          <div className="block lg:hidden w-full max-w-[440px] mx-auto pt-2 pb-2">
+            <NotFoundIllustration className="w-full" />
           </div>
 
-          {/* Left Column: Text & Actions (Desktop 6-7 cols) */}
-          <div className="lg:col-span-7 flex flex-col items-start text-left">
-            {/* Small uppercase eyebrow */}
-            <div className="text-[12px] sm:text-[13px] font-bold tracking-[0.14em] text-[#DC2626] uppercase mb-4 sm:mb-5 select-none">
+          {/* Left Column: Eyebrow, Two-line Headline, Description, Buttons, Back link */}
+          <div className="lg:col-span-6 xl:col-span-6 flex flex-col items-start text-left">
+            {/* Eyebrow: Slate-blue text (#526079), 13px, uppercase, increased tracking */}
+            <div className="text-[12px] sm:text-[13px] font-bold tracking-[0.14em] text-[#526079] dark:text-[#94A3B8] uppercase mb-4 select-none">
               СТРАНИЦА НЕ НАЙДЕНА
             </div>
 
-            {/* Huge Headline: "Кажется, вы заблудились" */}
-            <h1 className="text-[34px] sm:text-[46px] md:text-[56px] lg:text-[68px] xl:text-[74px] font-extrabold text-[#171A21] dark:text-[#F1F5F9] tracking-[-0.035em] leading-[1.04] mb-5 sm:mb-6">
-              Кажется, вы <br className="hidden sm:inline" />
+            {/* Headline: Exactly two lines "Кажется, вы / заблудились" */}
+            <h1 className="text-[36px] sm:text-[46px] md:text-[54px] lg:text-[62px] xl:text-[70px] font-extrabold text-[#171A21] dark:text-[#F1F5F9] tracking-[-0.035em] leading-[1.05] mb-5 sm:mb-6">
+              Кажется, вы <br />
               заблудились
             </h1>
 
-            {/* Description */}
-            <p className="text-[16px] sm:text-[18px] lg:text-[19px] text-[#526079] dark:text-[#A5B4C8] font-normal leading-[1.5] max-w-[540px] mb-8 sm:mb-10">
+            {/* Description: 18-20px comfortable reading length */}
+            <p className="text-[16px] sm:text-[18px] lg:text-[19px] text-[#526079] dark:text-[#94A3B8] font-normal leading-[1.5] max-w-[490px] mb-8 sm:mb-9">
               Возможно, ссылка устарела или в адресе есть опечатка. Давайте вернёмся к работе.
             </p>
 
-            {/* Action Buttons Row */}
+            {/* Action Buttons: Red Primary with Arrow, Secondary Support with Headset */}
             <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-6">
-              {/* Primary Button */}
+              {/* Primary Button (Width 220-250px on desktop, full on mobile, height 52-56px, rounded 6-8px) */}
               {isAuthenticated === null ? (
-                // Clean skeleton placeholder to avoid button flash
-                <div className="w-full sm:w-[170px] h-[48px] sm:h-[50px] bg-slate-200 dark:bg-slate-800 rounded-[6px] animate-pulse" />
+                <div className="w-full sm:w-[235px] h-[52px] sm:h-[54px] bg-slate-200 dark:bg-slate-800 rounded-[6px] animate-pulse" />
               ) : isAuthenticated ? (
                 <Link
                   href="/dashboard"
-                  className="w-full sm:w-auto min-w-[160px] h-[48px] sm:h-[50px] px-6 inline-flex items-center justify-center gap-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-all duration-150 shadow-xs cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2"
+                  className="w-full sm:w-[235px] h-[52px] sm:h-[54px] px-6 inline-flex items-center justify-center gap-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-semibold text-[15px] rounded-[6px] transition-all duration-150 shadow-xs cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2"
                 >
                   <span>В кабинет</span>
-                  <ArrowRight className="w-4 h-4 stroke-[2.2]" />
+                  <ArrowRight className="w-4 h-4 stroke-[2.4]" />
                 </Link>
               ) : (
                 <Link
                   href="/login"
-                  className="w-full sm:w-auto min-w-[160px] h-[48px] sm:h-[50px] px-6 inline-flex items-center justify-center gap-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-all duration-150 shadow-xs cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2"
+                  className="w-full sm:w-[235px] h-[52px] sm:h-[54px] px-6 inline-flex items-center justify-center gap-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-semibold text-[15px] rounded-[6px] transition-all duration-150 shadow-xs cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2"
                 >
                   <span>Войти</span>
-                  <ArrowRight className="w-4 h-4 stroke-[2.2]" />
+                  <ArrowRight className="w-4 h-4 stroke-[2.4]" />
                 </Link>
               )}
 
-              {/* Support Secondary Button */}
+              {/* Secondary Support Button */}
               <button
                 type="button"
                 onClick={handleSupportClick}
-                className="w-full sm:w-auto min-w-[160px] h-[48px] sm:h-[50px] px-6 inline-flex items-center justify-center gap-2.5 bg-transparent hover:bg-slate-100/70 dark:hover:bg-slate-800/60 active:scale-[0.99] border border-[#D8DFE8] dark:border-slate-700 text-[#171A21] dark:text-[#F1F5F9] font-medium text-[15px] rounded-[6px] transition-all duration-150 cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+                className="w-full sm:w-[235px] h-[52px] sm:h-[54px] px-6 inline-flex items-center justify-center gap-2.5 bg-transparent hover:bg-slate-100/70 dark:hover:bg-slate-800/60 active:scale-[0.99] border border-[#D8DFE8] dark:border-slate-700 text-[#171A21] dark:text-[#F1F5F9] font-semibold text-[15px] rounded-[6px] transition-all duration-150 cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
               >
-                <Headphones className="w-4 h-4 text-[#526079] dark:text-[#A5B4C8] stroke-[2]" />
+                <Headphones className="w-4 h-4 text-[#526079] dark:text-[#A5B4C8] stroke-[2.2]" />
                 <span>Поддержка</span>
               </button>
             </div>
 
-            {/* Back link */}
+            {/* Separate quiet Back link placed underneath */}
             <button
               type="button"
               onClick={handleGoBack}
-              className="inline-flex items-center gap-2 text-[14px] font-medium text-[#526079] dark:text-[#A5B4C8] hover:text-[#171A21] dark:hover:text-white transition-colors duration-150 cursor-pointer py-1 group focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-400 rounded"
+              className="inline-flex items-center gap-2 text-[14px] font-medium text-[#526079] dark:text-[#94A3B8] hover:text-[#171A21] dark:hover:text-white transition-colors duration-150 cursor-pointer py-1 group focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-400 rounded"
             >
               <ArrowLeft className="w-4 h-4 stroke-[2] transition-transform duration-150 group-hover:-translate-x-0.5" />
               <span>Вернуться назад</span>
             </button>
           </div>
 
-          {/* Right Column: Desktop Illustration (Desktop 5 cols) */}
-          <div className="hidden lg:flex lg:col-span-5 items-center justify-center pl-4">
-            <NotFoundIllustration />
+          {/* Right Column: Desktop 404 Illustration occupying full column width */}
+          <div className="hidden lg:flex lg:col-span-6 xl:col-span-6 items-center justify-center w-full pl-2 xl:pl-6">
+            <NotFoundIllustration className="w-full max-w-[620px]" />
           </div>
 
         </div>
       </main>
 
-      {/* 3. Subtle bottom spacing / empty minimal footer without advertising */}
-      <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-12 lg:px-16 py-4 shrink-0" />
+      {/* 3. Bottom spacing */}
+      <div className="w-full max-w-[1360px] mx-auto px-6 sm:px-10 lg:px-12 py-4 shrink-0" />
 
       {/* Public Support Modal for Guests */}
       {isModalOpen && (
@@ -210,7 +216,7 @@ export default function NotFound() {
           style={{ animationDuration: '180ms' }}
         >
           <div
-            className="w-full max-w-[460px] bg-white dark:bg-[#111C2E] border border-slate-200 dark:border-slate-800 rounded-[8px] p-6 shadow-xl relative"
+            className="w-full max-w-[460px] bg-white dark:bg-[#111C2E] border border-slate-200 dark:border-slate-800 rounded-[8px] p-6 shadow-xl relative text-left"
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
@@ -234,7 +240,7 @@ export default function NotFound() {
               </h2>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">
-              Опишите возникшую сложность или вопрос. Наша дежурная команда ответит на ваш email в ближайшее время.
+              Опишите возникшую проблему или вопрос. Команда поддержки свяжется с вами по указанному email.
             </p>
 
             {submitSuccess ? (
@@ -283,7 +289,7 @@ export default function NotFound() {
                     rows={4}
                     value={supportMessage}
                     onChange={(e) => setSupportMessage(e.target.value)}
-                    placeholder="Какая страница не открылась или какой у вас возник вопрос?"
+                    placeholder="Опишите, какую страницу вы искали или какая ошибка возникла"
                     className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors resize-none"
                   />
                 </div>
