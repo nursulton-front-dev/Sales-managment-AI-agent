@@ -13,8 +13,7 @@ export async function POST(req: NextRequest) {
       ws = await getWorkspaceById(targetId);
     }
     if (!ws) {
-      const all = await getAllWorkspaces();
-      if (all.length > 0) ws = all[0];
+      return NextResponse.json({ success: false, error: 'Организация не найдена' }, { status: 404 });
     }
 
     if (ws) {

@@ -16,8 +16,15 @@ export async function GET(req: NextRequest) {
       ws = await getWorkspaceById(workspaceId);
     }
     if (!ws) {
-      const all = await getAllWorkspaces();
-      if (all.length > 0) ws = all[0];
+      return NextResponse.json({
+        success: true,
+        configured: isGoogleCalendarConfigured(),
+        connected: false,
+        email: null,
+        workingHours: '10:00-18:00',
+        slotDuration: 45,
+        clientIdConfigured: Boolean(process.env.GOOGLE_CLIENT_ID),
+      });
     }
 
     const isConfigured = isGoogleCalendarConfigured();

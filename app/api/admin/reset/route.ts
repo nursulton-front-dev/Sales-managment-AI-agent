@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { clearAllTestData } from '@/src/db';
+import { getServerSessionContext } from '@/src/server/auth/session';
 import { neon } from '@neondatabase/serverless';
 
 const ADMIN_RESET_PASSWORD = process.env.ADMIN_RESET_PASSWORD || 'Nursulton_2011';
@@ -7,6 +8,14 @@ const ADMIN_RESET_PASSWORD = process.env.ADMIN_RESET_PASSWORD || 'Nursulton_2011
 export async function POST(req: NextRequest) {
   await connection();
   try {
+    const session = await getServerSessionContext();
+    if (!session.isSuperAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Доступ к очистке базы данных разрешен только SuperAdmin платформы.' },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const { password } = body;
 

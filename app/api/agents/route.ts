@@ -6,8 +6,16 @@ export async function GET(req: NextRequest) {
   await connection();
   try {
     const session = await getServerSessionContext();
+    if (!session.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
-    const workspaceId = searchParams.get('workspaceId') || session.workspaceId || undefined;
+    const requestedWorkspaceId = searchParams.get('workspaceId');
+    const workspaceId =
+      session.isSuperAdmin && requestedWorkspaceId
+        ? requestedWorkspaceId
+        : session.workspaceId;
 
     const agents = await getAllAgents(workspaceId);
     return NextResponse.json({ success: true, agents });
@@ -20,10 +28,14 @@ export async function POST(req: NextRequest) {
   await connection();
   try {
     const session = await getServerSessionContext();
-    const body = await req.json();
-    const workspaceId = body.workspaceId || session.workspaceId;
+    if (!session.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    }
 
-    if (!workspaceId || !body.name || !body.systemPrompt) {
+    const body = await req.json();
+    const workspaceId = session.workspaceId;
+
+    if (!body.name || !body.systemPrompt) {
       return NextResponse.json({ success: false, error: 'Обязательные поля: name, systemPrompt' }, { status: 400 });
     }
 

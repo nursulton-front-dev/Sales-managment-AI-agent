@@ -29,16 +29,13 @@ export async function getServerSessionContext(explicitWorkspaceId?: string): Pro
     workspace = await getWorkspaceById(targetId);
   }
 
-  // Fallback to first workspace if single-tenant dev mode, or null
-  if (!workspace && !explicitWorkspaceId) {
-    const all = await getAllWorkspaces();
-    if (all.length > 0) {
-      workspace = all[0];
-    }
-  }
-
+  // Multi-tenant security isolation:
+  // Strictly prevent unauthenticated visitors or cross-tenant forged requests
+  // from inheriting arbitrary first workspaces in the database.
   const userEmail = workspace?.ownerEmail || null;
-  const isSuperAdmin = userEmail?.toLowerCase() === FOUNDER_SUPERADMIN_EMAIL.toLowerCase();
+  const isSuperAdmin = Boolean(
+    userEmail && userEmail.toLowerCase() === FOUNDER_SUPERADMIN_EMAIL.toLowerCase()
+  );
 
   // Check if super_admin is currently in support session
   let isImpersonating = false;

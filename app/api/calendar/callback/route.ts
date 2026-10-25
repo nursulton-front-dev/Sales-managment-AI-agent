@@ -37,10 +37,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (!targetWs) {
-      const all = await getAllWorkspaces();
-      if (all.length > 0) {
-        targetWs = all[0];
-      }
+      return NextResponse.redirect(
+        new URL('/dashboard?calendar_error=workspace_not_found', req.url)
+      );
     }
 
     if (targetWs) {

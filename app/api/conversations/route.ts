@@ -6,12 +6,16 @@ export async function GET(req: NextRequest) {
   await connection();
   try {
     const session = await getServerSessionContext();
-    const { searchParams } = new URL(req.url);
-    const workspaceId = searchParams.get('workspaceId') || session.workspaceId;
-
-    if (!workspaceId) {
-      return NextResponse.json({ success: true, conversations: [] });
+    if (!session.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
     }
+
+    const { searchParams } = new URL(req.url);
+    const requestedWorkspaceId = searchParams.get('workspaceId');
+    const workspaceId =
+      session.isSuperAdmin && requestedWorkspaceId
+        ? requestedWorkspaceId
+        : session.workspaceId;
 
     const conversations = await getAllConversations(workspaceId);
     return NextResponse.json({ success: true, conversations });
@@ -24,10 +28,14 @@ export async function POST(req: NextRequest) {
   await connection();
   try {
     const session = await getServerSessionContext();
-    const body = await req.json();
-    const workspaceId = body.workspaceId || session.workspaceId;
+    if (!session.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    }
 
-    if (!workspaceId || !body.clientName || !body.clientPhone) {
+    const body = await req.json();
+    const workspaceId = session.workspaceId;
+
+    if (!body.clientName || !body.clientPhone) {
       return NextResponse.json(
         { success: false, error: 'Обязательные поля: clientName, clientPhone' },
         { status: 400 }

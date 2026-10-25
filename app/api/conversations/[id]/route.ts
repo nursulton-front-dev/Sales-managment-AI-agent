@@ -5,10 +5,20 @@ import { getServerSessionContext } from '@/src/server/auth/session';
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await connection();
   try {
+    const session = await getServerSessionContext();
+    if (!session.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    }
+
     const { id } = await params;
     const conv = await getConversationById(id);
     if (!conv) {
       return NextResponse.json({ success: false, error: 'Диалог не найден' }, { status: 404 });
+    }
+
+    // Tenant check: strictly prevent IDOR
+    if (!session.isSuperAdmin && conv.workspaceId !== session.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Доступ запрещён' }, { status: 403 });
     }
 
     const messages = await getMessagesByConversationId(id);
@@ -21,7 +31,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await connection();
   try {
+    const session = await getServerSessionContext();
+    if (!session.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    }
+
     const { id } = await params;
+    const conv = await getConversationById(id);
+    if (!conv) {
+      return NextResponse.json({ success: false, error: 'Диалог не найден' }, { status: 404 });
+    }
+
+    if (!session.isSuperAdmin && conv.workspaceId !== session.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Доступ запрещён' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { status } = body;
 
@@ -39,10 +63,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await connection();
   try {
+    const session = await getServerSessionContext();
+    if (!session.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    }
+
     const { id } = await params;
     const conv = await getConversationById(id);
     if (!conv) {
       return NextResponse.json({ success: false, error: 'Диалог не найден' }, { status: 404 });
+    }
+
+    if (!session.isSuperAdmin && conv.workspaceId !== session.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Доступ запрещён' }, { status: 403 });
     }
 
     const body = await req.json();

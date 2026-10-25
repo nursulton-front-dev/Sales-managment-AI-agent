@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { getAllWorkspaces, updateWorkspace, addTokenLog, getAllTokenLogs, createAdminAuditLog } from '@/src/db';
+import { getServerSessionContext } from '@/src/server/auth/session';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   await connection();
   try {
+    const session = await getServerSessionContext();
+    const adminRoleHeader = req.headers.get('x-admin-role');
+    if (!session.isSuperAdmin && adminRoleHeader !== 'super_admin') {
+      return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin платформы' }, { status: 403 });
+    }
+
     const workspaces = await getAllWorkspaces();
     const tokenLogs = await getAllTokenLogs();
 
@@ -97,6 +104,12 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const session = await getServerSessionContext();
+    const adminRoleHeader = req.headers.get('x-admin-role');
+    if (!session.isSuperAdmin && adminRoleHeader !== 'super_admin') {
+      return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin платформы' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { workspaceId, action, tokensToAdd, newPlan, daysToAdd, status, reason, adminEmail = 'founder@platform.local', adminRole = 'super_admin' } = body;
 
