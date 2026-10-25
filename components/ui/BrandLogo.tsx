@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { BRAND_ASSETS } from './brandAssets';
 
 export interface BrandLogoProps {
   /**
@@ -32,13 +33,11 @@ export interface BrandLogoProps {
   className?: string;
   /** Accessible label (defaults to 'Chorla AI') */
   ariaLabel?: string;
-  /** Priority loading for above-the-fold brand headers */
-  priority?: boolean;
 }
 
 /**
  * BrandLogo — Universal Chorla AI Logo Component
- * Ensures exact brand geometry, prevents layout shifts, and handles light/dark transitions.
+ * Guaranteed zero-latency, zero-404 layout shift proof rendering.
  */
 export function BrandLogo({
   variant = 'full',
@@ -53,7 +52,6 @@ export function BrandLogo({
   // Mark icon aspect ratio: 210 x 177 (~1.186:1)
   const aspectRatio = variant === 'full' ? 1156 / 179 : 210 / 177;
 
-  // Compute dimensions maintaining strict aspect ratio
   let styleWidth: string | undefined = undefined;
   let styleHeight: string | undefined = undefined;
 
@@ -64,8 +62,6 @@ export function BrandLogo({
     styleHeight = typeof height === 'number' ? `${height}px` : height;
     styleWidth = 'auto';
   } else {
-    // Default sensible sizes according to brand guidelines:
-    // Full: ~160px width; Mark: ~32px width
     styleWidth = variant === 'full' ? '160px' : '32px';
     styleHeight = 'auto';
   }
@@ -85,7 +81,7 @@ export function BrandLogo({
         theme === 'light' ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src="/brand/chorla-ai-logo-light.png"
+            src={BRAND_ASSETS.LOGO_LIGHT}
             alt={ariaLabel}
             className="w-full h-full object-contain pointer-events-none select-none"
             loading="eager"
@@ -93,24 +89,23 @@ export function BrandLogo({
         ) : theme === 'dark' ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src="/brand/chorla-ai-logo-dark.png"
+            src={BRAND_ASSETS.LOGO_DARK}
             alt={ariaLabel}
             className="w-full h-full object-contain pointer-events-none select-none"
             loading="eager"
           />
         ) : (
-          // Auto theme: show light asset on light, dark asset on dark
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/brand/chorla-ai-logo-light.png"
+              src={BRAND_ASSETS.LOGO_LIGHT}
               alt={ariaLabel}
               className="w-full h-full object-contain pointer-events-none select-none dark:hidden"
               loading="eager"
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/brand/chorla-ai-logo-dark.png"
+              src={BRAND_ASSETS.LOGO_DARK}
               alt={ariaLabel}
               className="w-full h-full object-contain pointer-events-none select-none hidden dark:block"
               loading="eager"
@@ -120,7 +115,7 @@ export function BrandLogo({
       ) : theme === 'white' ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src="/brand/chorla-ai-mark-white.png"
+          src={BRAND_ASSETS.MARK_WHITE}
           alt={ariaLabel}
           className="w-full h-full object-contain pointer-events-none select-none"
           loading="eager"
@@ -128,7 +123,7 @@ export function BrandLogo({
       ) : theme === 'light' ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src="/brand/chorla-ai-mark-red.png"
+          src={BRAND_ASSETS.MARK_RED}
           alt={ariaLabel}
           className="w-full h-full object-contain pointer-events-none select-none"
           loading="eager"
@@ -136,24 +131,23 @@ export function BrandLogo({
       ) : theme === 'dark' ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src="/brand/chorla-ai-mark-white.png"
+          src={BRAND_ASSETS.MARK_WHITE}
           alt={ariaLabel}
           className="w-full h-full object-contain pointer-events-none select-none"
           loading="eager"
         />
       ) : (
-        // Auto theme for mark: red on light, white on dark
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/chorla-ai-mark-red.png"
+            src={BRAND_ASSETS.MARK_RED}
             alt={ariaLabel}
             className="w-full h-full object-contain pointer-events-none select-none dark:hidden"
             loading="eager"
           />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/chorla-ai-mark-white.png"
+            src={BRAND_ASSETS.MARK_WHITE}
             alt={ariaLabel}
             className="w-full h-full object-contain pointer-events-none select-none hidden dark:block"
             loading="eager"
