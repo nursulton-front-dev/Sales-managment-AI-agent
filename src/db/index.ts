@@ -39,6 +39,7 @@ interface DBData {
   orders: schema.Order[];
   supportSessions: schema.SupportSession[];
   trialGrants: schema.TrialGrant[];
+  instagramEvents: schema.InstagramEvent[];
 }
 
 const DATA_DIR = path.join(process.cwd(), '.data');
@@ -55,6 +56,7 @@ const INITIAL_SEED: DBData = {
   orders: [],
   supportSessions: [],
   trialGrants: [],
+  instagramEvents: [],
 };
 
 function readStore(): DBData {
@@ -174,6 +176,16 @@ export async function createWorkspace(data: schema.NewWorkspace): Promise<schema
     googleCalendarId: data.googleCalendarId || 'primary',
     googleCalendarWorkingHours: data.googleCalendarWorkingHours || '10:00-18:00',
     googleCalendarSlotDuration: data.googleCalendarSlotDuration || 45,
+    instagramConnected: data.instagramConnected !== undefined ? data.instagramConnected : false,
+    instagramUserId: data.instagramUserId || null,
+    instagramUsername: data.instagramUsername || null,
+    instagramAccessToken: data.instagramAccessToken || null,
+    instagramTokenExpiresAt: data.instagramTokenExpiresAt || null,
+    instagramScopes: data.instagramScopes || [],
+    instagramStatus: data.instagramStatus || 'disconnected',
+    instagramLastError: data.instagramLastError || null,
+    instagramAgentId: data.instagramAgentId || null,
+    instagramAutoReply: data.instagramAutoReply !== undefined ? data.instagramAutoReply : false,
     createdAt: new Date(),
   };
 
@@ -1018,4 +1030,99 @@ export async function getAllAdminAuditLogs(): Promise<schema.AdminAuditLog[]> {
   return (store.adminAuditLogs || []).sort(
     (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+}
+
+// ================= INSTAGRAM EVENTS (IDEMPOTENCY & QUEUE) =================
+export async function getInstagramEventByEventId(eventId: string): Promise<schema.InstagramEvent | null> {
+  if (db) {
+    try {
+      const rows = await db.select().from(schema.instagramEvents).where(eq(schema.instagramEvents.eventId, eventId));
+      return rows[0] || null;
+    } catch (err) {
+      console.warn('Neon select instagramEvents error:', err);
+    }
+  }
+  const store = readStore();
+  return (store.instagramEvents || []).find((e) => e.eventId === eventId) || null;
+}
+
+export async function createInstagramEvent(data: Partial<schema.InstagramEvent> & {
+  workspaceId: string;
+  eventId: string;
+  senderId: string;
+  recipientId: string;
+}): Promise<schema.InstagramEvent> {
+  const event: schema.InstagramEvent = {
+    id: data.id || `ig_evt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    workspaceId: data.workspaceId,
+    eventId: data.eventId,
+    senderId: data.senderId,
+    recipientId: data.recipientId,
+    messageText: data.messageText || null,
+    rawPayload: data.rawPayload || null,
+    status: data.status || 'received',
+    processedAt: data.processedAt || null,
+    errorReason: data.errorReason || null,
+    createdAt: new Date(),
+  };
+
+  if (db) {
+    try {
+      await db.insert(schema.instagramEvents).values(event);
+      return event;
+    } catch (err) {
+      console.warn('Neon insert instagramEvents error:', err);
+    }
+  }
+
+  const store = readStore();
+  if (!store.instagramEvents) store.instagramEvents = [];
+  store.instagramEvents.push(event);
+  writeStore(store);
+  return event;
+}
+
+export async function updateInstagramEvent(
+  id: string,
+  data: Partial<schema.InstagramEvent>
+): Promise<schema.InstagramEvent | null> {
+  if (db) {
+    try {
+      const rows = await db
+        .update(schema.instagramEvents)
+        .set(data)
+        .where(eq(schema.instagramEvents.id, id))
+        .returning();
+      return rows[0] || null;
+    } catch (err) {
+      console.warn('Neon update instagramEvents error:', err);
+    }
+  }
+
+  const store = readStore();
+  if (!store.instagramEvents) store.instagramEvents = [];
+  const idx = store.instagramEvents.findIndex((e) => e.id === id);
+  if (idx !== -1) {
+    store.instagramEvents[idx] = { ...store.instagramEvents[idx], ...data };
+    writeStore(store);
+    return store.instagramEvents[idx];
+  }
+  return null;
+}
+
+export async function getWorkspaceByInstagramUserId(instagramUserId: string): Promise<schema.Workspace | null> {
+  if (db) {
+    try {
+      const rows = await db
+        .select()
+        .from(schema.workspaces)
+        .where(eq(schema.workspaces.instagramUserId, instagramUserId));
+      return rows[0] || null;
+    } catch (err) {
+      console.warn('Neon select workspace by instagramUserId error:', err);
+    }
+  }
+
+  const store = readStore();
+  return store.workspaces.find((w) => w.instagramUserId === instagramUserId) || null;
 }

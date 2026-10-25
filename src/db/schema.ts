@@ -24,6 +24,17 @@ export const workspaces = pgTable('workspaces', {
   googleCalendarId: text('google_calendar_id').default('primary'),
   googleCalendarWorkingHours: text('google_calendar_working_hours').default('10:00-18:00'),
   googleCalendarSlotDuration: integer('google_calendar_slot_duration').default(45),
+  // Instagram Integration Fields
+  instagramConnected: boolean('instagram_connected').notNull().default(false),
+  instagramUserId: text('instagram_user_id'),
+  instagramUsername: text('instagram_username'),
+  instagramAccessToken: text('instagram_access_token'), // AES-256 encrypted
+  instagramTokenExpiresAt: timestamp('instagram_token_expires_at', { withTimezone: true }),
+  instagramScopes: jsonb('instagram_scopes').$type<string[]>().default([]),
+  instagramStatus: text('instagram_status').notNull().default('disconnected'), // 'disconnected' | 'connected' | 'needs_reconnect' | 'error'
+  instagramLastError: text('instagram_last_error'),
+  instagramAgentId: text('instagram_agent_id'),
+  instagramAutoReply: boolean('instagram_auto_reply').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -266,6 +277,23 @@ export const adminAuditLogs = pgTable('admin_audit_logs', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// 15. Instagram Events (Очередь и идемпотентное логирование вебхуков Meta)
+export const instagramEvents = pgTable('instagram_events', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  eventId: text('event_id').notNull().unique(), // Meta message mid or entry id
+  senderId: text('sender_id').notNull(),
+  recipientId: text('recipient_id').notNull(),
+  messageText: text('message_text'),
+  rawPayload: jsonb('raw_payload'),
+  status: text('status').notNull().default('received'), // 'received' | 'processing' | 'replied' | 'ignored' | 'failed' | 'human_takeover'
+  processedAt: timestamp('processed_at', { withTimezone: true }),
+  errorReason: text('error_reason'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 export type Workspace = typeof workspaces.$inferSelect;
 export type NewWorkspace = typeof workspaces.$inferInsert;
 export type Agent = typeof agents.$inferSelect;
@@ -296,3 +324,5 @@ export type SupportMessage = typeof supportMessages.$inferSelect;
 export type NewSupportMessage = typeof supportMessages.$inferInsert;
 export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
 export type NewAdminAuditLog = typeof adminAuditLogs.$inferInsert;
+export type InstagramEvent = typeof instagramEvents.$inferSelect;
+export type NewInstagramEvent = typeof instagramEvents.$inferInsert;

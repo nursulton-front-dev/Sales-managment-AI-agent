@@ -93,6 +93,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       tokensCost: 0, // Human messages do not cost AI tokens
     });
 
+    // If channel is Instagram and sender is human, send outbound message to Instagram Direct
+    if (conv.channel === 'Instagram' && sender === 'human' && conv.clientPhone?.startsWith('ig:')) {
+      const recipientId = conv.clientPhone.replace('ig:', '');
+      try {
+        const { getWorkspaceById } = await import('@/src/db');
+        const { decryptToken } = await import('@/lib/instagram/config');
+        const { sendInstagramDirectMessage } = await import('@/lib/instagram/client');
+
+        const ws = await getWorkspaceById(conv.workspaceId);
+        if (ws?.instagramAccessToken) {
+          const accessToken = decryptToken(ws.instagramAccessToken);
+          if (accessToken) {
+            await sendInstagramDirectMessage({
+              recipientId,
+              text,
+              accessToken,
+            });
+          }
+        }
+      } catch (igSendErr) {
+        console.warn('Outbound human Instagram message delivery warning:', igSendErr);
+      }
+    }
+
     return NextResponse.json({ success: true, message: newMsg });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
