@@ -7,13 +7,19 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSessionContext();
     if (!session.workspace) {
-      return NextResponse.json({ success: false, error: 'Организация не найдена' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, authenticated: false, error: 'Организация не найдена или сессия не авторизована' },
+        { status: 401 }
+      );
     }
 
     return NextResponse.json({
       success: true,
+      authenticated: true,
       workspace: session.workspace,
       isSuperAdmin: session.isSuperAdmin,
+      isImpersonating: session.isImpersonating,
+      supportSessionReason: session.supportSessionReason,
       role: session.role,
     });
   } catch (error: any) {
