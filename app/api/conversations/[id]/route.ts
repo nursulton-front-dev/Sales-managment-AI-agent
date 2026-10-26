@@ -23,8 +23,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const messages = await getMessagesByConversationId(id);
     return NextResponse.json({ success: true, conversation: conv, messages });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
 }
 
@@ -55,8 +55,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const updated = await updateConversation(id, { status });
     return NextResponse.json({ success: true, conversation: updated });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
 }
 
@@ -85,40 +85,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: 'Текст сообщения обязателен' }, { status: 400 });
     }
 
-    const newMsg = await createMessage({
-      conversationId: id,
-      workspaceId: conv.workspaceId,
-      sender: sender as 'client' | 'agent' | 'human',
-      text,
-      tokensCost: 0, // Human messages do not cost AI tokens
-    });
-
-    // If channel is Instagram and sender is human, send outbound message to Instagram Direct
-    if (conv.channel === 'Instagram' && sender === 'human' && conv.clientPhone?.startsWith('ig:')) {
-      const recipientId = conv.clientPhone.replace('ig:', '');
-      try {
-        const { getWorkspaceById } = await import('@/src/db');
-        const { decryptToken } = await import('@/lib/instagram/config');
-        const { sendInstagramDirectMessage } = await import('@/lib/instagram/client');
-
-        const ws = await getWorkspaceById(conv.workspaceId);
-        if (ws?.instagramAccessToken) {
-          const accessToken = decryptToken(ws.instagramAccessToken);
-          if (accessToken) {
-            await sendInstagramDirectMessage({
-              recipientId,
-              text,
-              accessToken,
-            });
-          }
-        }
-      } catch (igSendErr) {
-        console.warn('Outbound human Instagram message delivery warning:', igSendErr);
-      }
+    if (typeof text !== 'string' || !text.trim() || text.length > 4000 || conv.status === 'closed') return NextResponse.json({ success: false, error: 'Проверьте текст и статус диалога' }, { status: 400 });
+    await updateConversation(id, { status: 'human_takeover' });
+    if (conv.channel === 'Instagram' && conv.clientPhone?.startsWith('ig:')) {
+      const { getWorkspaceById } = await import('@/src/db');
+      const { decryptToken } = await import('@/lib/instagram/config');
+      const { sendInstagramDirectMessage } = await import('@/lib/instagram/client');
+      const workspace = await getWorkspaceById(conv.workspaceId);
+      const accessToken = workspace?.instagramAccessToken ? decryptToken(workspace.instagramAccessToken) : null;
+      if (!accessToken) return NextResponse.json({ success: false, error: 'Переподключите Instagram' }, { status: 409 });
+      await sendInstagramDirectMessage({ recipientId: conv.clientPhone.slice(3), text, accessToken });
+    } else if (conv.channel === 'Telegram' && conv.clientPhone?.startsWith('id:')) {
+      const { getAllAgents } = await import('@/src/db');
+      const { telegramCall } = await import('@/lib/server/telegram');
+      const agent = (await getAllAgents(conv.workspaceId)).find((item) => item.id === conv.agentId);
+      if (!agent?.tgBotToken) return NextResponse.json({ success: false, error: 'Переподключите Telegram' }, { status: 409 });
+      await telegramCall(agent.tgBotToken, 'sendMessage', { chat_id: conv.clientPhone.slice(3), text });
+    } else {
+      return NextResponse.json({ success: false, error: 'В этом диалоге отправка пока недоступна' }, { status: 409 });
     }
+    const newMsg = await createMessage({ conversationId: id, workspaceId: conv.workspaceId, sender: 'human', text, tokensCost: 0 });
 
     return NextResponse.json({ success: true, message: newMsg });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
 }

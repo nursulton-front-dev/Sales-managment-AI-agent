@@ -1,3 +1,4 @@
+import { getServerSessionContext } from '@/src/server/auth/session';
 import { NextRequest, NextResponse, connection } from 'next/server';
 import {
   createGoogleCalendarEvent,
@@ -33,17 +34,11 @@ export async function POST(req: NextRequest) {
       appointmentId,
     } = body;
 
-    const cookieStore = await cookies();
-    const targetId = workspaceId || cookieStore.get('ai_os_workspace_id')?.value;
-
-    let ws = null;
-    if (targetId) {
-      ws = await getWorkspaceById(targetId);
-    }
-    if (!ws) {
-      return NextResponse.json({ success: false, error: 'Организация не найдена' }, { status: 404 });
-    }
-
+    const session = await getServerSessionContext();
+    const ws = session.workspace;
+    if (!ws) return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    if (appointmentId && !(await getAllAppointments(ws.id)).some((item) => item.id === appointmentId && (!eventId || item.googleEventId === eventId))) return NextResponse.json({ success: false, error: 'Запись не найдена' }, { status: 404 });
+    if (eventId && !appointmentId) return NextResponse.json({ success: false, error: 'Укажите запись' }, { status: 400 });
     const actualWorkspaceId = ws.id;
 
     // -------------------------------------------------------------
@@ -55,8 +50,8 @@ export async function POST(req: NextRequest) {
         try {
           await deleteGoogleCalendarEvent(ws.googleRefreshToken, eventId);
           liveCancelled = true;
-        } catch (err: any) {
-          console.warn('Google Calendar delete error:', err.message);
+        } catch (err) {
+          console.warn('Google Calendar delete error:', (err instanceof Error ? err.message : 'Ошибка запроса'));
         }
       }
 
@@ -91,8 +86,8 @@ export async function POST(req: NextRequest) {
             endTime: newEnd.toISOString(),
             summary: summary || `Перенесённый урок — ${clientName}`,
           });
-        } catch (err: any) {
-          console.warn('Google Calendar patch error:', err.message);
+        } catch (err) {
+          console.warn('Google Calendar patch error:', (err instanceof Error ? err.message : 'Ошибка запроса'));
         }
       }
 
@@ -188,8 +183,8 @@ export async function POST(req: NextRequest) {
         googleEventId = result.id;
         googleEventLink = result.htmlLink;
         isLiveApi = true;
-      } catch (err: any) {
-        console.warn('Google Calendar live API create error:', err.message);
+      } catch (err) {
+        console.warn('Google Calendar live API create error:', (err instanceof Error ? err.message : 'Ошибка запроса'));
       }
     }
 
@@ -228,8 +223,8 @@ export async function POST(req: NextRequest) {
         ? 'Событие успешно создано в Google Календаре!'
         : 'Запись успешно создана в базе организации со ссылкой на Google Календарь.',
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error handling calendar test event:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { createSupportSession, endSupportSession, getActiveSupportSession, getWorkspaceById } from '@/src/db';
 import { getServerSessionContext, FOUNDER_SUPERADMIN_EMAIL } from '@/src/server/auth/session';
+import { publicWorkspace } from '@/lib/server/public-data';
 import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
@@ -39,16 +40,18 @@ export async function POST(req: NextRequest) {
       path: '/',
       maxAge: 3600 * 2, // 2 hour max support window
       sameSite: 'lax',
+      httpOnly: true,
+      secure: req.nextUrl.protocol === 'https:',
     });
 
     return NextResponse.json({
       success: true,
       supportSession,
-      targetWorkspace: targetWs,
+      targetWorkspace: publicWorkspace(targetWs),
       message: `Support-сессия активирована для "${targetWs.companyName}". Причина: ${reason}`,
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
 }
 
@@ -56,6 +59,8 @@ export async function DELETE(req: NextRequest) {
   await connection();
   try {
     const session = await getServerSessionContext();
+    if (!session.isSuperAdmin) return NextResponse.json({ success: false, error: 'Доступ запрещён' }, { status: 403 });
+    (await cookies()).delete('ai_os_workspace_id');
     if (session.workspaceId) {
       const active = await getActiveSupportSession(session.workspaceId);
       if (active) {
@@ -67,7 +72,7 @@ export async function DELETE(req: NextRequest) {
       success: true,
       message: 'Support-сессия завершена. Возврат в панель администратора.',
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
 }

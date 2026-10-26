@@ -1,21 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { useApp } from '@/context/AppContext';
+import Link from 'next/link';
+import { DataState } from '@/components/ui/DataState';
+import { messageText } from '@/lib/message-text';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
   MessageSquare,
   Search,
+  User,
+  Bot,
   Send,
   PauseCircle,
   PlayCircle,
   Clock,
   ShieldAlert,
   ArrowLeft,
-  SlidersHorizontal,
 } from 'lucide-react';
 
 interface Conversation {
@@ -41,7 +45,11 @@ interface Message {
 }
 
 export default function ConversationsPage() {
-  const { user } = useApp();
+  const { user, showToast } = useApp();
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [messageError, setMessageError] = useState<string | null>(null);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [toggling, setToggling] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -49,8 +57,7 @@ export default function ConversationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [tabFilter, setTabFilter] = useState<'all' | 'my' | 'unanswered'>('all');
-  const [selectedChannel, setSelectedChannel] = useState<'all' | 'Telegram' | 'Instagram' | 'WhatsApp'>('all');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'active' | 'human_takeover'>('ALL');
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Load conversations
@@ -58,6 +65,8 @@ export default function ConversationsPage() {
     try {
       const res = await fetch('/api/conversations');
       const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Не удалось загрузить диалоги');
+      setLoadError(null);
       if (data.success) {
         setConversations(data.conversations || []);
         if (data.conversations?.length > 0 && !activeConvId) {
@@ -65,43 +74,38 @@ export default function ConversationsPage() {
         }
       }
     } catch (err) {
-      console.error('Failed to load conversations:', err);
+      setLoadError(err instanceof Error ? err.message : 'Ошибка сети');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- This starts an async API request; state is updated after the response.
     loadConversations();
   }, []);
 
-  // Load messages for active conversation
   useEffect(() => {
-    if (!activeConvId) {
-      setMessages([]);
-      return;
-    }
-
-    const fetchMessages = async () => {
-      try {
-        const res = await fetch(`/api/conversations/${activeConvId}`);
-        const data = await res.json();
-        if (data.success) {
-          setMessages(data.messages || []);
-        }
-      } catch (err) {
-        console.error('Failed to load messages:', err);
-      }
-    };
-
-    fetchMessages();
+    if (!activeConvId) return;
+    const controller = new AbortController();
+    // A new selection clears stale messages before starting its request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMessages([]); setMessagesLoading(true); setMessageError(null);
+    fetch(`/api/conversations/${activeConvId}`, { signal: controller.signal }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Не удалось загрузить сообщения');
+      if (!controller.signal.aborted) setMessages(data.messages || []);
+    }).catch((error) => { if (!controller.signal.aborted) setMessageError(error.message); })
+      .finally(() => { if (!controller.signal.aborted) setMessagesLoading(false); });
+    return () => controller.abort();
   }, [activeConvId]);
 
   const activeConversation = conversations.find((c) => c.id === activeConvId);
 
   // Toggle Human Takeover
   const handleToggleHumanTakeover = async () => {
-    if (!activeConversation) return;
+    if (!activeConversation || toggling) return;
+    setToggling(true);
     const newStatus = activeConversation.status === 'active' ? 'human_takeover' : 'active';
     try {
       const res = await fetch(`/api/conversations/${activeConversation.id}`, {
@@ -110,14 +114,15 @@ export default function ConversationsPage() {
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Ошибка сохранения');
       if (data.success) {
         setConversations((prev) =>
           prev.map((c) => (c.id === activeConversation.id ? { ...c, status: newStatus } : c))
         );
       }
     } catch (err) {
-      console.error('Failed to update conversation status:', err);
-    }
+      showToast('Не удалось изменить режим ответа', err instanceof Error ? err.message : 'Ошибка сети', 'error');
+    } finally { setToggling(false); }
   };
 
   // Send human message
@@ -127,7 +132,6 @@ export default function ConversationsPage() {
 
     setIsSending(true);
     const textToSend = inputText.trim();
-    setInputText('');
 
     try {
       const res = await fetch(`/api/conversations/${activeConvId}`, {
@@ -136,171 +140,100 @@ export default function ConversationsPage() {
         body: JSON.stringify({ text: textToSend, sender: 'human' }),
       });
       const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Не удалось отправить сообщение');
       if (data.success && data.message) {
+        setInputText('');
         setMessages((prev) => [...prev, data.message]);
         setConversations((prev) =>
           prev.map((c) =>
             c.id === activeConvId
-              ? { ...c, lastMessageText: textToSend, lastMessageAt: new Date().toISOString() }
+              ? { ...c, status: 'human_takeover', lastMessageText: textToSend, lastMessageAt: data.message.createdAt }
               : c
           )
         );
       }
     } catch (err) {
-      console.error('Failed to send message:', err);
+      showToast('Сообщение не отправлено', err instanceof Error ? err.message : 'Ошибка сети', 'error');
     } finally {
       setIsSending(false);
     }
   };
 
   const filteredConversations = conversations.filter((c) => {
-    const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
-      !q ||
-      c.clientName.toLowerCase().includes(q) ||
-      c.clientPhone.includes(q) ||
-      (c.lastMessageText || '').toLowerCase().includes(q);
-
-    const matchesChannel = selectedChannel === 'all' || c.channel.toLowerCase() === selectedChannel.toLowerCase();
-    const matchesTab =
-      tabFilter === 'all'
-        ? true
-        : tabFilter === 'my'
-        ? c.status === 'human_takeover'
-        : c.status === 'active';
-
-    return matchesSearch && matchesChannel && matchesTab;
+      c.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.clientPhone.includes(searchQuery) ||
+      (c.lastMessageText || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'ALL' || c.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   return (
     <div className="space-y-4 text-left">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-3 border-b border-[var(--border)]">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] leading-tight">
-            Диалоги
-          </h1>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
-            Сообщения из всех каналов в одном месте.
-          </p>
-        </div>
+      <PageHeader
+        title="Диалоги"
+        description="Переписка с клиентами и возможность ручного перехвата диалога"
+        badge={
+          <Badge variant="info">
+            {conversations.length} {conversations.length === 1 ? 'диалог' : 'диалогов'}
+          </Badge>
+        }
+      />
 
-        <Link
-          href="/dashboard/integrations"
-          className="inline-flex items-center justify-center text-xs font-semibold px-4 py-2 border border-[var(--accent)] text-[var(--accent)] rounded-[6px] hover:bg-[var(--accent-soft)] transition-colors self-start sm:self-auto"
-        >
-          Подключить канал
-        </Link>
-      </div>
-
-      {isLoading ? (
-        <div className="p-12 text-center text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-[8px]">
-          Загрузка диалогов...
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-[calc(100vh-220px)] min-h-[520px]">
+      {loadError ? <DataState error={loadError} retry={loadConversations} /> : isLoading ? <DataState loading /> : (
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-[calc(100vh-220px)] min-h-[420px]">
           {/* Left Column: Conversations List */}
           <div
-            className={`md:col-span-5 lg:col-span-4 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] flex flex-col overflow-hidden ${
+            className={`md:col-span-4 lg:col-span-4 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] flex flex-col overflow-hidden ${
               mobileView === 'chat' ? 'hidden md:flex' : 'flex'
             }`}
           >
             {/* Search and filters */}
-            <div className="p-3 border-b border-[var(--border)] space-y-3 bg-[var(--surface)]">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    placeholder="Поиск диалогов"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-[var(--surface)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] font-medium"
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-[var(--border)] rounded-[6px] text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] cursor-pointer"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  <span>Фильтры</span>
-                </button>
+            <div className="p-3 border-b border-[var(--border)] space-y-2 bg-[var(--surface-secondary)]">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-3 sm:top-2.5" />
+                <input
+                  type="text"
+                  aria-label="Поиск диалогов" placeholder="Поиск по имени, номеру..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 sm:py-1.5 min-h-[40px] sm:min-h-[34px] text-base sm:text-xs bg-[var(--surface)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] font-medium"
+                />
               </div>
 
-              {/* Tabs: Все, Мои, Без ответа */}
-              <div className="flex items-center gap-4 text-xs font-semibold border-b border-[var(--border)] -mb-1 pb-1">
+              <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
                 <button
                   type="button"
-                  onClick={() => setTabFilter('all')}
-                  className={`pb-1 cursor-pointer transition-colors border-b-2 ${
-                    tabFilter === 'all'
-                      ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
-                      : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  onClick={() => setStatusFilter('ALL')}
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-[4px] transition-colors cursor-pointer shrink-0 ${
+                    statusFilter === 'ALL'
+                      ? 'bg-[var(--accent)] text-[var(--accent-text)] font-bold'
+                      : 'bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--border)] border border-[var(--border)]'
                   }`}
                 >
-                  Все <span className="text-[11px] font-normal">{conversations.length}</span>
+                  Все ({conversations.length})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTabFilter('my')}
-                  className={`pb-1 cursor-pointer transition-colors border-b-2 ${
-                    tabFilter === 'my'
-                      ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
-                      : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  onClick={() => setStatusFilter('active')}
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-[4px] transition-colors cursor-pointer shrink-0 ${
+                    statusFilter === 'active'
+                      ? 'bg-[var(--accent)] text-[var(--accent-text)] font-bold'
+                      : 'bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--border)] border border-[var(--border)]'
                   }`}
                 >
-                  Мои <span className="text-[11px] font-normal">{conversations.filter(c => c.status === 'human_takeover').length}</span>
+                  Авто-ИИ
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTabFilter('unanswered')}
-                  className={`pb-1 cursor-pointer transition-colors border-b-2 ${
-                    tabFilter === 'unanswered'
-                      ? 'border-[var(--accent)] text-[var(--accent)] font-bold'
-                      : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  onClick={() => setStatusFilter('human_takeover')}
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-[4px] transition-colors cursor-pointer shrink-0 ${
+                    statusFilter === 'human_takeover'
+                      ? 'bg-[var(--accent)] text-[var(--accent-text)] font-bold'
+                      : 'bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--border)] border border-[var(--border)]'
                   }`}
                 >
-                  Без ответа <span className="text-[11px] font-normal">{conversations.filter(c => c.status === 'active').length}</span>
-                </button>
-              </div>
-
-              {/* Channels filter pills */}
-              <div className="flex items-center gap-2 pt-1 overflow-x-auto">
-                <button
-                  type="button"
-                  onClick={() => setSelectedChannel(selectedChannel === 'Telegram' ? 'all' : 'Telegram')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-medium border cursor-pointer transition-colors ${
-                    selectedChannel === 'Telegram'
-                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent-text)]'
-                      : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
-                  }`}
-                >
-                  <Image src="/integrations/telegram.svg" alt="Telegram" width={14} height={14} />
-                  <span>Telegram</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedChannel(selectedChannel === 'Instagram' ? 'all' : 'Instagram')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-medium border cursor-pointer transition-colors ${
-                    selectedChannel === 'Instagram'
-                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent-text)]'
-                      : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
-                  }`}
-                >
-                  <Image src="/integrations/instagram.svg" alt="Instagram" width={14} height={14} />
-                  <span>Instagram</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedChannel(selectedChannel === 'WhatsApp' ? 'all' : 'WhatsApp')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-medium border cursor-pointer transition-colors ${
-                    selectedChannel === 'WhatsApp'
-                      ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent-text)]'
-                      : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
-                  }`}
-                >
-                  <Image src="/integrations/whatsapp.svg" alt="WhatsApp" width={14} height={14} />
-                  <span>WhatsApp</span>
+                  Ручной ответ
                 </button>
               </div>
             </div>
@@ -308,16 +241,8 @@ export default function ConversationsPage() {
             {/* List */}
             <div className="flex-1 overflow-y-auto divide-y divide-[var(--border)]">
               {filteredConversations.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[var(--text-secondary)] space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-muted)] flex items-center justify-center mx-auto">
-                    <MessageSquare className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm text-[var(--text-primary)]">Диалогов пока нет</div>
-                    <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto leading-relaxed">
-                      Подключите каналы, чтобы начать получать сообщения от клиентов.
-                    </p>
-                  </div>
+                <div className="p-8 text-center text-xs text-[var(--text-muted)]">
+                  {conversations.length ? 'По заданным фильтрам диалогов не найдено' : 'Диалогов пока нет. Подключите канал общения.'}
                 </div>
               ) : (
                 filteredConversations.map((conv) => {
@@ -325,15 +250,15 @@ export default function ConversationsPage() {
                   const isTakeover = conv.status === 'human_takeover';
 
                   return (
-                    <div
+                    <button type="button" aria-pressed={isSelected}
                       key={conv.id}
                       onClick={() => {
                         setActiveConvId(conv.id);
                         setMobileView('chat');
                       }}
-                      className={`p-3 sm:p-3.5 transition-colors cursor-pointer text-left ${
+                      className={`w-full p-3 sm:p-3.5 transition-colors cursor-pointer text-left ${
                         isSelected
-                          ? 'bg-[var(--accent-soft)] border-l-2 border-[var(--accent)]'
+                          ? 'bg-[var(--accent-soft)] border-l-3 border-[var(--accent)]'
                           : 'hover:bg-[var(--surface-secondary)]'
                       }`}
                     >
@@ -350,7 +275,7 @@ export default function ConversationsPage() {
                       </div>
 
                       <p className="text-[11px] text-[var(--text-secondary)] truncate mb-1.5">
-                        {conv.lastMessageText || 'Нет сообщений'}
+                        {messageText(conv.lastMessageText || 'Нет сообщений')}
                       </p>
 
                       <div className="flex items-center gap-1.5">
@@ -370,7 +295,7 @@ export default function ConversationsPage() {
                           </span>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })
               )}
@@ -379,7 +304,7 @@ export default function ConversationsPage() {
 
           {/* Right Column: Active Conversation Chat Thread */}
           <div
-            className={`md:col-span-7 lg:col-span-8 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] flex flex-col overflow-hidden ${
+            className={`md:col-span-8 lg:col-span-8 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] flex flex-col overflow-hidden ${
               mobileView === 'list' ? 'hidden md:flex' : 'flex'
             }`}
           >
@@ -391,7 +316,7 @@ export default function ConversationsPage() {
                     {/* Mobile Back Button to list */}
                     <button
                       type="button"
-                      onClick={() => setMobileView('list')}
+                      aria-label="Вернуться к списку диалогов" onClick={() => setMobileView('list')}
                       className="md:hidden w-8 h-8 rounded-[6px] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border)] cursor-pointer"
                     >
                       <ArrowLeft className="w-4 h-4" />
@@ -413,7 +338,7 @@ export default function ConversationsPage() {
                         <span>Канал: <strong>{activeConversation.channel}</strong></span>
                         <span>·</span>
                         <span>
-                          {activeConversation.status === 'active' ? 'ИИ автоответ' : 'Оператор на связи'}
+                          {activeConversation.status === 'closed' ? 'Диалог закрыт' : activeConversation.status === 'active' ? 'Отвечает ИИ' : 'Отвечает оператор'}
                         </span>
                       </div>
                     </div>
@@ -425,7 +350,7 @@ export default function ConversationsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={handleToggleHumanTakeover}
+                        onClick={handleToggleHumanTakeover} disabled={toggling}
                         className="text-[var(--warning-text)] border-[var(--warning-border)] hover:bg-[var(--warning-bg)]"
                       >
                         <PauseCircle className="w-3.5 h-3.5 text-[var(--warning)]" />
@@ -435,7 +360,7 @@ export default function ConversationsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={handleToggleHumanTakeover}
+                        onClick={handleToggleHumanTakeover} disabled={toggling}
                         className="text-[var(--success-text)] border-[var(--success-border)] hover:bg-[var(--success-bg)]"
                       >
                         <PlayCircle className="w-3.5 h-3.5 text-[var(--success)]" />
@@ -450,14 +375,14 @@ export default function ConversationsPage() {
                   <div className="p-2.5 px-4 bg-[var(--warning-bg)] border-b border-[var(--warning-border)] text-[var(--warning-text)] text-[11px] flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-medium">
                       <ShieldAlert className="w-3.5 h-3.5 text-[var(--warning)] shrink-0" />
-                      <span>ИИ-автоответчик на паузе. Сообщения отправляются оператором без списания токенов.</span>
+                      <span>ИИ-автоответчик на паузе. Сообщения отправляются оператором без списания токенов (0 токенов).</span>
                     </div>
                   </div>
                 )}
 
                 {/* Messages Stream */}
                 <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[var(--background)]">
-                  {messages.length === 0 ? (
+                  {messagesLoading || messageError ? <DataState loading={messagesLoading} error={messageError} /> : messages.length === 0 ? (
                     <div className="p-12 text-center text-xs text-[var(--text-muted)]">
                       Диалог открыт. Сообщений пока нет.
                     </div>
@@ -497,7 +422,7 @@ export default function ConversationsPage() {
                                 : 'bg-[var(--accent)] text-[var(--accent-text)]'
                             }`}
                           >
-                            <p className="whitespace-pre-wrap">{m.text}</p>
+                            <p className="whitespace-pre-wrap break-words">{messageText(m.text)}</p>
                           </div>
                         </div>
                       );
@@ -512,40 +437,24 @@ export default function ConversationsPage() {
                 >
                   <input
                     type="text"
-                    value={inputText}
+                    aria-label="Ответ клиенту" maxLength={4000} value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder={
                       activeConversation.status === 'human_takeover'
                         ? 'Напишите ответ клиенту вручную...'
                         : 'Ответить как оператор (автоматически включит ручной режим)...'
                     }
-                    className="flex-1 px-3 py-2 min-h-[44px] sm:min-h-[40px] text-base sm:text-xs bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] placeholder:text-[var(--text-muted)] text-[var(--text-primary)]"
+                    className="min-w-0 flex-1 px-3 py-2 min-h-[44px] sm:min-h-[40px] text-base sm:text-xs bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] placeholder:text-[var(--text-muted)] text-[var(--text-primary)]"
                   />
-                  <Button type="submit" size="sm" isLoading={isSending} disabled={!inputText.trim()}>
+                  <Button type="submit" size="sm" isLoading={isSending} disabled={!inputText.trim() || messagesLoading || Boolean(messageError) || activeConversation.status === 'closed'}>
                     <Send className="w-3.5 h-3.5" />
                     <span>Отправить</span>
                   </Button>
                 </form>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[var(--surface)]">
-                <div className="w-16 h-16 rounded-full bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-muted)] flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 stroke-current fill-none" viewBox="0 0 24 24" strokeWidth="1.75">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">
-                  Здесь будут сообщения клиентов
-                </h3>
-                <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-sm mx-auto mt-1 mb-6 leading-relaxed">
-                  Подключите Telegram, Instagram или WhatsApp, чтобы начать работу.
-                </p>
-                <Link
-                  href="/dashboard/integrations"
-                  className="inline-flex items-center justify-center bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-text)] text-xs font-semibold px-6 py-2.5 rounded-[6px] transition-colors shadow-2xs"
-                >
-                  Подключить канал
-                </Link>
+              <div className="flex-1 flex items-center justify-center p-8 text-center text-xs text-[var(--text-muted)]">
+                <div><MessageSquare size={48} className="mx-auto mb-5" /><h2 className="text-lg font-semibold text-[var(--text-primary)]">Здесь будут сообщения клиентов</h2><p className="text-sm mt-3">{conversations.length ? 'Выберите диалог из списка слева.' : 'Подключите канал, чтобы начать работу.'}</p>{!conversations.length && <Link href="/dashboard/integrations" className="inline-flex mt-5 text-sm text-[var(--accent-link)]">Подключить канал →</Link>}</div>
               </div>
             )}
           </div>

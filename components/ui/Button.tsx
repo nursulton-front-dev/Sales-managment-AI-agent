@@ -32,14 +32,16 @@ export function Button({
   };
 
   const sizes = {
-    sm: 'text-xs min-h-[38px] sm:min-h-[34px] px-3 py-1.5 gap-1.5',
-    md: 'text-xs sm:text-sm min-h-[44px] sm:min-h-[40px] px-4 py-2 gap-2',
+    sm: 'text-sm min-h-[44px] sm:min-h-[36px] px-3 py-1.5 gap-1.5',
+    md: 'text-sm min-h-[44px] sm:min-h-[40px] px-4 py-2 gap-2',
     lg: 'text-sm min-h-[48px] sm:min-h-[44px] px-5 py-2.5 gap-2.5',
   };
 
   return (
     <button
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      type="button"
+      aria-busy={isLoading || undefined}
       disabled={disabled || isLoading}
       {...props}
     >

@@ -1,21 +1,13 @@
+import { getServerSessionContext } from '@/src/server/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { updateWorkspace, getWorkspaceById, getAllWorkspaces } from '@/src/db';
 import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
-    const { workspaceId } = await req.json().catch(() => ({}));
-    const cookieStore = await cookies();
-    const targetId = workspaceId || cookieStore.get('ai_os_workspace_id')?.value;
-
-    let ws = null;
-    if (targetId) {
-      ws = await getWorkspaceById(targetId);
-    }
-    if (!ws) {
-      return NextResponse.json({ success: false, error: 'Организация не найдена' }, { status: 404 });
-    }
-
+    const session = await getServerSessionContext();
+    const ws = session.workspace;
+    if (!ws) return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
     if (ws) {
       await updateWorkspace(ws.id, {
         googleCalendarConnected: false,
@@ -28,7 +20,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: 'Google Календарь успешно отключен',
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
 }

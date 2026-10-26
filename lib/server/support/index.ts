@@ -1,3 +1,4 @@
+import { readSupportStore, writeSupportStore } from './local-store';
 import { db } from '@/src/db';
 import * as schema from '@/src/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
@@ -13,7 +14,13 @@ export interface CreateTicketParams {
 }
 
 export async function createSupportTicket(params: CreateTicketParams) {
-  if (!db) throw new Error('Database is not initialized');
+  if (!db) {
+    const store = readSupportStore(); const now = new Date(); const id = crypto.randomUUID();
+    const ticket: schema.SupportTicket = { id, ticketNumber: 1001 + store.tickets.length, workspaceId: params.workspaceId, authorEmail: params.authorEmail, authorName: params.authorName, type: params.type, subject: params.subject, description: params.description, status: 'new', assignedTo: null, unreadByCustomer: false, unreadBySupport: true, createdAt: now, updatedAt: now };
+    store.tickets.push(ticket);
+    store.messages.push({ id: crypto.randomUUID(), ticketId: id, senderRole: 'customer', senderEmail: params.authorEmail, senderName: params.authorName, text: params.description, isInternalNote: false, attachments: params.attachments || [], createdAt: now });
+    writeSupportStore(store); return ticket;
+  }
 
   // Generate sequential-like ticket number based on existing count
   const allTickets = await db.select().from(schema.supportTickets);
@@ -57,7 +64,7 @@ export async function createSupportTicket(params: CreateTicketParams) {
 }
 
 export async function getCustomerTickets(authorEmail: string, workspaceId: string) {
-  if (!db) return [];
+  if (!db) return readSupportStore().tickets.filter((ticket) => ticket.authorEmail === authorEmail && ticket.workspaceId === workspaceId).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   return db
     .select()
     .from(schema.supportTickets)
@@ -71,7 +78,7 @@ export async function getCustomerTickets(authorEmail: string, workspaceId: strin
 }
 
 export async function getAllSupportTicketsForAdmin() {
-  if (!db) return [];
+  if (!db) return readSupportStore().tickets.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   return db
     .select()
     .from(schema.supportTickets)
@@ -79,7 +86,7 @@ export async function getAllSupportTicketsForAdmin() {
 }
 
 export async function getSupportTicketById(ticketId: string) {
-  if (!db) return null;
+  if (!db) return readSupportStore().tickets.find((ticket) => ticket.id === ticketId) || null;
   const [ticket] = await db
     .select()
     .from(schema.supportTickets)
@@ -89,7 +96,7 @@ export async function getSupportTicketById(ticketId: string) {
 }
 
 export async function getTicketMessages(ticketId: string, includeInternalNotes: boolean = false) {
-  if (!db) return [];
+  if (!db) return readSupportStore().messages.filter((message) => message.ticketId === ticketId && (includeInternalNotes || !message.isInternalNote));
   const rows = await db
     .select()
     .from(schema.supportMessages)
@@ -119,7 +126,14 @@ export async function addSupportMessage({
   isInternalNote?: boolean;
   attachments?: Array<{ name: string; url: string; size: number; mimeType: string }>;
 }) {
-  if (!db) throw new Error('Database is not initialized');
+  if (!db) {
+    const store = readSupportStore(); const ticket = store.tickets.find((item) => item.id === ticketId);
+    if (!ticket) throw new Error('Обращение не найдено');
+    const message: schema.SupportMessage = { id: crypto.randomUUID(), ticketId, senderRole, senderEmail, senderName, text, isInternalNote, attachments, createdAt: new Date() };
+    store.messages.push(message); ticket.updatedAt = new Date();
+    if (!isInternalNote) { ticket.unreadByCustomer = senderRole === 'support'; ticket.unreadBySupport = senderRole === 'customer'; ticket.status = senderRole === 'support' ? 'waiting_user' : 'in_progress'; }
+    writeSupportStore(store); return message;
+  }
 
   const now = new Date();
   const [msg] = await db
@@ -165,9 +179,14 @@ export async function updateTicketStatus(
   status: 'new' | 'in_progress' | 'waiting_user' | 'resolved',
   assignedTo?: string
 ) {
-  if (!db) throw new Error('Database is not initialized');
+  if (!db) {
+    const store = readSupportStore(); const ticket = store.tickets.find((item) => item.id === ticketId);
+    if (!ticket) throw new Error('Обращение не найдено');
+    ticket.status = status; ticket.updatedAt = new Date(); if (assignedTo !== undefined) ticket.assignedTo = assignedTo;
+    writeSupportStore(store); return ticket;
+  }
 
-  const updates: any = { status, updatedAt: new Date() };
+  const updates: Partial<schema.SupportTicket> = { status, updatedAt: new Date() };
   if (assignedTo !== undefined) updates.assignedTo = assignedTo;
 
   const [ticket] = await db
@@ -180,7 +199,7 @@ export async function updateTicketStatus(
 }
 
 export async function markTicketAsReadByCustomer(ticketId: string) {
-  if (!db) return;
+  if (!db) { const store = readSupportStore(); const ticket = store.tickets.find((item) => item.id === ticketId); if (ticket) ticket.unreadByCustomer = false; writeSupportStore(store); return; }
   await db
     .update(schema.supportTickets)
     .set({ unreadByCustomer: false })
@@ -188,7 +207,7 @@ export async function markTicketAsReadByCustomer(ticketId: string) {
 }
 
 export async function markTicketAsReadBySupport(ticketId: string) {
-  if (!db) return;
+  if (!db) { const store = readSupportStore(); const ticket = store.tickets.find((item) => item.id === ticketId); if (ticket) ticket.unreadBySupport = false; writeSupportStore(store); return; }
   await db
     .update(schema.supportTickets)
     .set({ unreadBySupport: false })

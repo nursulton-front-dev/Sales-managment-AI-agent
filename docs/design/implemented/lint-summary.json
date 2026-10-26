@@ -1,0 +1,236 @@
+{
+  "baseline": "27c62db",
+  "errors": 66,
+  "warnings": 150,
+  "changedFileErrors": 0,
+  "files": [
+    {
+      "file": "app/admin/audit/page.tsx",
+      "errors": 3,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "app/admin/billing/page.tsx",
+      "errors": 3,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "app/admin/layout.tsx",
+      "errors": 3,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "app/admin/operations/page.tsx",
+      "errors": 3,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "app/admin/organizations/page.tsx",
+      "errors": 4,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "app/admin/page.tsx",
+      "errors": 4,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/purity",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "app/admin/support/page.tsx",
+      "errors": 2,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "app/api/admin/audit/route.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/admin/deepseek/route.ts",
+      "errors": 2,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/admin/reset/route.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/admin/support/route.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/admin/token-logs/route.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/admin/workspaces/route.ts",
+      "errors": 2,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/billing/transactions/route.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/conversations/route.ts",
+      "errors": 2,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/health/route.ts",
+      "errors": 4,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/instagram/auth/route.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/instagram/callback/route.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/instagram/disconnect/route.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/instagram/status/route.ts",
+      "errors": 3,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/instagram/webhook/route.ts",
+      "errors": 3,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/meta/data-deletion/route.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/api/support/public/route.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/login/page.tsx",
+      "errors": 3,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "app/not-found.tsx",
+      "errors": 2,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "components/calendar/GoogleCalendarModal.tsx",
+      "errors": 2,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "components/theme/ThemeSwitcher.tsx",
+      "errors": 1,
+      "rules": [
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "lib/calendar/google.ts",
+      "errors": 3,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "lib/instagram/processor.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "lib/server/ai/provider.ts",
+      "errors": 1,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "lib/server/ai/providers/deepseek.ts",
+      "errors": 5,
+      "rules": [
+        "@typescript-eslint/no-explicit-any"
+      ]
+    }
+  ]
+}

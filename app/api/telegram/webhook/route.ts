@@ -1,72 +1,31 @@
-import { NextRequest, NextResponse, connection } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'node:crypto';
 import { processAgentMessage } from '@/lib/ai/gateway';
-import { getAllAgents, createLead, getAllWorkspaces } from '@/src/db';
+import { getAllAgents, getAllConversations, createConversation, createMessage, getMessagesByConversationId } from '@/src/db';
+import { telegramWebhookSecret, telegramCall } from '@/lib/server/telegram';
 
-export async function GET(req: NextRequest) {
-  await connection();
-  return NextResponse.json({
-    status: 'online',
-    service: 'Chorla AI Telegram Webhook Router',
-    timestamp: new Date().toISOString(),
-  });
-}
-
+export async function GET() { return NextResponse.json({ status: 'online' }); }
 export async function POST(req: NextRequest) {
   try {
-    const update = await req.json();
-
-    // Check message payload
-    const message = update.message || update.edited_message;
-    if (!message || !message.text) {
-      return NextResponse.json({ ok: true, note: 'No text message' });
+    const id = req.nextUrl.searchParams.get('agentId');
+    const provided = req.headers.get('x-telegram-bot-api-secret-token') || '';
+    if (!id) return NextResponse.json({ ok: false }, { status: 401 });
+    const expected = telegramWebhookSecret(id);
+    if (Buffer.byteLength(provided) !== Buffer.byteLength(expected) || !timingSafeEqual(Buffer.from(provided), Buffer.from(expected))) return NextResponse.json({ ok: false }, { status: 401 });
+    const agent = (await getAllAgents()).find((item) => item.id === id);
+    if (!agent?.tgBotToken) return NextResponse.json({ ok: false }, { status: 404 });
+    const { message } = await req.json();
+    if (!message?.text || !message.chat?.id) return NextResponse.json({ ok: true });
+    const contact = `id:${message.chat.id}`;
+    let conversation = (await getAllConversations(agent.workspaceId)).find((item) => item.agentId === id && item.channel === 'Telegram' && item.clientPhone === contact);
+    if (!conversation) conversation = await createConversation({ workspaceId: agent.workspaceId, agentId: id, channel: 'Telegram', clientName: [message.from?.first_name, message.from?.last_name].filter(Boolean).join(' ') || 'Клиент Telegram', clientPhone: contact, status: 'active' });
+    const history = await getMessagesByConversationId(conversation.id);
+    await createMessage({ conversationId: conversation.id, workspaceId: agent.workspaceId, sender: 'client', text: message.text, tokensCost: 0 });
+    if (agent.isActive && conversation.status === 'active') {
+      const result = await processAgentMessage({ message: message.text, agentId: id, workspaceId: agent.workspaceId, clientName: conversation.clientName, clientPhone: contact, channel: 'Telegram', history: history.slice(-12).map((item) => ({ role: item.sender === 'client' ? 'user' : 'assistant', content: item.text })) });
+      await telegramCall(agent.tgBotToken, 'sendMessage', { chat_id: message.chat.id, text: result.reply });
+      await createMessage({ conversationId: conversation.id, workspaceId: agent.workspaceId, sender: 'agent', text: result.reply, tokensCost: result.tokensCost });
     }
-
-    const chatId = message.chat?.id;
-    const text = message.text;
-    const fromName = [message.from?.first_name, message.from?.last_name].filter(Boolean).join(' ') || 'Пользователь Telegram';
-    const username = message.from?.username ? `@${message.from.username}` : `id:${chatId}`;
-
-    // Find agent by token or default
-    const agents = await getAllAgents();
-    const activeAgent = agents.find((a) => a.isActive) || agents[0];
-
-    // Process message through AI engine
-    const aiResult = await processAgentMessage({
-      message: text,
-      agentId: activeAgent?.id,
-      workspaceId: activeAgent?.workspaceId,
-      clientName: fromName,
-      clientPhone: username,
-      channel: 'Telegram',
-    });
-
-    // Attempt real Telegram sendMessage if bot token is provided
-    if (activeAgent?.tgBotToken && !activeAgent.tgBotToken.includes('sample') && !activeAgent.tgBotToken.includes('demo')) {
-      try {
-        await fetch(`https://api.telegram.org/bot${activeAgent.tgBotToken}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: aiResult.reply,
-            parse_mode: 'Markdown',
-          }),
-        });
-      } catch (tgErr) {
-        console.warn('Telegram API send error:', tgErr);
-      }
-    }
-
-    return NextResponse.json({
-      ok: true,
-      sender: fromName,
-      userQuery: text,
-      botReply: aiResult.reply,
-      tokensCost: aiResult.tokensCost,
-      isBooking: aiResult.isBooking,
-    });
-  } catch (error: any) {
-    console.error('Error handling telegram webhook:', error);
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  }
+    return NextResponse.json({ ok: true });
+  } catch { return NextResponse.json({ ok: false }, { status: 500 }); }
 }

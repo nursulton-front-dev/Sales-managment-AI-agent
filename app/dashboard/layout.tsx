@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useApp } from '@/context/AppContext';
+import { DataState } from '@/components/ui/DataState';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { SandboxDrawer } from '@/components/sandbox/SandboxDrawer';
@@ -15,52 +17,26 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [isImpersonating, setIsImpersonating] = useState(false);
-  const [supportReason, setSupportReason] = useState<string>('');
+  const { user, workspaceLoading, workspaceError, refreshWorkspace, isImpersonating, supportSessionReason, showToast } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    fetch('/api/workspace/settings')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.success || !data.workspace) {
-          // If no active workspace session in DB, redirect to login
-          try {
-            localStorage.removeItem('ai_os_user');
-            localStorage.removeItem('ai_os_workspace');
-            localStorage.removeItem('ai_os_tokens');
-            localStorage.removeItem('ai_os_plan');
-            localStorage.removeItem('ai_os_agents');
-            localStorage.removeItem('ai_os_leads');
-            localStorage.removeItem('ai_os_email_verified');
-            localStorage.removeItem('ai_os_gcal_connected');
-            document.cookie = 'ai_os_workspace_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-          } catch {}
-          router.replace('/login');
-          return;
-        }
-
-        if (data.success && data.isImpersonating) {
-          setIsImpersonating(true);
-          setSupportReason(data.supportSessionReason || 'Техническая поддержка');
-        }
-      })
-      .catch(() => {
-        router.replace('/login');
-      });
-  }, [router]);
+    if (!workspaceLoading && !workspaceError && !user) router.replace('/login');
+  }, [user, workspaceLoading, workspaceError, router]);
 
   const handleExitSupport = async () => {
     try {
-      await fetch('/api/admin/support-session', { method: 'DELETE' });
+      const response = await fetch('/api/admin/support-session', { method: 'DELETE' });
+      if (!response.ok) throw new Error('Не удалось завершить сессию');
+      await refreshWorkspace();
       router.push('/admin');
     } catch {
-      router.push('/admin');
+      showToast('Не удалось завершить сессию', 'Попробуйте ещё раз.', 'error');
     }
   };
 
   return (
-    <div className="h-[100dvh] w-full flex overflow-hidden bg-[var(--background)] text-[var(--text-primary)] font-sans antialiased">
+    <div className="dashboard-shell h-[100dvh] w-full flex overflow-hidden bg-[var(--background)] text-[var(--text-primary)] font-sans antialiased">
       {/* Sidebar (Desktop fixed left rail + Mobile Slide-over Drawer) */}
       <Sidebar
         mobileOpen={isMobileMenuOpen}
@@ -75,7 +51,7 @@ export default function DashboardLayout({
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 shrink-0 text-amber-200" />
               <span>
-                <strong>Режим аудита (Support Session)</strong>: Причина: <em>{supportReason}</em>
+                <strong>Режим аудита (Support Session)</strong>: Причина: <em>{supportSessionReason}</em>
               </span>
             </div>
             <button
@@ -94,8 +70,8 @@ export default function DashboardLayout({
         </div>
 
         {/* Scrollable Main Area (flex-1, min-h-0, overflow-y-auto) */}
-        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 w-full max-w-[1600px] mx-auto">
-          {children}
+        <main className="dashboard-content flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 w-full max-w-[1600px] mx-auto">
+          {workspaceLoading || workspaceError ? <DataState loading={workspaceLoading} error={workspaceError} retry={refreshWorkspace} /> : user ? children : null}
         </main>
       </div>
 

@@ -44,3 +44,5 @@ next-env.d.ts
 /.data/
 .neon
 *.crdownload
+/*.deb
+/Chorla-AI-Design-Pack.zip

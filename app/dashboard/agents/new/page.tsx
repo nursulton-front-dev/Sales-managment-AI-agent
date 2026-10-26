@@ -147,6 +147,7 @@ const STEP_TITLES = [
 export default function NewAgentWizardPage() {
   const router = useRouter();
   const { createAgent, openSandbox, showToast } = useApp();
+  const [isSavingAgent, setIsSavingAgent] = useState(false);
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   // Do NOT select first niche automatically. Allow null or restore from draft
@@ -161,7 +162,7 @@ export default function NewAgentWizardPage() {
   // Step 3 state
   const [botToken, setBotToken] = useState<string>('');
   const [googleCalendarEnabled, setGoogleCalendarEnabled] = useState<boolean>(true);
-  const [autoReminderEnabled, setAutoReminderEnabled] = useState<boolean>(true);
+  const autoReminderEnabled = false;
 
   // Step 4 state
   const [agentName, setAgentName] = useState<string>('');
@@ -177,6 +178,7 @@ export default function NewAgentWizardPage() {
         if (parsed.nicheId) {
           const matched = ALL_NICHES.find((n) => n.id === parsed.nicheId);
           if (matched) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore the browser draft after hydration.
             setSelectedNiche(matched);
             setPriceList(parsed.priceList || matched.defaultPrice);
             setQuestions(parsed.questions || matched.defaultQuestions);
@@ -260,7 +262,7 @@ ${priceList}
 ИНТЕГРАЦИЯ С КАЛЕНДАРЕМ:
 ${
   googleCalendarEnabled
-    ? 'Ты подключен к Google Календарю. При согласии клиента предложи свободные слоты в интервале 10:00–18:00 и подтверди авто-бронь.'
+    ? 'Уточни желаемое время. Не придумывай свободные часы и не подтверждай запись без результата календаря.'
     : 'Календарь отключен — принимай контактные данные клиента для ручной связи.'
 }
 ${
@@ -273,9 +275,10 @@ ${
 Вежливая, деловая, лаконичная. Не пиши простыни текста, общайся живыми короткими сообщениями.`;
 
   const handleSaveAgent = async () => {
-    if (!selectedNiche) return;
-
-    const newAgent = createAgent({
+    if (!selectedNiche || isSavingAgent) return;
+    setIsSavingAgent(true);
+    try {
+    const newAgent = await createAgent({
       name: agentName || selectedNiche.defaultName,
       niche: selectedNiche.title,
       nicheId: selectedNiche.id,
@@ -288,35 +291,13 @@ ${
       isActive: true
     });
 
-    if (isSupabaseConfigured) {
-      try {
-        const supabase = createClient();
-        if (supabase) {
-          const { data: { user: authUser } } = await supabase.auth.getUser();
-          if (authUser) {
-            await (supabase.from('agents') as any).insert({
-              user_id: authUser.id,
-              name: agentName || selectedNiche.defaultName,
-              niche: selectedNiche.title,
-              niche_id: selectedNiche.id,
-              system_prompt: generatedSystemPrompt,
-              price_list: priceList,
-              qualification_questions: questions,
-              telegram_token: botToken,
-              google_calendar_enabled: googleCalendarEnabled,
-              auto_reminder_enabled: autoReminderEnabled,
-              is_active: true
-            });
-          }
-        }
-      } catch {}
-    }
-
     setSavedAgentId(newAgent.id);
     setIsSaved(true);
     try {
       sessionStorage.removeItem('ai_agent_wizard_draft');
     } catch {}
+    } catch (error) { showToast('Не удалось создать сотрудника', error instanceof Error ? error.message : 'Ошибка сети', 'error'); }
+    finally { setIsSavingAgent(false); }
   };
 
   // Keyboard navigation for radio group
@@ -714,11 +695,11 @@ ${
                   type="checkbox"
                   id="autoReminder"
                   checked={autoReminderEnabled}
-                  onChange={(e) => setAutoReminderEnabled(e.target.checked)}
+                  disabled
                   className="h-4 w-4 text-[#DC2626] rounded border-[var(--border)] focus:ring-[#DC2626] cursor-pointer"
                 />
                 <label htmlFor="autoReminder" className="text-xs text-[var(--text-secondary)] cursor-pointer">
-                  Отправлять напоминание клиенту за 2 часа до визита (1 токен)
+                  Автоматические напоминания пока недоступны
                 </label>
               </div>
             </div>
@@ -765,7 +746,7 @@ ${
                 <div className="pt-2">
                   <button
                     type="button"
-                    onClick={handleSaveAgent}
+                    onClick={handleSaveAgent} disabled={isSavingAgent}
                     className="w-full h-[48px] flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] text-white font-semibold rounded-[6px] transition-colors cursor-pointer text-sm"
                   >
                     <Check className="w-4 h-4" />

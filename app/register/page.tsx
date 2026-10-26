@@ -1,5 +1,6 @@
 'use client';
 
+import { authClient } from '@/lib/auth-client';
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -104,6 +105,7 @@ export default function RegisterWizardPage() {
       const draft = sessionStorage.getItem('ai_os_reg_draft_v2');
       if (draft) {
         const parsed = JSON.parse(draft);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore the browser draft after hydration.
         if (parsed.ownerName) setOwnerName(parsed.ownerName);
         if (parsed.ownerEmail) setOwnerEmail(parsed.ownerEmail);
         if (parsed.companyName) setCompanyName(parsed.companyName);
@@ -193,7 +195,7 @@ export default function RegisterWizardPage() {
         return;
       }
       throw new Error(data?.message || 'Не удалось сформировать ссылку авторизации');
-    } catch (err: any) {
+    } catch (err) {
       setErrorMsg('Google OAuth временно настраивается. Заполните имя и email для быстрой регистрации.');
       setIsLoading(false);
     }
@@ -219,6 +221,13 @@ export default function RegisterWizardPage() {
 
     setIsLoading(true);
     try {
+      const current = await authClient.getSession();
+      if (!current.data) {
+        const signup = await authClient.signUp.email({ email: ownerEmail.trim(), password, name: ownerName.trim() });
+        if (signup.error) throw new Error(signup.error.message || 'Не удалось создать аккаунт. Если он уже существует, войдите.');
+      } else if (current.data.user.email.toLowerCase() !== ownerEmail.trim().toLowerCase()) {
+        throw new Error('Выйдите из текущего аккаунта перед регистрацией другого email.');
+      }
       const res = await fetch('/api/auth/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -237,8 +246,8 @@ export default function RegisterWizardPage() {
       setTimeout(() => {
         digitInputRefs.current[0]?.focus();
       }, 100);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Сбой при отправке кода на почту');
+    } catch (err) {
+      setErrorMsg((err instanceof Error ? err.message : 'Ошибка запроса') || 'Сбой при отправке кода на почту');
     } finally {
       setIsLoading(false);
     }
@@ -290,8 +299,8 @@ export default function RegisterWizardPage() {
       setShowOtpView(false);
       showToast('Email подтвержден', 'Переходим к оформлению компании', 'success');
       transitionToStep(2);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Ошибка проверки кода');
+    } catch (err) {
+      setErrorMsg((err instanceof Error ? err.message : 'Ошибка запроса') || 'Ошибка проверки кода');
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -383,29 +392,7 @@ export default function RegisterWizardPage() {
         throw new Error(data.error || 'Ошибка при сохранении организации');
       }
 
-      // Verify email on server side if code was entered
-      if (isEmailVerifiedLocally) {
-        await fetch('/api/auth/verify-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: ownerEmail,
-            code: devCode || '123456',
-            workspaceId: data.workspace.id,
-          }),
-        });
-      }
-
-      // Update client context
-      setWorkspace({
-        id: data.workspace.id,
-        companyName: data.workspace.companyName,
-        ownerName: data.workspace.ownerName,
-        ownerEmail: data.workspace.ownerEmail,
-        plan: data.workspace.plan,
-        tokenBalance: data.workspace.tokenBalance || 100,
-        emailVerified: true,
-      });
+      setWorkspace(data.workspace);
 
       // Clear draft
       sessionStorage.removeItem('ai_os_reg_draft_v2');
@@ -417,8 +404,8 @@ export default function RegisterWizardPage() {
       } else {
         router.push(`/dashboard/agents/new?template=${selectedAgentTask}&niche=${niche}`);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Не удалось завершить регистрацию');
+    } catch (err) {
+      setErrorMsg((err instanceof Error ? err.message : 'Ошибка запроса') || 'Не удалось завершить регистрацию');
       setIsLoading(false);
       setIsSubmittingFinal(false);
     }

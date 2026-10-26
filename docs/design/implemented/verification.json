@@ -1,0 +1,39 @@
+{
+  "environment": "Isolated local server, Node 24.18.0, Next 16.4.2",
+  "typecheck": {
+    "command": "tsc --noEmit",
+    "exitCode": 0
+  },
+  "build": {
+    "command": "next build",
+    "exitCode": 0,
+    "warnings": [
+      "Deprecated middleware convention",
+      "Dynamic filesystem access causes broad tracing"
+    ]
+  },
+  "lint": {
+    "command": "eslint . --format json",
+    "exitCode": 1,
+    "errors": 66,
+    "warnings": 150,
+    "errorsInDesignImplementation": 0
+  },
+  "browser": {
+    "command": "node scripts/verify-design-pack.cjs",
+    "exitCode": 0,
+    "checks": 103,
+    "screenshots": 67
+  },
+  "businessRisks": {
+    "command": "node scripts/test-design-risks.cjs",
+    "exitCode": 0,
+    "checks": 14
+  },
+  "deployment": "Not performed",
+  "cleanup": {
+    "removedBytes": 273849175,
+    "removedFiles": 17,
+    "runtimeSourceChanged": false
+  }
+}

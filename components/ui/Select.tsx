@@ -1,4 +1,4 @@
-import React, { SelectHTMLAttributes, forwardRef } from 'react';
+import React, { SelectHTMLAttributes, forwardRef, useId } from 'react';
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
@@ -9,7 +9,9 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, helperText, options, className = '', id, ...props }, ref) => {
-    const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = useId();
+    const selectId = id || generatedId;
+    const descriptionId = `${selectId}-description`;
 
     return (
       <div className="w-full space-y-1.5 text-left">
@@ -21,7 +23,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           id={selectId}
-          className={`w-full px-3 py-2 min-h-[44px] sm:min-h-[38px] text-base sm:text-xs text-[var(--text-primary)] bg-[var(--surface)] border rounded-[6px] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--accent)] disabled:bg-[var(--surface-secondary)] disabled:text-[var(--text-muted)] cursor-pointer ${
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error || helperText ? descriptionId : undefined}
+          className={`w-full px-3 py-2 min-h-[44px] sm:min-h-[38px] text-base sm:text-sm text-[var(--text-primary)] bg-[var(--surface)] border rounded-[6px] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-[var(--accent)] disabled:bg-[var(--surface-secondary)] disabled:text-[var(--text-muted)] cursor-pointer ${
             error
               ? 'border-[var(--danger)] focus:ring-[var(--danger-border)] focus:border-[var(--danger)]'
               : 'border-[var(--border)] hover:border-[var(--border-strong)]'
@@ -34,8 +38,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        {error && <p className="text-[11px] text-[var(--danger-text)] font-medium">{error}</p>}
-        {helperText && !error && <p className="text-[11px] text-[var(--text-muted)]">{helperText}</p>}
+        {error && <p id={descriptionId} role="alert" className="text-xs text-[var(--danger-text)] font-medium">{error}</p>}
+        {helperText && !error && <p id={descriptionId} className="text-xs text-[var(--text-muted)]">{helperText}</p>}
       </div>
     );
   }

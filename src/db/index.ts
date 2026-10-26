@@ -1,6 +1,7 @@
 import { neon, NeonQueryFunction } from '@neondatabase/serverless';
 import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import * as schema from './schema';
 import fs from 'fs';
 import path from 'path';
@@ -18,8 +19,7 @@ if (isNeonConfigured) {
     const sql = neon(process.env.DATABASE_URL!);
     dbInstance = drizzle(sql, { schema });
   } catch (err) {
-    console.warn('Neon connection failed, falling back to local store:', err);
-    dbInstance = null;
+    throw new Error('Не удалось настроить подключение к базе данных', { cause: err });
   }
 }
 
@@ -40,9 +40,10 @@ interface DBData {
   supportSessions: schema.SupportSession[];
   trialGrants: schema.TrialGrant[];
   instagramEvents: schema.InstagramEvent[];
+  adminAuditLogs: schema.AdminAuditLog[];
 }
 
-const DATA_DIR = path.join(process.cwd(), '.data');
+const DATA_DIR = process.env.CHORLA_DATA_DIR || path.join(process.cwd(), '.data');
 const DATA_FILE = path.join(DATA_DIR, 'db_store.json');
 
 const INITIAL_SEED: DBData = {
@@ -57,6 +58,7 @@ const INITIAL_SEED: DBData = {
   supportSessions: [],
   trialGrants: [],
   instagramEvents: [],
+  adminAuditLogs: [],
 };
 
 function readStore(): DBData {
@@ -69,34 +71,33 @@ function readStore(): DBData {
       return INITIAL_SEED;
     }
     const content = fs.readFileSync(DATA_FILE, 'utf-8');
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(content) as DBData;
     // Convert date strings back to Date objects
     if (parsed.workspaces) {
-      parsed.workspaces.forEach((w: any) => {
+      parsed.workspaces.forEach((w) => {
         if (w.createdAt) w.createdAt = new Date(w.createdAt);
         if (w.subExpiresAt) w.subExpiresAt = new Date(w.subExpiresAt);
       });
     }
     if (parsed.agents) {
-      parsed.agents.forEach((a: any) => {
+      parsed.agents.forEach((a) => {
         if (a.createdAt) a.createdAt = new Date(a.createdAt);
       });
     }
     if (parsed.leads) {
-      parsed.leads.forEach((l: any) => {
+      parsed.leads.forEach((l) => {
         if (l.createdAt) l.createdAt = new Date(l.createdAt);
         if (l.appointmentTime) l.appointmentTime = new Date(l.appointmentTime);
       });
     }
     if (parsed.tokenLogs) {
-      parsed.tokenLogs.forEach((t: any) => {
+      parsed.tokenLogs.forEach((t) => {
         if (t.createdAt) t.createdAt = new Date(t.createdAt);
       });
     }
     return parsed;
   } catch (err) {
-    console.error('Error reading DB store:', err);
-    return INITIAL_SEED;
+    throw new Error('Не удалось прочитать локальное хранилище', { cause: err });
   }
 }
 
@@ -105,9 +106,11 @@ function writeStore(data: DBData): void {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    const temporary = `${DATA_FILE}.${randomUUID()}.tmp`;
+    fs.writeFileSync(temporary, JSON.stringify(data, null, 2), { encoding: 'utf-8', mode: 0o600 });
+    fs.renameSync(temporary, DATA_FILE);
   } catch (err) {
-    console.error('Error writing DB store:', err);
+    throw new Error('Не удалось сохранить данные', { cause: err });
   }
 }
 
@@ -120,6 +123,7 @@ export async function getAllWorkspaces(): Promise<schema.Workspace[]> {
       return rows;
     } catch (err) {
       console.warn('Neon select workspaces error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -133,6 +137,7 @@ export async function getWorkspaceById(id: string): Promise<schema.Workspace | n
       return rows[0] || null;
     } catch (err) {
       console.warn('Neon select workspace by id error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -146,6 +151,7 @@ export async function getWorkspaceByEmail(email: string): Promise<schema.Workspa
       return rows[0] || null;
     } catch (err) {
       console.warn('Neon select workspace by email error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -192,8 +198,10 @@ export async function createWorkspace(data: schema.NewWorkspace): Promise<schema
   if (db) {
     try {
       await db.insert(schema.workspaces).values(newWs);
+      return newWs;
     } catch (err) {
       console.warn('Neon insert workspace error:', err);
+      throw err;
     }
   }
 
@@ -222,9 +230,11 @@ export async function createWorkspace(data: schema.NewWorkspace): Promise<schema
 export async function updateWorkspace(id: string, updates: Partial<schema.Workspace>): Promise<schema.Workspace | null> {
   if (db) {
     try {
-      await db.update(schema.workspaces).set(updates).where(eq(schema.workspaces.id, id));
+      const rows = await db.update(schema.workspaces).set(updates).where(eq(schema.workspaces.id, id)).returning();
+      return rows[0] || null;
     } catch (err) {
       console.warn('Neon update workspace error:', err);
+      throw err;
     }
   }
 
@@ -248,8 +258,10 @@ export async function deleteWorkspace(id: string): Promise<boolean> {
   if (db) {
     try {
       await db.delete(schema.workspaces).where(eq(schema.workspaces.id, id));
+      return true;
     } catch (err) {
       console.warn('Neon delete workspace error:', err);
+      throw err;
     }
   }
 
@@ -278,8 +290,10 @@ export async function clearAllTestData(): Promise<void> {
       await db.delete(schema.supportSessions);
       await db.delete(schema.trialGrants);
       await db.delete(schema.workspaces);
+      return;
     } catch (err) {
       console.warn('Neon clearAllTestData error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -305,6 +319,7 @@ export async function getAllAgents(workspaceId?: string): Promise<schema.Agent[]
       return await db.select().from(schema.agents);
     } catch (err) {
       console.warn('Neon select agents error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -332,8 +347,10 @@ export async function createAgent(data: Partial<schema.NewAgent> & { workspaceId
   if (db) {
     try {
       await db.insert(schema.agents).values(newAgent);
+      return newAgent;
     } catch (err) {
       console.warn('Neon insert agent error:', err);
+      throw err;
     }
   }
 
@@ -346,9 +363,11 @@ export async function createAgent(data: Partial<schema.NewAgent> & { workspaceId
 export async function updateAgent(id: string, updates: Partial<schema.Agent>): Promise<schema.Agent | null> {
   if (db) {
     try {
-      await db.update(schema.agents).set(updates).where(eq(schema.agents.id, id));
+      const rows = await db.update(schema.agents).set(updates).where(eq(schema.agents.id, id)).returning();
+      return rows[0] || null;
     } catch (err) {
       console.warn('Neon update agent error:', err);
+      throw err;
     }
   }
 
@@ -377,6 +396,7 @@ export async function getAllLeads(workspaceId?: string): Promise<schema.Lead[]> 
       return await db.select().from(schema.leads);
     } catch (err) {
       console.warn('Neon select leads error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -405,8 +425,10 @@ export async function createLead(data: Partial<schema.NewLead> & { workspaceId: 
   if (db) {
     try {
       await db.insert(schema.leads).values(newLead);
+      return newLead;
     } catch (err) {
       console.warn('Neon insert lead error:', err);
+      throw err;
     }
   }
 
@@ -419,9 +441,11 @@ export async function createLead(data: Partial<schema.NewLead> & { workspaceId: 
 export async function updateLead(id: string, updates: Partial<schema.Lead>): Promise<schema.Lead | null> {
   if (db) {
     try {
-      await db.update(schema.leads).set(updates).where(eq(schema.leads.id, id));
+      const rows = await db.update(schema.leads).set(updates).where(eq(schema.leads.id, id)).returning();
+      return rows[0] || null;
     } catch (err) {
       console.warn('Neon update lead error:', err);
+      throw err;
     }
   }
 
@@ -450,6 +474,7 @@ export async function getAllTokenLogs(workspaceId?: string): Promise<schema.Toke
       return await db.select().from(schema.tokenLogs);
     } catch (err) {
       console.warn('Neon select tokenLogs error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -474,8 +499,10 @@ export async function addTokenLog(data: schema.NewTokenLog): Promise<schema.Toke
   if (db) {
     try {
       await db.insert(schema.tokenLogs).values(newLog);
+      return newLog;
     } catch (err) {
       console.warn('Neon insert tokenLog error:', err);
+      throw err;
     }
   }
 
@@ -501,36 +528,40 @@ export async function recordTokenTransaction({
   paymentMethod?: string;
   description?: string;
 }): Promise<{ success: boolean; newBalance: number; error?: string }> {
-  const ws = await getWorkspaceById(workspaceId);
-  if (!ws) {
-    return { success: false, newBalance: 0, error: 'Организация не найдена' };
+  if (!Number.isSafeInteger(tokensDelta)) throw new Error('Некорректное изменение баланса');
+  const id = `tx_${randomUUID()}`;
+  if (db) {
+    // One PostgreSQL statement: the conditional debit and its ledger entry commit together.
+    // Concurrent updates lock the workspace row and recheck the balance after waiting.
+    const result = await db.execute<{ new_balance: number }>(sql`
+      WITH changed AS (
+        UPDATE ${schema.workspaces}
+        SET token_balance = token_balance + ${tokensDelta}
+        WHERE id = ${workspaceId} AND token_balance + ${tokensDelta} >= 0
+        RETURNING id, token_balance
+      ), logged AS (
+        INSERT INTO ${schema.tokenLogs}
+          (id, workspace_id, action_type, tokens_delta, amount_usd, payment_method, description)
+        SELECT ${id}, id, ${actionType}, ${tokensDelta}, ${amountUsd}, ${paymentMethod}, ${description}
+        FROM changed RETURNING workspace_id
+      )
+      SELECT changed.token_balance AS new_balance FROM changed
+      JOIN logged ON logged.workspace_id = changed.id
+    `);
+    if (result.rows[0]) return { success: true, newBalance: result.rows[0].new_balance };
+    const workspace = await getWorkspaceById(workspaceId);
+    return { success: false, newBalance: workspace?.tokenBalance ?? 0, error: workspace ? 'Недостаточно токенов' : 'Организация не найдена' };
   }
 
-  const currentBalance = ws.tokenBalance ?? 0;
-  const newBalance = currentBalance + tokensDelta;
-
-  if (newBalance < 0) {
-    return {
-      success: false,
-      newBalance: currentBalance,
-      error: `Недостаточно токенов (текущий баланс: ${currentBalance}, требуется: ${Math.abs(tokensDelta)})`,
-    };
-  }
-
-  // Update workspace balance
-  await updateWorkspace(workspaceId, { tokenBalance: newBalance });
-
-  // Record log
-  await addTokenLog({
-    id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    workspaceId,
-    actionType,
-    tokensDelta,
-    amountUsd,
-    paymentMethod,
-    description,
-  });
-
+  // Local development runs in one process. No await between read and atomic file replacement.
+  const store = readStore();
+  const workspace = store.workspaces.find((item) => item.id === workspaceId);
+  if (!workspace) return { success: false, newBalance: 0, error: 'Организация не найдена' };
+  const newBalance = workspace.tokenBalance + tokensDelta;
+  if (newBalance < 0) return { success: false, newBalance: workspace.tokenBalance, error: 'Недостаточно токенов' };
+  workspace.tokenBalance = newBalance;
+  store.tokenLogs.unshift({ id, workspaceId, actionType, tokensDelta, amountUsd, paymentMethod, description, createdAt: new Date() });
+  writeStore(store);
   return { success: true, newBalance };
 }
 
@@ -544,6 +575,7 @@ export async function getAllConversations(workspaceId?: string): Promise<schema.
       return await db.select().from(schema.conversations);
     } catch (err) {
       console.warn('Neon select conversations error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -560,6 +592,7 @@ export async function getConversationById(id: string): Promise<schema.Conversati
       return rows[0] || null;
     } catch (err) {
       console.warn('Neon select conversation by id error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -587,8 +620,10 @@ export async function createConversation(data: Partial<schema.NewConversation> &
   if (db) {
     try {
       await db.insert(schema.conversations).values(newConv);
+      return newConv;
     } catch (err) {
       console.warn('Neon insert conversation error:', err);
+      throw err;
     }
   }
 
@@ -602,9 +637,11 @@ export async function createConversation(data: Partial<schema.NewConversation> &
 export async function updateConversation(id: string, updates: Partial<schema.Conversation>): Promise<schema.Conversation | null> {
   if (db) {
     try {
-      await db.update(schema.conversations).set(updates).where(eq(schema.conversations.id, id));
+      const rows = await db.update(schema.conversations).set(updates).where(eq(schema.conversations.id, id)).returning();
+      return rows[0] || null;
     } catch (err) {
       console.warn('Neon update conversation error:', err);
+      throw err;
     }
   }
 
@@ -631,6 +668,7 @@ export async function getMessagesByConversationId(conversationId: string): Promi
       return await db.select().from(schema.messages).where(eq(schema.messages.conversationId, conversationId));
     } catch (err) {
       console.warn('Neon select messages error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -660,8 +698,10 @@ export async function createMessage(data: Partial<schema.NewMessage> & {
         lastMessageText: newMsg.text,
         lastMessageAt: newMsg.createdAt,
       }).where(eq(schema.conversations.id, data.conversationId));
+      return newMsg;
     } catch (err) {
       console.warn('Neon insert message error:', err);
+      throw err;
     }
   }
 
@@ -689,6 +729,7 @@ export async function getAllAppointments(workspaceId?: string): Promise<schema.A
       return await db.select().from(schema.appointments);
     } catch (err) {
       console.warn('Neon select appointments error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -726,8 +767,10 @@ export async function createAppointment(data: Partial<schema.NewAppointment> & {
   if (db) {
     try {
       await db.insert(schema.appointments).values(newApp);
+      return newApp;
     } catch (err) {
       console.warn('Neon insert appointment error:', err);
+      throw err;
     }
   }
 
@@ -741,9 +784,11 @@ export async function createAppointment(data: Partial<schema.NewAppointment> & {
 export async function updateAppointment(id: string, updates: Partial<schema.Appointment>): Promise<schema.Appointment | null> {
   if (db) {
     try {
-      await db.update(schema.appointments).set(updates).where(eq(schema.appointments.id, id));
+      const rows = await db.update(schema.appointments).set(updates).where(eq(schema.appointments.id, id)).returning();
+      return rows[0] || null;
     } catch (err) {
       console.warn('Neon update appointment error:', err);
+      throw err;
     }
   }
 
@@ -768,8 +813,10 @@ export async function deleteAppointment(id: string): Promise<boolean> {
   if (db) {
     try {
       await db.delete(schema.appointments).where(eq(schema.appointments.id, id));
+      return true;
     } catch (err) {
       console.warn('Neon delete appointment error:', err);
+      throw err;
     }
   }
 
@@ -813,6 +860,7 @@ export async function getAllOrders(workspaceId?: string): Promise<schema.Order[]
       return await db.select().from(schema.orders);
     } catch (err) {
       console.warn('Neon select orders error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -845,8 +893,10 @@ export async function createOrder(data: Partial<schema.NewOrder> & {
   if (db) {
     try {
       await db.insert(schema.orders).values(newOrder);
+      return newOrder;
     } catch (err) {
       console.warn('Neon insert order error:', err);
+      throw err;
     }
   }
 
@@ -860,9 +910,11 @@ export async function createOrder(data: Partial<schema.NewOrder> & {
 export async function updateOrder(id: string, updates: Partial<schema.Order>): Promise<schema.Order | null> {
   if (db) {
     try {
-      await db.update(schema.orders).set(updates).where(eq(schema.orders.id, id));
+      const rows = await db.update(schema.orders).set(updates).where(eq(schema.orders.id, id)).returning();
+      return rows[0] || null;
     } catch (err) {
       console.warn('Neon update order error:', err);
+      throw err;
     }
   }
 
@@ -898,8 +950,10 @@ export async function createSupportSession(superAdminEmail: string, targetWorksp
   if (db) {
     try {
       await db.insert(schema.supportSessions).values(newSession);
+      return newSession;
     } catch (err) {
       console.warn('Neon insert supportSession error:', err);
+      throw err;
     }
   }
 
@@ -921,6 +975,7 @@ export async function getActiveSupportSession(targetWorkspaceId: string): Promis
       return active || null;
     } catch (err) {
       console.warn('Neon select active supportSession error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -931,8 +986,10 @@ export async function endSupportSession(id: string): Promise<boolean> {
   if (db) {
     try {
       await db.update(schema.supportSessions).set({ isActive: false, endedAt: new Date() }).where(eq(schema.supportSessions.id, id));
+      return true;
     } catch (err) {
       console.warn('Neon end supportSession error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -953,6 +1010,7 @@ export async function hasClaimedTrial(email: string, phone: string): Promise<boo
       return Boolean(matched);
     } catch (err) {
       console.warn('Neon check trialGrants error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -974,8 +1032,10 @@ export async function recordTrialGrant(ownerEmail: string, ownerPhone: string, w
   if (db) {
     try {
       await db.insert(schema.trialGrants).values(grant);
+      return grant;
     } catch (err) {
       console.warn('Neon insert trialGrant error:', err);
+      throw err;
     }
   }
 
@@ -1005,12 +1065,14 @@ export async function createAdminAuditLog(data: Omit<schema.AdminAuditLog, 'id' 
   if (db) {
     try {
       await db.insert(schema.adminAuditLogs).values(log);
+      return log;
     } catch (err) {
       console.warn('Neon insert adminAuditLog error:', err);
+      throw err;
     }
   }
 
-  const store = readStore() as any;
+  const store = readStore();
   if (!store.adminAuditLogs) store.adminAuditLogs = [];
   store.adminAuditLogs.unshift(log);
   writeStore(store);
@@ -1024,11 +1086,12 @@ export async function getAllAdminAuditLogs(): Promise<schema.AdminAuditLog[]> {
       return rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (err) {
       console.warn('Neon select adminAuditLogs error:', err);
+      throw err;
     }
   }
-  const store = readStore() as any;
+  const store = readStore();
   return (store.adminAuditLogs || []).sort(
-    (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
 
@@ -1040,6 +1103,7 @@ export async function getInstagramEventByEventId(eventId: string): Promise<schem
       return rows[0] || null;
     } catch (err) {
       console.warn('Neon select instagramEvents error:', err);
+      throw err;
     }
   }
   const store = readStore();
@@ -1072,6 +1136,7 @@ export async function createInstagramEvent(data: Partial<schema.InstagramEvent> 
       return event;
     } catch (err) {
       console.warn('Neon insert instagramEvents error:', err);
+      throw err;
     }
   }
 
@@ -1096,6 +1161,7 @@ export async function updateInstagramEvent(
       return rows[0] || null;
     } catch (err) {
       console.warn('Neon update instagramEvents error:', err);
+      throw err;
     }
   }
 
@@ -1120,6 +1186,7 @@ export async function getWorkspaceByInstagramUserId(instagramUserId: string): Pr
       return rows[0] || null;
     } catch (err) {
       console.warn('Neon select workspace by instagramUserId error:', err);
+      throw err;
     }
   }
 

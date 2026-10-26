@@ -1,0 +1,23 @@
+/* Reference tokens: merge with the existing theme provider; do not install a second one. */
+:root, [data-theme="light"] {
+  --background:#F8FAFC; --surface:#FFFFFF; --surface-secondary:#F1F5F9;
+  --foreground:#0F172A; --muted-foreground:#475569;
+  --border:#E2E8F0; --border-strong:#CBD5E1;
+  --accent:#E52329; --accent-hover:#C91C22; --accent-text:#FFFFFF;
+  --accent-soft:#FFF1F2; --accent-soft-text:#B91C1C;
+  --success-bg:#DCFCE7; --success-text:#166534;
+  --warning-bg:#FEF3C7; --warning-text:#92400E;
+  --focus:#2563EB; --radius-card:8px; --radius-control:6px;
+  --shadow-card:0 1px 2px rgb(15 23 42 / .04);
+  --sidebar-width:240px; --header-height:64px;
+}
+[data-theme="dark"], .dark {
+  --background:#0B1220; --surface:#111C2F; --surface-secondary:#1A2740;
+  --foreground:#F1F5F9; --muted-foreground:#94A3B8;
+  --border:#29364B; --border-strong:#475569;
+  --accent:#F87171; --accent-hover:#FCA5A5; --accent-text:#0B1220;
+  --accent-soft:#3A1C25; --accent-soft-text:#FCA5A5;
+  --success-bg:#123829; --success-text:#86EFAC;
+  --warning-bg:#3B2E17; --warning-text:#FCD34D; --focus:#93C5FD;
+  --shadow-card:0 1px 2px rgb(0 0 0 / .18);
+}

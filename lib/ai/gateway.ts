@@ -27,7 +27,7 @@ export interface ChatCompletionResult {
   tokensCost: number;
   isBooking: boolean;
   appointmentTime?: string;
-  leadCreated?: any;
+  leadCreated?: Awaited<ReturnType<typeof createLead>> | null;
   provider: 'openai' | 'gemini' | 'deepseek' | 'rules_engine';
   model: string;
 }
@@ -80,7 +80,7 @@ async function callOpenAI(
 /**
  * Call Gemini API as backup fallback if configured
  */
-async function callGemini(systemPrompt: string, userMessage: string): Promise<string | null> {
+async function callGemini(systemPrompt: string, userMessage: string, history: ChatCompletionOptions['history'] = []): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey.includes('placeholder')) return null;
 
@@ -91,7 +91,7 @@ async function callGemini(systemPrompt: string, userMessage: string): Promise<st
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\nПользователь: ${userMessage}` }] },
+          { role: 'user', parts: [{ text: `${systemPrompt}\n\nИстория диалога:\n${history.slice(-6).map((item) => `${item.role}: ${item.content}`).join('\n')}\n\nПользователь: ${userMessage}` }] },
         ],
       }),
     });
@@ -120,7 +120,8 @@ export async function processAgentMessage({
 
   // Find agent
   const agents = await getAllAgents(workspaceId);
-  const agent = agents.find((a) => a.id === agentId) || agents[0];
+  const agent = agentId ? agents.find((a) => a.id === agentId) : agents[0];
+  if (!agent) throw new Error('Сотрудник не найден');
 
   const targetWsId = workspaceId || agent?.workspaceId;
   const ws = targetWsId ? await getWorkspaceById(targetWsId) : null;
@@ -199,7 +200,7 @@ export async function processAgentMessage({
 
   // 2. Attempt Gemini backup if not already answered
   if (!reply) {
-    const geminiReply = await callGemini(fullSystemPrompt, query);
+    const geminiReply = await callGemini(fullSystemPrompt, query, history);
     if (geminiReply) {
       reply = geminiReply;
       provider = 'gemini';
@@ -207,22 +208,7 @@ export async function processAgentMessage({
     }
   }
 
-  // 3. Fallback to structured rules engine
-  if (!reply) {
-    provider = 'rules_engine';
-    modelName = 'local-rules-v1';
-    const questions = (agent?.qualificationQuestions as string[]) || [];
-
-    if (isBooking) {
-      reply = `Отлично! Я проверил расписание. Ближайший свободный слот: завтра в 14:30. Подскажите, пожалуйста, ваше имя и номер телефона для подтверждения брони?`;
-    } else if (lower.includes('цен') || lower.includes('скольк') || lower.includes('прайс') || lower.includes('стоим')) {
-      reply = `Вот наш прайс-лист:\n\n${agent?.knowledgeBase || 'Стандартный тариф: от 150 000 сум.'}\n\n${questions[0] || 'Какой формат вам больше подходит?'}`;
-    } else if (lower.includes('уровен') || lower.includes('возраст') || lower.includes('симптом') || lower.includes('мастер')) {
-      reply = `Понял вас! ${questions[1] || 'В какие дни и часы вам удобнее подойти на встречу?'}`;
-    } else {
-      reply = `Здравствуйте! Я виртуальный консультант компании. ${questions[0] || 'Чем могу помочь вам сегодня?'}`;
-    }
-  }
+  if (!reply) throw new Error('Сервис ответов временно недоступен. Попробуйте позже. Токены не списаны.');
 
   let appointmentTime: string | undefined = undefined;
   let leadCreated = null;
@@ -302,12 +288,13 @@ export async function processAgentMessage({
       ? 'Запись в календарь через ИИ (-5 токенов)'
       : 'Ответ ИИ-сотрудника в диалоге (-1 токен)';
 
-    await recordTokenTransaction({
+    const transaction = await recordTokenTransaction({
       workspaceId: ws.id,
       actionType: isBooking && !isSandbox ? 'calendar_booking' : 'chat_reply',
       tokensDelta: -tokensCost,
       description: desc,
     });
+    if (!transaction.success) throw new Error(transaction.error || 'Не удалось списать токены');
   }
 
   return {

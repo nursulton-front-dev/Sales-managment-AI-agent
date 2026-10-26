@@ -53,7 +53,7 @@ export function PricingSelector({
     <div className={`space-y-6 ${className}`}>
       {/* 3-column Grid for Paid Plans (START, BUSINESS in graphite, PRO) */}
       <div
-        role="radiogroup"
+        role="group"
         aria-label="Выбор тарифного плана"
         className="grid grid-cols-1 lg:grid-cols-3 gap-5"
       >
