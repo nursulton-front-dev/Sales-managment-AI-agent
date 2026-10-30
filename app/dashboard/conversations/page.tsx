@@ -1,23 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import Link from 'next/link';
 import { DataState } from '@/components/ui/DataState';
 import { messageText } from '@/lib/message-text';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
   MessageSquare,
   Search,
-  User,
-  Bot,
   Send,
   PauseCircle,
   PlayCircle,
-  Clock,
   ShieldAlert,
   ArrowLeft,
 } from 'lucide-react';
@@ -61,7 +57,7 @@ export default function ConversationsPage() {
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Load conversations
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       const res = await fetch('/api/conversations');
       const data = await res.json();
@@ -69,21 +65,25 @@ export default function ConversationsPage() {
       setLoadError(null);
       if (data.success) {
         setConversations(data.conversations || []);
-        if (data.conversations?.length > 0 && !activeConvId) {
-          setActiveConvId(data.conversations[0].id);
-        }
+        setActiveConvId((current) => {
+          if (current && data.conversations.some((conversation: Conversation) => conversation.id === current)) return current;
+          const requested = new URLSearchParams(window.location.search).get('conversation');
+          return data.conversations.find((conversation: Conversation) => conversation.id === requested)?.id || data.conversations[0]?.id || null;
+        });
       }
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Ошибка сети');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- This starts an async API request; state is updated after the response.
-    loadConversations();
-  }, []);
+    void loadConversations();
+    const timer = setInterval(() => { if (!document.hidden) void loadConversations(); }, 5000);
+    return () => clearInterval(timer);
+  }, [loadConversations]);
 
   useEffect(() => {
     if (!activeConvId) return;
@@ -91,13 +91,19 @@ export default function ConversationsPage() {
     // A new selection clears stale messages before starting its request.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMessages([]); setMessagesLoading(true); setMessageError(null);
-    fetch(`/api/conversations/${activeConvId}`, { signal: controller.signal }).then(async (res) => {
+    const refresh = () => fetch(`/api/conversations/${activeConvId}`, { signal: controller.signal }).then(async (res) => {
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Не удалось загрузить сообщения');
-      if (!controller.signal.aborted) setMessages(data.messages || []);
+      if (!controller.signal.aborted) {
+        setMessages((current) => [...new Map([...current, ...(data.messages || [])].map((message: Message) => [message.id, message])).values()].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
+        setMessageError(null);
+        setConversations((current) => current.map((conversation) => conversation.id === activeConvId ? { ...conversation, status: data.conversation.status } : conversation));
+      }
     }).catch((error) => { if (!controller.signal.aborted) setMessageError(error.message); })
       .finally(() => { if (!controller.signal.aborted) setMessagesLoading(false); });
-    return () => controller.abort();
+    void refresh();
+    const timer = setInterval(() => { if (!document.hidden) void refresh(); }, 4000);
+    return () => { controller.abort(); clearInterval(timer); };
   }, [activeConvId]);
 
   const activeConversation = conversations.find((c) => c.id === activeConvId);
@@ -280,7 +286,7 @@ export default function ConversationsPage() {
 
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] bg-[var(--surface-secondary)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded border border-[var(--border)] font-medium">
-                          {conv.channel}
+                          {conv.channel === 'WebWidget' ? 'Сайт' : conv.channel}
                         </span>
 
                         {isTakeover ? (
@@ -335,7 +341,7 @@ export default function ConversationsPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-[11px] text-[var(--text-secondary)]">
-                        <span>Канал: <strong>{activeConversation.channel}</strong></span>
+                        <span>Канал: <strong>{activeConversation.channel === 'WebWidget' ? 'Сайт' : activeConversation.channel}</strong></span>
                         <span>·</span>
                         <span>
                           {activeConversation.status === 'closed' ? 'Диалог закрыт' : activeConversation.status === 'active' ? 'Отвечает ИИ' : 'Отвечает оператор'}
