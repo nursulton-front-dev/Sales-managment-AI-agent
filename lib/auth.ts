@@ -167,6 +167,7 @@ export let auth = betterAuth({
   trustedOrigins: [
     'https://chorla-ai.vercel.app',
     'https://saler-aka.vercel.app',
+    'https://*.vercel.app',
     'http://localhost:3000',
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
   ],
