@@ -19,13 +19,10 @@ export const INSTAGRAM_SCOPES = [
 ].join(',');
 
 // Encryption key for securing tokens at rest (AES-256-GCM)
-const ENCRYPTION_SECRET =
-  process.env.INSTAGRAM_TOKEN_ENCRYPTION_KEY ||
-  process.env.BETTER_AUTH_SECRET ||
-  'chorla-ai-instagram-secure-encryption-key-32-chars-min!';
-
 function getDerivedKey(): Buffer {
-  return crypto.createHash('sha256').update(ENCRYPTION_SECRET).digest();
+  const secret = process.env.INSTAGRAM_TOKEN_ENCRYPTION_KEY || process.env.BETTER_AUTH_SECRET;
+  if (!secret || secret.length < 32) throw new Error('Настройте секрет шифрования Instagram длиной от 32 символов');
+  return crypto.createHash('sha256').update(secret).digest();
 }
 
 /**
@@ -155,7 +152,7 @@ export function verifyOAuthState(stateString: string): { valid: boolean; workspa
       workspaceId: data.workspaceId,
       userId: data.userId,
     };
-  } catch (err) {
+  } catch {
     return { valid: false };
   }
 }

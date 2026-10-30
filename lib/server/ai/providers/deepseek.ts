@@ -11,7 +11,7 @@ export class DeepSeekProvider implements LLMProvider {
     this.baseUrl = (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '');
     this.defaultModel = process.env.DEEPSEEK_MODEL || 'deepseek-flash';
     this.apiKey = process.env.DEEPSEEK_API_KEY;
-    this.thinkingMode = (process.env.DEEPSEEK_THINKING === 'enabled' ? 'enabled' : 'disabled') as any;
+    this.thinkingMode = process.env.DEEPSEEK_THINKING === 'enabled' ? 'enabled' : 'disabled';
   }
 
   isConfigured(): boolean {
@@ -44,16 +44,16 @@ export class DeepSeekProvider implements LLMProvider {
       }
 
       const data = await res.json();
-      const models = data?.data?.map((m: any) => m.id) || [];
+      const models = data?.data?.map((model: { id: string }) => model.id) || [];
       return {
         ok: true,
         message: `Подключение успешно. Доступно моделей: ${models.length}`,
         models,
       };
-    } catch (err: any) {
+    } catch (err) {
       return {
         ok: false,
-        message: `Сетевая ошибка при запросе к DeepSeek: ${err.message}`,
+        message: `Сетевая ошибка при запросе к DeepSeek: ${err instanceof Error ? err.message : 'неизвестная ошибка'}`,
       };
     }
   }
@@ -64,7 +64,7 @@ export class DeepSeekProvider implements LLMProvider {
     }
 
     const startTime = Date.now();
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       model: this.defaultModel,
       messages: options.messages,
       temperature: options.temperature ?? 0.3,
@@ -90,9 +90,10 @@ export class DeepSeekProvider implements LLMProvider {
           Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(20_000),
       });
-    } catch (err: any) {
-      throw new Error(`Сетевой сбой при обращении к DeepSeek (${this.baseUrl}): ${err.message}`);
+    } catch (err) {
+      throw new Error(`Сетевой сбой при обращении к DeepSeek (${this.baseUrl}): ${err instanceof Error ? err.message : 'неизвестная ошибка'}`);
     }
 
     const durationMs = Date.now() - startTime;

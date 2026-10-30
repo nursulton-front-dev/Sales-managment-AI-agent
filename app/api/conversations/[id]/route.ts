@@ -101,6 +101,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const agent = (await getAllAgents(conv.workspaceId)).find((item) => item.id === conv.agentId);
       if (!agent?.tgBotToken) return NextResponse.json({ success: false, error: 'Переподключите Telegram' }, { status: 409 });
       await telegramCall(agent.tgBotToken, 'sendMessage', { chat_id: conv.clientPhone.slice(3), text });
+    } else if (conv.channel === 'WebWidget') {
+      // The authenticated visitor reads this persisted reply through their widget session.
     } else {
       return NextResponse.json({ success: false, error: 'В этом диалоге отправка пока недоступна' }, { status: 409 });
     }

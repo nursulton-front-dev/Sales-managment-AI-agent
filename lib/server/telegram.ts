@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+import { DeliveryRejectedError } from '@/lib/server/channels/errors';
 
 export function telegramWebhookSecret(agentId: string) {
   const secret = process.env.BETTER_AUTH_SECRET;
@@ -16,7 +17,7 @@ export async function telegramCall<T>(token: string, method: string, body?: Reco
   try { res = await fetch(`https://api.telegram.org/bot${token}/${method}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), signal: AbortSignal.timeout(10000) }); }
   catch { throw new Error('Telegram временно недоступен'); }
   const data = await res.json();
-  if (!res.ok || !data.ok) throw new Error('Telegram отклонил запрос. Проверьте подключение бота.');
+  if (!res.ok || !data.ok) throw new DeliveryRejectedError(res.status === 429 || res.status >= 500);
   return data.result as T;
 }
 export async function connectTelegram(agentId: string, token: string) {

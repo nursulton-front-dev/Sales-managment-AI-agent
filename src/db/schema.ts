@@ -1,4 +1,5 @@
-import { pgTable, text, integer, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, jsonb, index, uniqueIndex, bigserial } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 // 1. Workspaces (Организации)
 export const workspaces = pgTable('workspaces', {
@@ -326,3 +327,66 @@ export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
 export type NewAdminAuditLog = typeof adminAuditLogs.$inferInsert;
 export type InstagramEvent = typeof instagramEvents.$inferSelect;
 export type NewInstagramEvent = typeof instagramEvents.$inferInsert;
+
+export const websiteWidgets = pgTable('website_widgets', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id').notNull().unique().references(() => workspaces.id, { onDelete: 'cascade' }),
+  agentId: text('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
+  enabled: boolean('enabled').notNull().default(false),
+  title: text('title').notNull(),
+  greeting: text('greeting').notNull(),
+  color: text('color').notNull(),
+  position: text('position').notNull().default('right'),
+  allowedOrigins: jsonb('allowed_origins').$type<string[]>().notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+  lastSeenOrigin: text('last_seen_origin'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const widgetSessions = pgTable('widget_sessions', {
+  tokenHash: text('token_hash').primaryKey(),
+  widgetId: text('widget_id').notNull().references(() => websiteWidgets.id, { onDelete: 'cascade' }),
+  origin: text('origin').notNull(),
+  conversationId: text('conversation_id').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+});
+
+export type ChannelPayload = {
+  agentId: string;
+  contact: string;
+  clientName: string;
+  text: string;
+  reply?: string;
+  tokensCost?: number;
+};
+export const channelEvents = pgTable('channel_events', {
+  id: text('id').primaryKey(),
+  sequence: bigserial('sequence', { mode: 'number' }).notNull(),
+  workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  channel: text('channel').$type<'Telegram' | 'Instagram' | 'WebWidget'>().notNull(),
+  conversationId: text('conversation_id').notNull(),
+  payload: jsonb('payload').$type<ChannelPayload>().notNull(),
+  status: text('status').notNull().default('pending'),
+  stage: text('stage').notNull().default('received'),
+  attempts: integer('attempts').notNull().default(0),
+  availableAt: timestamp('available_at', { withTimezone: true }).defaultNow().notNull(),
+  lockedUntil: timestamp('locked_until', { withTimezone: true }),
+  errorCode: text('error_code'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('channel_events_due_idx').on(table.status, table.availableAt),
+  index('channel_events_workspace_idx').on(table.workspaceId, table.createdAt),
+  index('channel_events_conversation_sequence_idx').on(table.conversationId, table.sequence),
+  uniqueIndex('channel_events_processing_conversation_idx').on(table.conversationId).where(sql`${table.status} = 'processing'`),
+]);
+
+export const integrationRateLimits = pgTable('integration_rate_limits', {
+  id: text('id').primaryKey(),
+  count: integer('count').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+});
+
+export type WebsiteWidget = typeof websiteWidgets.$inferSelect;
+export type WidgetSession = typeof widgetSessions.$inferSelect;
+export type ChannelEvent = typeof channelEvents.$inferSelect;

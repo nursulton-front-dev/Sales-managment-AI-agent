@@ -1,6 +1,6 @@
 import { neon, NeonQueryFunction } from '@neondatabase/serverless';
 import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import { eq, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import * as schema from './schema';
 import fs from 'fs';
@@ -619,8 +619,10 @@ export async function createConversation(data: Partial<schema.NewConversation> &
 
   if (db) {
     try {
-      await db.insert(schema.conversations).values(newConv);
-      return newConv;
+      const [inserted] = await db.insert(schema.conversations).values(newConv).onConflictDoNothing().returning();
+      const existing = inserted || await getConversationById(newConv.id);
+      if (!existing || existing.workspaceId !== newConv.workspaceId) throw new Error('Конфликт идентификатора диалога');
+      return existing;
     } catch (err) {
       console.warn('Neon insert conversation error:', err);
       throw err;
@@ -629,6 +631,11 @@ export async function createConversation(data: Partial<schema.NewConversation> &
 
   const store = readStore();
   if (!store.conversations) store.conversations = [];
+  const existing = store.conversations.find((item) => item.id === newConv.id);
+  if (existing) {
+    if (existing.workspaceId !== newConv.workspaceId) throw new Error('Конфликт идентификатора диалога');
+    return existing;
+  }
   store.conversations.unshift(newConv);
   writeStore(store);
   return newConv;
@@ -665,14 +672,14 @@ export async function updateConversation(id: string, updates: Partial<schema.Con
 export async function getMessagesByConversationId(conversationId: string): Promise<schema.Message[]> {
   if (db) {
     try {
-      return await db.select().from(schema.messages).where(eq(schema.messages.conversationId, conversationId));
+      return await db.select().from(schema.messages).where(eq(schema.messages.conversationId, conversationId)).orderBy(asc(schema.messages.createdAt), asc(schema.messages.id));
     } catch (err) {
       console.warn('Neon select messages error:', err);
       throw err;
     }
   }
   const store = readStore();
-  return (store.messages || []).filter((m) => m.conversationId === conversationId);
+  return (store.messages || []).filter((m) => m.conversationId === conversationId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() || a.id.localeCompare(b.id));
 }
 
 export async function createMessage(data: Partial<schema.NewMessage> & {
@@ -688,12 +695,17 @@ export async function createMessage(data: Partial<schema.NewMessage> & {
     sender: data.sender,
     text: data.text,
     tokensCost: data.tokensCost || 0,
-    createdAt: new Date(),
+    createdAt: data.createdAt || new Date(),
   };
 
   if (db) {
     try {
-      await db.insert(schema.messages).values(newMsg);
+      const [inserted] = await db.insert(schema.messages).values(newMsg).onConflictDoNothing().returning();
+      if (!inserted) {
+        const [existing] = await db.select().from(schema.messages).where(eq(schema.messages.id, newMsg.id));
+        if (!existing || existing.workspaceId !== newMsg.workspaceId || existing.conversationId !== newMsg.conversationId || existing.sender !== newMsg.sender || existing.text !== newMsg.text) throw new Error('Конфликт идентификатора сообщения');
+        return existing;
+      }
       await db.update(schema.conversations).set({
         lastMessageText: newMsg.text,
         lastMessageAt: newMsg.createdAt,
@@ -707,6 +719,11 @@ export async function createMessage(data: Partial<schema.NewMessage> & {
 
   const store = readStore();
   if (!store.messages) store.messages = [];
+  const existingMessage = store.messages.find((item) => item.id === newMsg.id);
+  if (existingMessage) {
+    if (existingMessage.workspaceId !== newMsg.workspaceId || existingMessage.conversationId !== newMsg.conversationId || existingMessage.sender !== newMsg.sender || existingMessage.text !== newMsg.text) throw new Error('Конфликт идентификатора сообщения');
+    return existingMessage;
+  }
   store.messages.push(newMsg);
   if (!store.conversations) store.conversations = [];
   store.conversations = store.conversations.map((c) => {
