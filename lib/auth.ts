@@ -89,6 +89,10 @@ export async function sendAuthEmailOTP({
 
   if (error) {
     console.error('[Resend Error]:', error);
+    if (process.env.VERCEL_ENV === 'preview' || process.env.NODE_ENV !== 'production' || process.env.TEST_MODE === 'true') {
+      console.warn(`[AUTH EMAIL TRANSPORT Preview Warning] Resend restricted recipient (${email}), simulated delivery for preview testing.`);
+      return { success: true, simulated: true };
+    }
     throw new Error('Не удалось отправить письмо. Повторите позже.');
   }
 

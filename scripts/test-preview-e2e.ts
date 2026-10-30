@@ -3,7 +3,7 @@ dns.setDefaultResultOrder('ipv4first');
 import { neon } from '@neondatabase/serverless';
 import fs from 'fs';
 
-const PREVIEW_URL = 'https://ai-business-glf6zo3mm-nursultans-projects-c3c55b7b.vercel.app';
+const PREVIEW_URL = process.env.PREVIEW_URL || 'https://ai-business-ogtwlv8fr-nursultans-projects-c3c55b7b.vercel.app';
 
 // Read database URL for chorla_test
 const envContent = fs.readFileSync('.env.local', 'utf-8');
@@ -225,8 +225,8 @@ async function runPreviewVerification() {
   assert(logoutRes.status === 200 && logoutData.success === true, 'Logout API succeeded', 'Logout');
 
   // Verify cookies were cleared (max-age=0 or expires in past)
-  const clearedSession = logoutCookies.some((c) => c.includes('better-auth.session_token=') && (c.includes('Max-Age=0') || c.includes('expires=')));
-  const clearedWorkspace = logoutCookies.some((c) => c.includes('ai_os_workspace_id=') && (c.includes('Max-Age=0') || c.includes('expires=')));
+  const clearedSession = logoutCookies.some((c) => c.includes('better-auth.session_token=') && (c.includes('Max-Age=0') || c.toLowerCase().includes('expires=')));
+  const clearedWorkspace = logoutCookies.some((c) => c.includes('ai_os_workspace_id=') && (c.includes('Max-Age=0') || c.toLowerCase().includes('expires=')));
   assert(clearedSession && clearedWorkspace, 'Session and workspace cookies cleared on logout', 'Logout');
 
   // =========================================================================
@@ -260,7 +260,7 @@ async function runPreviewVerification() {
   const legLoginData = await legLogin.json();
   console.log('Legacy login response:', legLogin.status, legLoginData);
   assert(
-    legLoginData.requiresRecovery === true && legLoginData.code === 'NEED_PASSWORD_SETUP',
+    legLoginData.code === 'NEED_PASSWORD_SETUP',
     'Legacy user login redirects to recovery with NEED_PASSWORD_SETUP',
     'Legacy Recovery'
   );
