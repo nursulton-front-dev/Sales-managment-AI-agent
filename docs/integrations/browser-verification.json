@@ -1,0 +1,38 @@
+{
+  "time": "2026-10-30T09:02:32.484Z",
+  "environment": "Isolated local Next server + separate customer origin + local HTTP model fixture. No live external accounts or model payments.",
+  "checks": [
+    "Owner can create an isolated account",
+    "Integrations UI generates an installable snippet without secret keys",
+    "Integrations has no page overflow at 375px",
+    "Integrations has no page overflow at 1440px",
+    "Widget loads on a separate approved customer origin",
+    "Opening chat puts keyboard focus in message field",
+    "Visitor message gets a real gateway reply through local model transport",
+    "Website conversation appears in owner dashboard API",
+    "Exactly one reply token is debited",
+    "Dashboard deep link opens the actual website conversation",
+    "Owner can reply and take over the conversation",
+    "Operator reply arrives at visitor without reload",
+    "Operator dashboard also refreshes persisted messages",
+    "Handoff keeps visitor messages and suppresses another model call",
+    "Mobile widget fits in viewport",
+    "Escape closes chat and restores launcher focus",
+    "Visitor history survives page reload in same tab",
+    "Late poll from previous session cannot repaint a new conversation",
+    "Separate visitor cannot see existing conversation history",
+    "Installation detection records customer site origin",
+    "Installation help is stored as a support ticket",
+    "Unapproved dashboard origin cannot use public widget API",
+    "Light custom colors retain readable button text",
+    "Disabled widget does not mount on customer site",
+    "No browser runtime errors"
+  ],
+  "screenshots": [
+    "integrations-375.png",
+    "integrations-1440.png",
+    "widget-375.png",
+    "widget-1440.png"
+  ],
+  "errors": []
+}

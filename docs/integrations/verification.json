@@ -1,0 +1,41 @@
+{
+  "time": "2026-10-30T09:09:54.353Z",
+  "typecheck": {
+    "command": "npx tsc --noEmit",
+    "exitCode": 0
+  },
+  "build": {
+    "command": "next build --webpack",
+    "exitCode": 0,
+    "warnings": [
+      "Existing deprecated middleware convention"
+    ],
+    "note": "Default Turbopack could not bind its internal worker port in this execution environment; supported Webpack fallback was built and exercised in browser."
+  },
+  "checks": {
+    "localHandlers": 46,
+    "browser": 25,
+    "postgres": 11,
+    "previousBusinessRisks": 14,
+    "total": 96
+  },
+  "lint": {
+    "errors": 56,
+    "warnings": 127,
+    "newAndModifiedProductionFilesErrors": 0,
+    "note": "Repository-wide legacy errors remain. See lint-verification.json."
+  },
+  "review": {
+    "verdict": "APPROVE",
+    "critical": 0,
+    "high": 0,
+    "medium": 0
+  },
+  "deployment": "Not performed. Target migration, scheduled recovery and real external accounts require target environment setup.",
+  "evidence": [
+    "integrations-375.png",
+    "integrations-1440.png",
+    "widget-375.png",
+    "widget-1440.png"
+  ]
+}

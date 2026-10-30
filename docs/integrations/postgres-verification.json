@@ -1,0 +1,17 @@
+{
+  "time": "2026-10-30T09:00:38.288Z",
+  "scope": "Real local PostgreSQL 16, real Drizzle SQL and repositories. Neon HTTP transport replaced with a local psql adapter; external model/channel transports mocked.",
+  "checks": [
+    "Widget settings persist through real PostgreSQL",
+    "PostgreSQL visitor session validates its hashed token and origin",
+    "Concurrent PostgreSQL rate cap admits exactly five requests",
+    "PostgreSQL sequence preserves accepted event order",
+    "FIFO gate rejects out-of-order claim in PostgreSQL",
+    "Concurrent PostgreSQL workers claim one event exactly once",
+    "PostgreSQL processor sends and records all three replies once",
+    "PostgreSQL processor debits exactly one token per response",
+    "Replaying completed PostgreSQL jobs never resends or recharges",
+    "Concurrent idempotent message inserts remain unique in PostgreSQL",
+    "Expired PostgreSQL generation requires review and operator takeover"
+  ]
+}

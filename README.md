@@ -1,37 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chorla AI
 
-## Getting Started
+Кабинет компании с ИИ-сотрудниками, диалогами, лидами, поддержкой и интеграциями. Подготовлены Telegram, Instagram и устанавливаемый чат сайта. Подключение реальных внешних аккаунтов и production-приёмка выполняются отдельно; WhatsApp, Uzum Market, звонки и Bitrix24 пока не реализованы.
 
-First, run the development server:
+## Локальный запуск
 
-```bash
+Требуется Node.js 24 и зависимости из lock-файла.
+
+```sh
+npm ci
+cp .env.local.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Задайте собственный `BETTER_AUTH_SECRET`. Оставьте `DATABASE_URL` пустым для локальной разработки в одном процессе либо настройте отдельную PostgreSQL-базу с существующей схемой `src/db/schema.ts`. Без БД авторизация хранится в памяти, прикладные данные — в `.data`. Для serverless и production требуется PostgreSQL.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Ключ модели нужен для ответов ИИ. Подключения почты, Google Calendar, Telegram и Instagram требуют соответствующих доступов; их отсутствие не считается успешным подключением.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Чат на сайте и очередь сообщений
 
-## Learn More
+[Установка, переменные окружения, миграция, планировщик и ограничения](docs/integrations/README.md).
 
-To learn more about Next.js, take a look at the following resources:
+Перед публикацией новой версии в целевой БД примените [добавочную миграцию](scripts/sql/widget-channels.sql) и настройте защищённый обработчик очереди. Рабочая база автоматически не изменяется.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Проверки
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sh
+npx tsc --noEmit
+npm run build
+node scripts/test-widget-channels.cjs
+node scripts/test-design-risks.cjs
+```
 
-## Deploy on Vercel
+Изолированная браузерная проверка нового виджета: `node scripts/verify-widget.cjs`. Она запускает тестовый кабинет, сайт клиента и локальный HTTP-ответчик модели; внешние аккаунты и платные API не используются.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Если среда ограничивает служебные порты Turbopack, поддерживается `npx next build --webpack` и `npx next dev --webpack`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# Sales-managment-AI-agent
+[Результаты новой приёмки](docs/integrations/README.md#проверки), [отчёт по внедрению Design Pack](docs/design/IMPLEMENTATION.md). Общий ESLint содержит ранее существовавшие замечания; успешные отдельные проверки не означают, что весь репозиторий прошёл lint или production-приёмку.

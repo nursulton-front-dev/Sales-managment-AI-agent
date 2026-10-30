@@ -1,0 +1,117 @@
+{
+  "time": "2026-10-30T09:06:36.484Z",
+  "command": "eslint . --format json",
+  "errors": 56,
+  "warnings": 127,
+  "scope": "Repository-wide ESLint. Existing admin/legacy/provider interface errors remain. All newly added modules and modified production files have zero lint errors.",
+  "files": [
+    {
+      "file": "app/admin/audit/page.tsx",
+      "errors": 3
+    },
+    {
+      "file": "app/admin/billing/page.tsx",
+      "errors": 3
+    },
+    {
+      "file": "app/admin/layout.tsx",
+      "errors": 3
+    },
+    {
+      "file": "app/admin/operations/page.tsx",
+      "errors": 3
+    },
+    {
+      "file": "app/admin/organizations/page.tsx",
+      "errors": 4
+    },
+    {
+      "file": "app/admin/page.tsx",
+      "errors": 4
+    },
+    {
+      "file": "app/admin/support/page.tsx",
+      "errors": 2
+    },
+    {
+      "file": "app/api/admin/audit/route.ts",
+      "errors": 1
+    },
+    {
+      "file": "app/api/admin/deepseek/route.ts",
+      "errors": 2
+    },
+    {
+      "file": "app/api/admin/reset/route.ts",
+      "errors": 1
+    },
+    {
+      "file": "app/api/admin/support/route.ts",
+      "errors": 1
+    },
+    {
+      "file": "app/api/admin/token-logs/route.ts",
+      "errors": 1
+    },
+    {
+      "file": "app/api/admin/workspaces/route.ts",
+      "errors": 2
+    },
+    {
+      "file": "app/api/billing/transactions/route.ts",
+      "errors": 1
+    },
+    {
+      "file": "app/api/conversations/route.ts",
+      "errors": 2
+    },
+    {
+      "file": "app/api/health/route.ts",
+      "errors": 4
+    },
+    {
+      "file": "app/api/instagram/auth/route.ts",
+      "errors": 1
+    },
+    {
+      "file": "app/api/instagram/disconnect/route.ts",
+      "errors": 1
+    },
+    {
+      "file": "app/api/instagram/status/route.ts",
+      "errors": 3
+    },
+    {
+      "file": "app/api/meta/data-deletion/route.ts",
+      "errors": 1
+    },
+    {
+      "file": "app/api/support/public/route.ts",
+      "errors": 1
+    },
+    {
+      "file": "app/login/page.tsx",
+      "errors": 3
+    },
+    {
+      "file": "app/not-found.tsx",
+      "errors": 2
+    },
+    {
+      "file": "components/calendar/GoogleCalendarModal.tsx",
+      "errors": 2
+    },
+    {
+      "file": "components/theme/ThemeSwitcher.tsx",
+      "errors": 1
+    },
+    {
+      "file": "lib/calendar/google.ts",
+      "errors": 3
+    },
+    {
+      "file": "lib/server/ai/provider.ts",
+      "errors": 1
+    }
+  ]
+}
