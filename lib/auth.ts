@@ -7,12 +7,14 @@ import * as schema from '@/src/db/schema';
 
 // Resolve public production / deployment host
 const configuredBaseUrl =
-  process.env.BETTER_AUTH_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : process.env.VERCEL_URL
+  process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000');
+    : process.env.BETTER_AUTH_URL ||
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3000');
 
 import { getCurrentAuthEndpointContext } from '@better-auth/core/context';
 import { APIError } from 'better-auth/api';
