@@ -3,7 +3,7 @@ dns.setDefaultResultOrder('ipv4first');
 import { neon } from '@neondatabase/serverless';
 import fs from 'fs';
 
-const PREVIEW_URL = process.env.PREVIEW_URL || 'https://ai-business-ogtwlv8fr-nursultans-projects-c3c55b7b.vercel.app';
+const PREVIEW_URL = process.env.PREVIEW_URL || 'https://ai-business-3htki5uba-nursultans-projects-c3c55b7b.vercel.app';
 
 // Read database URL for chorla_test
 const envContent = fs.readFileSync('.env.local', 'utf-8');
@@ -12,7 +12,18 @@ if (!match) throw new Error('No DATABASE_URL found in .env.local');
 
 const u = new URL(match[1]);
 u.pathname = '/chorla_test';
-const testSql = neon(u.toString());
+const rawSql = neon(u.toString());
+async function testSql(strings: TemplateStringsArray, ...values: any[]): Promise<any[]> {
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      return (await (rawSql as any)(strings, ...values)) as any[];
+    } catch (err) {
+      if (attempt === 5) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+  return [];
+}
 
 function assert(condition: boolean, name: string, category: string, details?: string) {
   if (!condition) {
