@@ -6,16 +6,33 @@ import { auth } from '@/lib/auth';
 export const FOUNDER_SUPERADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.SUPERADMIN_EMAIL || 'maxramovnursulton1@gmail.com';
 export interface UserSessionContext {
   workspace: Workspace | null; workspaceId: string | null; userEmail: string | null; userName: string | null;
+  userEmailVerified: boolean;
   role: 'super_admin' | 'owner' | 'admin' | 'member'; isSuperAdmin: boolean; isImpersonating: boolean;
   supportSessionReason?: string;
 }
 
 export async function getServerSessionContext(explicitWorkspaceId?: string): Promise<UserSessionContext> {
   const identity = await auth.api.getSession({ headers: await headers() });
-  const empty: UserSessionContext = { workspace: null, workspaceId: null, userEmail: null, userName: null, role: 'member', isSuperAdmin: false, isImpersonating: false };
+  const empty: UserSessionContext = { workspace: null, workspaceId: null, userEmail: null, userName: null, userEmailVerified: false, role: 'member', isSuperAdmin: false, isImpersonating: false };
   if (!identity) return empty;
   const email = identity.user.email.toLowerCase();
-  const isSuperAdmin = identity.user.emailVerified && email === FOUNDER_SUPERADMIN_EMAIL.toLowerCase();
+  const isVerified = Boolean(identity.user.emailVerified);
+  const isSuperAdmin = isVerified && email === FOUNDER_SUPERADMIN_EMAIL.toLowerCase();
+
+  // REQUIREMENT 1: Forbid company access and ownership resolution if email is not verified
+  if (!isVerified) {
+    return {
+      workspace: null,
+      workspaceId: null,
+      userEmail: email,
+      userName: identity.user.name,
+      userEmailVerified: false,
+      role: 'member',
+      isSuperAdmin: false,
+      isImpersonating: false,
+    };
+  }
+
   const owned = await getWorkspaceByEmail(email);
   const targetId = explicitWorkspaceId || (await cookies()).get('ai_os_workspace_id')?.value;
   let workspace = owned;
@@ -31,6 +48,7 @@ export async function getServerSessionContext(explicitWorkspaceId?: string): Pro
   }
   if (workspace && !isImpersonating) workspace = { ...workspace, emailVerified: identity.user.emailVerified };
   return { workspace, workspaceId: workspace?.id || null, userEmail: email, userName: identity.user.name,
+    userEmailVerified: Boolean(identity.user.emailVerified),
     role: isSuperAdmin ? 'super_admin' : owned ? 'owner' : 'member', isSuperAdmin, isImpersonating, supportSessionReason };
 }
 export async function assertSuperAdmin() { return (await getServerSessionContext()).isSuperAdmin; }

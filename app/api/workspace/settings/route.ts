@@ -1,22 +1,36 @@
 import { publicWorkspace } from '@/lib/server/public-data';
 import { NextRequest, NextResponse, connection } from 'next/server';
-import { getWorkspaceById, updateWorkspace } from '@/src/db';
+import { updateWorkspace } from '@/src/db';
 import { getServerSessionContext } from '@/src/server/auth/session';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   await connection();
   try {
     const session = await getServerSessionContext();
-    if (!session.workspace) {
+    if (!session.userEmail) {
       return NextResponse.json(
-        { success: false, authenticated: false, error: 'Организация не найдена или сессия не авторизована' },
+        { success: false, authenticated: false, error: 'Сессия не авторизована' },
         { status: 401 }
       );
+    }
+
+    if (!session.workspace) {
+      return NextResponse.json({
+        success: true,
+        authenticated: true,
+        hasWorkspace: false,
+        user: {
+          name: session.userName,
+          email: session.userEmail,
+          emailVerified: session.userEmailVerified,
+        },
+      });
     }
 
     return NextResponse.json({
       success: true,
       authenticated: true,
+      hasWorkspace: true,
       workspace: publicWorkspace(session.workspace),
       isSuperAdmin: session.isSuperAdmin,
       isImpersonating: session.isImpersonating,

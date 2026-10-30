@@ -85,6 +85,22 @@ export function AppContextProvider({ children }: { children: ReactNode }) {
       if (res.status === 401) { setUser(null); saveWorkspace(null); setIsSuperAdmin(false); setAgents([]); setLeads([]); setWorkspaceError(null); return; }
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Не удалось загрузить рабочее пространство');
+      if (data.hasWorkspace === false) {
+        saveWorkspace(null);
+        setUser({
+          id: '',
+          name: data.user?.name || '',
+          email: data.user?.email || '',
+          companyName: '',
+          isDemo: false,
+          emailVerified: Boolean(data.user?.emailVerified),
+          role: 'member',
+        });
+        setAgents([]);
+        setLeads([]);
+        setWorkspaceError(null);
+        return;
+      }
       setWorkspace(data.workspace);
       setSupportSession({ isImpersonating: Boolean(data.isImpersonating), reason: data.supportSessionReason || '' });
       setIsSuperAdmin(Boolean(data.isSuperAdmin));

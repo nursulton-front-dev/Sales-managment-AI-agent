@@ -1,0 +1,85 @@
+{
+  "timestamp": "2026-10-30T17:14:23.034Z",
+  "results": [
+    {
+      "name": "Empty password bar has 0% width (w-0)",
+      "passed": true,
+      "detail": "h-full transition-all duration-300 rounded-full w-0 bg-transparent"
+    },
+    {
+      "name": "Password field has autocomplete=\"new-password\"",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Confirm Password field has autocomplete=\"new-password\"",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "No mismatch error displayed initially",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Weak password (12345678) has 25% bar and red color",
+      "passed": true,
+      "detail": "СлабыйДобавьте редкие слова, цифры или символы"
+    },
+    {
+      "name": "Medium password has 50% bar and orange color",
+      "passed": true,
+      "detail": "СреднийСделайте пароль длиннее или добавьте спецсимволы"
+    },
+    {
+      "name": "Good password has 75% bar and blue color",
+      "passed": true,
+      "detail": "ХорошийХороший пароль, подходит для защиты аккаунта"
+    },
+    {
+      "name": "Strong password has 100% bar and emerald color",
+      "passed": true,
+      "detail": "НадёжныйОтличный сложный пароль"
+    },
+    {
+      "name": "Password toggle button switches type between password and text",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Password toggle button restores password type",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Mismatch message \"Пароли не совпадают\" appears under confirm field",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Mismatch dynamically updates when first password changes",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Mismatch error disappears when passwords match",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Passwords are NEVER stored in sessionStorage",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Mobile 375px responsive dark theme renders correctly",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery modal opens with title \"Восстановление доступа\"",
+      "passed": true,
+      "detail": ""
+    }
+  ]
+}

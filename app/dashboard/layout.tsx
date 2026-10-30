@@ -17,12 +17,18 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, workspaceLoading, workspaceError, refreshWorkspace, isImpersonating, supportSessionReason, showToast } = useApp();
+  const { user, workspace, workspaceLoading, workspaceError, refreshWorkspace, isImpersonating, supportSessionReason, showToast } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (!workspaceLoading && !workspaceError && !user) router.replace('/login');
-  }, [user, workspaceLoading, workspaceError, router]);
+    if (!workspaceLoading && !workspaceError) {
+      if (!user) {
+        router.replace('/login');
+      } else if (!workspace) {
+        router.replace('/register?step=2');
+      }
+    }
+  }, [user, workspace, workspaceLoading, workspaceError, router]);
 
   const handleExitSupport = async () => {
     try {

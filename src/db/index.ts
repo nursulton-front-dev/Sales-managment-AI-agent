@@ -23,7 +23,11 @@ if (isNeonConfigured) {
   }
 }
 
-export const db = dbInstance;
+export let db: NeonHttpDatabase<typeof schema> | null = dbInstance;
+
+export function setTestDb(customDb: unknown) {
+  db = customDb as NeonHttpDatabase<typeof schema>;
+}
 
 // ================= FALLBACK PERSISTENT STORE =================
 // Ensures seamless out-of-the-box operation even without Neon credentials
