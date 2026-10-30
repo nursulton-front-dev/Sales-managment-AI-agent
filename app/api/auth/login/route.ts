@@ -97,10 +97,6 @@ export async function POST(req: NextRequest) {
       workspace: publicWorkspace(workspace),
     });
 
-    for (const cookie of result.headers.getSetCookie()) {
-      response.headers.append('set-cookie', cookie);
-    }
-
     response.cookies.set('ai_os_workspace_id', workspace.id, {
       httpOnly: true,
       secure: req.nextUrl.protocol === 'https:',
@@ -108,6 +104,10 @@ export async function POST(req: NextRequest) {
       path: '/',
       maxAge: 86400 * 30,
     });
+
+    for (const cookie of result.headers.getSetCookie()) {
+      response.headers.append('set-cookie', cookie);
+    }
 
     return response;
   } catch (err: unknown) {

@@ -220,12 +220,6 @@ export async function POST(req: NextRequest) {
       hasWorkspace: Boolean(workspace),
     });
 
-    if (signInResult) {
-      for (const cookie of signInResult.headers.getSetCookie()) {
-        response.headers.append('set-cookie', cookie);
-      }
-    }
-
     if (workspace) {
       response.cookies.set('ai_os_workspace_id', workspace.id, {
         httpOnly: true,
@@ -234,6 +228,12 @@ export async function POST(req: NextRequest) {
         path: '/',
         maxAge: 86400 * 30,
       });
+    }
+
+    if (signInResult) {
+      for (const cookie of signInResult.headers.getSetCookie()) {
+        response.headers.append('set-cookie', cookie);
+      }
     }
 
     return response;
