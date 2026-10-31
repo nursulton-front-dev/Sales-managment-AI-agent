@@ -251,8 +251,8 @@ export function WebsiteWidgetModal({
         {/* Modal Header */}
         <div className="p-5 sm:p-6 border-b border-[var(--border)] bg-[var(--surface)] flex items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-3.5">
-            <div className="size-11 rounded-xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center text-[var(--accent)] shrink-0 border border-red-100 dark:border-red-900/40">
-              <Globe size={22} />
+            <div className="size-11 rounded-2xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center text-[var(--accent)] shrink-0 border border-red-100 dark:border-red-900/40 shadow-xs">
+              <Globe size={24} />
             </div>
             <div>
               <div className="flex items-center gap-2">

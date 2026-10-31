@@ -514,8 +514,8 @@ export default function IntegrationsPage() {
           {/* Header */}
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3.5">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-[#229ED9]/15 flex items-center justify-center shrink-0 border border-[#229ED9]/25">
-                <Image src="/integrations/telegram.svg" width={24} height={24} alt="Telegram" />
+              <div className="size-11 rounded-2xl bg-[#229ED9]/10 flex items-center justify-center shrink-0 border border-[#229ED9]/20 shadow-xs">
+                <Image src="/integrations/telegram.svg" width={26} height={26} alt="Telegram" />
               </div>
               <div>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">Telegram-бот</h2>
@@ -707,8 +707,8 @@ export default function IntegrationsPage() {
         <div className="p-5 sm:p-6 space-y-4">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3.5">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 border border-blue-100 dark:border-blue-900/40">
-                <CalendarIcon size={20} />
+              <div className="size-11 rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center shrink-0 border border-[var(--border)] shadow-xs">
+                <Image src="/integrations/google-calendar.png" width={26} height={26} alt="Google Calendar" className="object-contain" />
               </div>
               <div>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">Google Календарь</h2>
@@ -867,8 +867,8 @@ export default function IntegrationsPage() {
         <div className="p-5 sm:p-6 space-y-4">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3.5">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-pink-50 dark:bg-pink-950/40 flex items-center justify-center text-pink-600 border border-pink-100 dark:border-pink-900/40">
-                <MessageCircle size={20} />
+              <div className="size-11 rounded-2xl bg-pink-50 dark:bg-pink-950/40 flex items-center justify-center shrink-0 border border-pink-100 dark:border-pink-900/40 shadow-xs">
+                <Image src="/integrations/instagram.svg" width={26} height={26} alt="Instagram" className="object-contain" />
               </div>
               <div>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">Instagram Direct</h2>
@@ -1020,10 +1020,13 @@ export default function IntegrationsPage() {
         <div className="p-5 sm:p-6 space-y-4">
           <div className="flex justify-between items-center border-b border-[var(--border)] pb-3.5">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600 border border-emerald-100 dark:border-emerald-900/40">
-                <MessageCircle size={20} />
+              <div className="size-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/40 shadow-xs">
+                <Image src="/integrations/whatsapp.svg" width={26} height={26} alt="WhatsApp" className="object-contain" />
               </div>
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">WhatsApp Business</h2>
+              <div>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">WhatsApp Business</h2>
+                <p className="text-xs text-[var(--text-secondary)]">Мессенджер для продаж и поддержки</p>
+              </div>
             </div>
             <Button
               type="button"
