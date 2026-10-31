@@ -3,7 +3,7 @@ dns.setDefaultResultOrder('ipv4first');
 import { neon } from '@neondatabase/serverless';
 import fs from 'fs';
 
-const PREVIEW_URL = process.env.PREVIEW_URL || 'https://ai-business-3htki5uba-nursultans-projects-c3c55b7b.vercel.app';
+const PREVIEW_URL = process.env.PREVIEW_URL || 'https://ai-business-oelriupa2-nursultans-projects-c3c55b7b.vercel.app';
 
 // Read database URL for chorla_test
 const envContent = fs.readFileSync('.env.local', 'utf-8');
