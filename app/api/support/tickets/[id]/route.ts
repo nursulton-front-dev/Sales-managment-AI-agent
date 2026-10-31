@@ -1,3 +1,4 @@
+import { validateAttachments, attachmentLinks } from '@/lib/server/support/attachments';
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { getServerSessionContext } from '@/src/server/auth/session';
 import {
@@ -26,7 +27,7 @@ export async function GET(
     }
 
     // Tenant check: customer can only read their own ticket
-    if (!session.isSuperAdmin && ticket.authorEmail !== session.userEmail) {
+    if (!session.isSuperAdmin && (ticket.authorEmail !== session.userEmail || ticket.workspaceId !== session.workspaceId)) {
       return NextResponse.json({ success: false, error: 'Доступ запрещён' }, { status: 403 });
     }
 
@@ -36,10 +37,10 @@ export async function GET(
     return NextResponse.json({
       success: true,
       ticket,
-      messages,
+      messages: messages.map(attachmentLinks),
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
 }
 
@@ -61,18 +62,21 @@ export async function POST(
     }
 
     // Tenant check
-    if (!session.isSuperAdmin && ticket.authorEmail !== session.userEmail) {
+    if (!session.isSuperAdmin && (ticket.authorEmail !== session.userEmail || ticket.workspaceId !== session.workspaceId)) {
       return NextResponse.json({ success: false, error: 'Доступ запрещён' }, { status: 403 });
     }
 
     const body = await req.json();
     const { text, attachments, reopen } = body;
 
-    if (!text && !reopen) {
+    if ((!text && !reopen) || (text !== undefined && (typeof text !== 'string' || !text.trim() || text.length > 10000))) {
       return NextResponse.json({ success: false, error: 'Текст сообщения не может быть пустым' }, { status: 400 });
     }
 
-    if (reopen && ticket.status === 'resolved') {
+    let validAttachments;
+    try { validAttachments = validateAttachments(attachments); } catch (error) { return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Некорректные вложения' }, { status: 400 }); }
+
+    if (reopen && ['resolved', 'closed'].includes(ticket.status)) {
       await updateTicketStatus(id, 'in_progress');
     }
 
@@ -83,11 +87,11 @@ export async function POST(
       senderName: session.userName || 'Пользователь',
       text: text || 'Клиент возобновил обращение',
       isInternalNote: false,
-      attachments: attachments || [],
+      attachments: validAttachments,
     });
 
-    return NextResponse.json({ success: true, message: msg });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, message: msg ? attachmentLinks(msg) : null });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
 }

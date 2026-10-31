@@ -1,33 +1,25 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import { authClient } from '@/lib/auth-client';
+import React, { useState, useRef, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
 import { BrandLogo } from '@/components/ui/BrandLogo';
-import { TRIAL_PLAN, PLANS, PLANS_LIST, PlanOrTrialId } from '@/lib/pricing';
+import { PLANS_LIST, PlanOrTrialId } from '@/lib/pricing';
+import { evaluatePassword, validatePasswordPolicy } from '@/lib/password';
+import clsx from 'clsx';
 import {
   Building2,
-  Lock,
   Eye,
   EyeOff,
-  Phone,
-  Clock,
   Upload,
   Trash2,
-  GraduationCap,
-  Stethoscope,
-  Scissors,
-  ShoppingBag,
-  Briefcase,
   ArrowRight,
   ArrowLeft,
-  Check,
   AlertCircle,
-  RotateCcw,
-  Sparkles,
 } from 'lucide-react';
 
 const STEP_DATA = [
@@ -45,7 +37,7 @@ const NICHE_OPTIONS = [
   { id: 'other', label: 'Другая сфера', defaultAgentTask: 'other' },
 ];
 
-export default function RegisterWizardPage() {
+function RegisterWizard() {
   const router = useRouter();
   const { setWorkspace, showToast } = useApp();
 
@@ -61,8 +53,16 @@ export default function RegisterWizardPage() {
   const [ownerName, setOwnerName] = useState<string>('');
   const [ownerEmail, setOwnerEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const [isConfirmTouched, setIsConfirmTouched] = useState<boolean>(false);
+  const [hasFormSubmitted, setHasFormSubmitted] = useState<boolean>(false);
   const [isEmailVerifiedLocally, setIsEmailVerifiedLocally] = useState<boolean>(false);
+
+  // Evaluate password strength locally via zxcvbn-ts
+  const passwordStrength = useMemo(() => evaluatePassword(password), [password]);
+  const isMismatch = (isConfirmTouched || hasFormSubmitted || confirmPassword.length > 0) && confirmPassword !== password;
 
   // Step 1 sub-stage: OTP Verification
   const [showOtpView, setShowOtpView] = useState<boolean>(false);
@@ -89,6 +89,30 @@ export default function RegisterWizardPage() {
   const [selectedAgentTask, setSelectedAgentTask] = useState<string>('courses');
   const [isSubmittingFinal, setIsSubmittingFinal] = useState<boolean>(false);
 
+  // Check active Better Auth session on mount (e.g. returning from Google OAuth)
+  useEffect(() => {
+    let isMounted = true;
+    async function checkAuthSession() {
+      try {
+        const session = await authClient.getSession();
+        if (session.data?.user && isMounted) {
+          if (session.data.user.name) setOwnerName(session.data.user.name);
+          if (session.data.user.email) setOwnerEmail(session.data.user.email);
+          const isVerified = Boolean(session.data.user.emailVerified);
+          setIsEmailVerifiedLocally(isVerified);
+          // Only advance if email is verified by confirmed server state
+          if (isVerified) {
+            setCurrentStep(2);
+          }
+        }
+      } catch {}
+    }
+    void checkAuthSession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Focus heading on step transitions
   const transitionToStep = (newStep: number) => {
     setCurrentStep(newStep);
@@ -98,25 +122,28 @@ export default function RegisterWizardPage() {
     }, 120);
   };
 
-  // Restore draft state safely from sessionStorage
+  // Restore draft state safely from sessionStorage (never passwords)
   useEffect(() => {
-    try {
-      const draft = sessionStorage.getItem('ai_os_reg_draft_v2');
-      if (draft) {
-        const parsed = JSON.parse(draft);
-        if (parsed.ownerName) setOwnerName(parsed.ownerName);
-        if (parsed.ownerEmail) setOwnerEmail(parsed.ownerEmail);
-        if (parsed.companyName) setCompanyName(parsed.companyName);
-        if (parsed.niche) setNiche(parsed.niche);
-        if (parsed.ownerPhone) setOwnerPhone(parsed.ownerPhone);
-        if (parsed.isSoleProprietor !== undefined) setIsSoleProprietor(parsed.isSoleProprietor);
-        if (parsed.timezone) setTimezone(parsed.timezone);
-        if (parsed.selectedPlan) setSelectedPlan(parsed.selectedPlan);
-        if (parsed.currentStep && parsed.currentStep >= 1 && parsed.currentStep <= 4) {
-          setCurrentStep(parsed.currentStep);
+    const t = setTimeout(() => {
+      try {
+        const draft = sessionStorage.getItem('ai_os_reg_draft_v2');
+        if (draft) {
+          const parsed = JSON.parse(draft);
+          if (parsed.ownerName) setOwnerName(parsed.ownerName);
+          if (parsed.ownerEmail) setOwnerEmail(parsed.ownerEmail);
+          if (parsed.companyName) setCompanyName(parsed.companyName);
+          if (parsed.niche) setNiche(parsed.niche);
+          if (parsed.ownerPhone) setOwnerPhone(parsed.ownerPhone);
+          if (parsed.isSoleProprietor !== undefined) setIsSoleProprietor(parsed.isSoleProprietor);
+          if (parsed.timezone) setTimezone(parsed.timezone);
+          if (parsed.selectedPlan) setSelectedPlan(parsed.selectedPlan);
+          if (parsed.currentStep && parsed.currentStep >= 1 && parsed.currentStep <= 4) {
+            setCurrentStep(parsed.currentStep);
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }, 0);
+    return () => clearTimeout(t);
   }, []);
 
   // Save draft state safely (never password or OTP)
@@ -143,13 +170,6 @@ export default function RegisterWizardPage() {
     const t = setInterval(() => setResendCooldown((c) => c - 1), 1000);
     return () => clearInterval(t);
   }, [resendCooldown]);
-
-  // Password requirements calculation
-  const pwdChecks = {
-    minLength: password.length >= 8,
-    hasNumber: /\d/.test(password),
-  };
-  const isPasswordValid = pwdChecks.minLength && pwdChecks.hasNumber;
 
   // Handle Logo Upload
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,7 +213,7 @@ export default function RegisterWizardPage() {
         return;
       }
       throw new Error(data?.message || 'Не удалось сформировать ссылку авторизации');
-    } catch (err: any) {
+    } catch {
       setErrorMsg('Google OAuth временно настраивается. Заполните имя и email для быстрой регистрации.');
       setIsLoading(false);
     }
@@ -202,6 +222,8 @@ export default function RegisterWizardPage() {
   // Step 1: Submit Account & Send verification code
   const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setHasFormSubmitted(true);
+    setIsConfirmTouched(true);
     setErrorMsg(null);
 
     if (!ownerName.trim()) {
@@ -212,13 +234,36 @@ export default function RegisterWizardPage() {
       setErrorMsg('Укажите корректный адрес электронной почты');
       return;
     }
-    if (!isPasswordValid) {
-      setErrorMsg('Пароль должен содержать минимум 8 символов и хотя бы одну цифру');
+    if (!password) {
+      setErrorMsg('Введите пароль');
+      return;
+    }
+
+    const policy = validatePasswordPolicy(password);
+    if (!policy.valid) {
+      setErrorMsg(policy.error || 'Пароль слишком слабый. Добавьте уникальные слова или символы.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg('Пароли не совпадают. Пожалуйста, проверьте подтверждение пароля.');
       return;
     }
 
     setIsLoading(true);
     try {
+      const current = await authClient.getSession();
+      if (!current.data) {
+        const signup = await authClient.signUp.email({ email: ownerEmail.trim(), password, name: ownerName.trim() });
+        if (signup.error) {
+          const signin = await authClient.signIn.email({ email: ownerEmail.trim(), password });
+          if (signin.error) {
+            throw new Error(signup.error.message || 'Не удалось создать аккаунт. Если он уже существует, войдите или восстановите доступ.');
+          }
+        }
+      } else if (current.data.user.email.toLowerCase() !== ownerEmail.trim().toLowerCase()) {
+        throw new Error('Выйдите из текущего аккаунта перед регистрацией другого email.');
+      }
       const res = await fetch('/api/auth/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -237,8 +282,8 @@ export default function RegisterWizardPage() {
       setTimeout(() => {
         digitInputRefs.current[0]?.focus();
       }, 100);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Сбой при отправке кода на почту');
+    } catch (err) {
+      setErrorMsg((err instanceof Error ? err.message : 'Ошибка запроса') || 'Сбой при отправке кода на почту');
     } finally {
       setIsLoading(false);
     }
@@ -290,8 +335,8 @@ export default function RegisterWizardPage() {
       setShowOtpView(false);
       showToast('Email подтвержден', 'Переходим к оформлению компании', 'success');
       transitionToStep(2);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Ошибка проверки кода');
+    } catch (err) {
+      setErrorMsg((err instanceof Error ? err.message : 'Ошибка запроса') || 'Ошибка проверки кода');
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -383,29 +428,7 @@ export default function RegisterWizardPage() {
         throw new Error(data.error || 'Ошибка при сохранении организации');
       }
 
-      // Verify email on server side if code was entered
-      if (isEmailVerifiedLocally) {
-        await fetch('/api/auth/verify-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: ownerEmail,
-            code: devCode || '123456',
-            workspaceId: data.workspace.id,
-          }),
-        });
-      }
-
-      // Update client context
-      setWorkspace({
-        id: data.workspace.id,
-        companyName: data.workspace.companyName,
-        ownerName: data.workspace.ownerName,
-        ownerEmail: data.workspace.ownerEmail,
-        plan: data.workspace.plan,
-        tokenBalance: data.workspace.tokenBalance || 100,
-        emailVerified: true,
-      });
+      setWorkspace(data.workspace);
 
       // Clear draft
       sessionStorage.removeItem('ai_os_reg_draft_v2');
@@ -417,8 +440,8 @@ export default function RegisterWizardPage() {
       } else {
         router.push(`/dashboard/agents/new?template=${selectedAgentTask}&niche=${niche}`);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Не удалось завершить регистрацию');
+    } catch (err) {
+      setErrorMsg((err instanceof Error ? err.message : 'Ошибка запроса') || 'Не удалось завершить регистрацию');
       setIsLoading(false);
       setIsSubmittingFinal(false);
     }
@@ -553,18 +576,24 @@ export default function RegisterWizardPage() {
                 />
               </div>
 
+              {/* Password Field */}
               <div>
-                <label className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5">
+                <label
+                  htmlFor="register-password"
+                  className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5"
+                >
                   Пароль
                 </label>
                 <div className="relative">
                   <input
+                    id="register-password"
+                    name="password"
                     type={showPassword ? 'text' : 'password'}
                     required
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder=""
+                    placeholder="Например: Tr0ub4dor&3"
                     className="w-full h-[48px] pl-3.5 pr-11 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
                   />
                   <button
@@ -577,17 +606,80 @@ export default function RegisterWizardPage() {
                   </button>
                 </div>
 
-                {/* Compact Password Requirements */}
-                <div className="mt-2 text-[12px] flex items-center gap-4 text-slate-500 dark:text-slate-400">
-                  <div className={`flex items-center gap-1 ${pwdChecks.minLength ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}`}>
-                    <Check className={`w-3.5 h-3.5 ${pwdChecks.minLength ? 'opacity-100' : 'opacity-30'}`} />
-                    <span>От 8 символов</span>
+                {/* Password Strength Indicator */}
+                <div className="mt-2 space-y-1.5" aria-live="polite">
+                  <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700/60 rounded-full overflow-hidden">
+                    <div
+                      className={clsx(
+                        'h-full transition-all duration-300 rounded-full',
+                        passwordStrength.widthClass,
+                        passwordStrength.colorClass
+                      )}
+                    />
                   </div>
-                  <div className={`flex items-center gap-1 ${pwdChecks.hasNumber ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}`}>
-                    <Check className={`w-3.5 h-3.5 ${pwdChecks.hasNumber ? 'opacity-100' : 'opacity-30'}`} />
-                    <span>Минимум 1 цифра</span>
-                  </div>
+                  {password.length > 0 && (
+                    <div className="flex items-center justify-between text-xs transition-opacity duration-200">
+                      <span className={clsx('font-semibold', passwordStrength.textColorClass)}>
+                        {passwordStrength.label}
+                      </span>
+                      {passwordStrength.hint && (
+                        <span className="text-slate-500 dark:text-slate-400 text-[11px] text-right truncate ml-2">
+                          {passwordStrength.hint}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* Confirm Password Field */}
+              <div>
+                <label
+                  htmlFor="register-confirm-password"
+                  className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5"
+                >
+                  Подтвердите пароль
+                </label>
+                <div className="relative">
+                  <input
+                    id="register-confirm-password"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setIsConfirmTouched(true);
+                    }}
+                    onBlur={() => {
+                      if (confirmPassword.length > 0) setIsConfirmTouched(true);
+                    }}
+                    placeholder="Повторите введённый пароль"
+                    className={clsx(
+                      'w-full h-[48px] pl-3.5 pr-11 bg-white dark:bg-slate-800 border rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none transition-colors duration-150',
+                      isMismatch
+                        ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'
+                        : 'border-slate-300 dark:border-slate-700 focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626]'
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? 'Скрыть подтверждение пароля' : 'Показать подтверждение пароля'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors duration-150 cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* Mismatch Alert under Confirm Field */}
+                {isMismatch && (
+                  <p role="alert" className="mt-1.5 text-[12px] font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1.5 animate-fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>Пароли не совпадают</span>
+                  </p>
+                )}
               </div>
 
               {/* Submit Button */}
@@ -701,6 +793,19 @@ export default function RegisterWizardPage() {
         {/* ========================================================================= */}
         {currentStep === 2 && (
           <form onSubmit={handleCompanySubmit} className="space-y-4 animate-fade-in" style={{ animationDuration: '200ms' }}>
+            {ownerEmail && (
+              <div className="p-3 rounded-[6px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between text-[13px]">
+                <span className="text-slate-600 dark:text-slate-400">
+                  Владелец: <strong className="text-slate-900 dark:text-white font-medium">{ownerEmail}</strong>
+                </span>
+                {isEmailVerifiedLocally && (
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
+                    Email подтверждён
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* 1. Company Name */}
             {!isSoleProprietor && (
               <div>
@@ -1138,5 +1243,13 @@ export default function RegisterWizardPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function RegisterWizardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1220]" />}>
+      <RegisterWizard />
+    </Suspense>
   );
 }

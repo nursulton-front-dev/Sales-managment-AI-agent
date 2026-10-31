@@ -1,10 +1,8 @@
 import {
-  INSTAGRAM_GRAPH_API_VERSION,
   INSTAGRAM_GRAPH_BASE_URL,
   META_GRAPH_BASE_URL,
-  decryptToken,
-  encryptToken,
 } from './config';
+import { DeliveryRejectedError } from '@/lib/server/channels/errors';
 
 export interface InstagramTokenResponse {
   access_token: string;
@@ -168,7 +166,7 @@ export async function subscribeInstagramWebhook(
       }),
     });
     const data = await res.json();
-    return Boolean(data.success);
+    return res.ok && data.success === true;
   } catch (err) {
     console.warn('Instagram webhook subscription warning:', err);
     return false;
@@ -205,26 +203,26 @@ export async function sendInstagramDirectMessage({
         text,
       },
     }),
+    signal: AbortSignal.timeout(8000),
   });
 
   const data = await res.json();
 
   if (!res.ok || data.error) {
-    const errorMessage = data.error?.message || `Instagram API send error (${res.status})`;
     const errorCode = data.error?.code;
     const errorSubcode = data.error?.error_subcode;
 
     // Check for 24-hour messaging window expiration (Error 551 or 10 or 2018001)
     if (errorCode === 10 || errorCode === 551 || errorSubcode === 2018001) {
-      throw new Error(`WINDOW_EXPIRED: 24-часовое окно ответа закрыто. Клиент должен написать первым.`);
+      throw new DeliveryRejectedError(false, 'window_expired');
     }
 
     // Token expired or invalid
     if (errorCode === 190) {
-      throw new Error(`TOKEN_EXPIRED: Токен Instagram отозван или истёк. Требуется переподключение.`);
+      throw new DeliveryRejectedError(false, 'needs_reconnect');
     }
 
-    throw new Error(errorMessage);
+    throw new DeliveryRejectedError(res.status === 429 || res.status >= 500);
   }
 
   return {

@@ -1,19 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
 import { BrandLogo } from '@/components/ui/BrandLogo';
+import { evaluatePassword, validatePasswordPolicy } from '@/lib/password';
+import clsx from 'clsx';
 import {
-  Building2,
   Eye,
   EyeOff,
   AlertCircle,
   RotateCcw,
   Check,
+  X,
+  KeyRound,
+  ArrowLeft,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -26,6 +30,22 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Recovery modal state
+  const [isRecoverOpen, setIsRecoverOpen] = useState(false);
+  const [recoverStage, setRecoverStage] = useState<'email' | 'code'>('email');
+  const [recoverEmail, setRecoverEmail] = useState('');
+  const [recoverCode, setRecoverCode] = useState('');
+  const [recoverPassword, setRecoverPassword] = useState('');
+  const [recoverConfirmPassword, setRecoverConfirmPassword] = useState('');
+  const [recoverShowPassword, setRecoverShowPassword] = useState(false);
+  const [recoverShowConfirmPassword, setRecoverShowConfirmPassword] = useState(false);
+  const [isRecoverConfirmTouched, setIsRecoverConfirmTouched] = useState(false);
+  const [isRecoverSubmitting, setIsRecoverSubmitting] = useState(false);
+  const [recoverError, setRecoverError] = useState<string | null>(null);
+
+  const recoverPasswordStrength = useMemo(() => evaluatePassword(recoverPassword), [recoverPassword]);
+  const isRecoverMismatch = (isRecoverConfirmTouched || recoverConfirmPassword.length > 0) && recoverConfirmPassword !== recoverPassword;
 
   // --------------------------------------------------------------------------
   // Sequential Controlled Demo Animation:
@@ -53,8 +73,7 @@ export default function LoginPage() {
       return;
     }
 
-    setDemoStage(0);
-
+    const t0 = setTimeout(() => setDemoStage(0), 0);
     const t1 = setTimeout(() => setDemoStage(1), 600);
     const t2 = setTimeout(() => setDemoStage(2), 1100);
     const t3 = setTimeout(() => setDemoStage(3), 1800);
@@ -62,12 +81,17 @@ export default function LoginPage() {
     const t5 = setTimeout(() => setDemoStage(5), 3500);
     const t6 = setTimeout(() => setDemoStage(6), 4200);
 
-    timersRef.current = [t1, t2, t3, t4, t5, t6];
+    timersRef.current = [t0, t1, t2, t3, t4, t5, t6];
   };
 
   useEffect(() => {
-    startDemoSequence();
-    return () => clearDemoTimers();
+    const t = setTimeout(() => {
+      startDemoSequence();
+    }, 0);
+    return () => {
+      clearTimeout(t);
+      clearDemoTimers();
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -87,7 +111,18 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
+        if (data.code === 'NEED_PASSWORD_SETUP') {
+          setRecoverEmail(email);
+          setIsRecoverOpen(true);
+          setRecoverStage('email');
+        }
         throw new Error(data.error || 'Неверный адрес электронной почты или пароль');
+      }
+
+      if (data.hasWorkspace === false) {
+        showToast('Вход выполнен', 'Завершите создание компании', 'info');
+        router.push(data.redirectTo || '/register?step=2');
+        return;
       }
 
       if (data.workspace) {
@@ -96,9 +131,86 @@ export default function LoginPage() {
 
       showToast('Вход выполнен', 'Добро пожаловать в рабочее пространство', 'success');
       router.push('/dashboard');
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Ошибка подключения к серверу авторизации');
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Ошибка подключения к серверу авторизации');
       setIsLoading(false);
+    }
+  };
+
+  const handleSendRecoverCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoverEmail || !recoverEmail.includes('@')) {
+      setRecoverError('Укажите корректный адрес электронной почты');
+      return;
+    }
+    setIsRecoverSubmitting(true);
+    setRecoverError(null);
+    try {
+      const res = await fetch('/api/auth/recover/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: recoverEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось отправить код');
+      }
+      setRecoverStage('code');
+      showToast('Код отправлен', `Проверьте почту ${recoverEmail}`, 'info');
+    } catch (err: unknown) {
+      setRecoverError(err instanceof Error ? err.message : 'Ошибка отправки кода');
+    } finally {
+      setIsRecoverSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsRecoverConfirmTouched(true);
+    setRecoverError(null);
+
+    if (!recoverCode.trim() || recoverCode.trim().length < 6) {
+      setRecoverError('Введите 6-значный проверочный код');
+      return;
+    }
+    const policy = validatePasswordPolicy(recoverPassword);
+    if (!policy.valid) {
+      setRecoverError(policy.error || 'Пароль слишком слабый');
+      return;
+    }
+    if (recoverPassword !== recoverConfirmPassword) {
+      setRecoverError('Пароли не совпадают');
+      return;
+    }
+
+    setIsRecoverSubmitting(true);
+    try {
+      const res = await fetch('/api/auth/recover/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: recoverEmail,
+          code: recoverCode.trim(),
+          newPassword: recoverPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось обновить пароль');
+      }
+
+      showToast('Пароль обновлён', 'Вход выполнен успешно', 'success');
+      setIsRecoverOpen(false);
+      if (data.workspace) {
+        setWorkspace(data.workspace);
+        router.push('/dashboard');
+      } else {
+        router.push('/register?step=2');
+      }
+    } catch (err: unknown) {
+      setRecoverError(err instanceof Error ? err.message : 'Ошибка сброса пароля');
+    } finally {
+      setIsRecoverSubmitting(false);
     }
   };
 
@@ -123,7 +235,7 @@ export default function LoginPage() {
       }
 
       throw new Error(data?.message || 'Не удалось сформировать OAuth-ссылку');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Google OAuth error:', err);
       setErrorMsg(
         'Авторизация через Google временно настраивается. Войдите по Email или зарегистрируйте рабочее пространство.'
@@ -523,12 +635,18 @@ export default function LoginPage() {
                 >
                   Пароль
                 </label>
-                <Link
-                  href="/dashboard/support"
-                  className="text-[13px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors duration-150"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecoverEmail(email);
+                    setIsRecoverOpen(true);
+                    setRecoverStage('email');
+                    setRecoverError(null);
+                  }}
+                  className="text-[13px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors duration-150 cursor-pointer"
                 >
                   Забыли пароль?
-                </Link>
+                </button>
               </div>
               <div className="relative">
                 <input
@@ -581,6 +699,210 @@ export default function LoginPage() {
           © 2026 Chorla AI
         </div>
       </main>
+
+      {/* Recovery Modal */}
+      {isRecoverOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-[460px] bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-[8px] p-6 sm:p-8 shadow-xl relative animate-scale-in">
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => setIsRecoverOpen(false)}
+              className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-[4px] transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Title */}
+            <div className="flex items-center gap-2.5 mb-1">
+              <div className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center text-[#DC2626]">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {recoverStage === 'email' ? 'Восстановление доступа' : 'Новый пароль'}
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+              {recoverStage === 'email'
+                ? 'Введите email, указанный при регистрации, чтобы получить код подтверждения.'
+                : `Код отправлен на ${recoverEmail}. Введите его и задайте новый надёжный пароль.`}
+            </p>
+
+            {recoverError && (
+              <div role="alert" className="mb-4 p-2.5 bg-red-50 dark:bg-rose-950/40 border border-red-200 dark:border-rose-900/50 rounded-[6px] flex items-start gap-2 text-xs text-red-700 dark:text-rose-300">
+                <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626] mt-0.5" />
+                <span>{recoverError}</span>
+              </div>
+            )}
+
+            {recoverStage === 'email' ? (
+              <form onSubmit={handleSendRecoverCode} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Электронная почта
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={recoverEmail}
+                    onChange={(e) => setRecoverEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    className="w-full h-[46px] px-3.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626]"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsRecoverOpen(false)}
+                    className="px-4 h-[42px] rounded-[6px] border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isRecoverSubmitting}
+                    className="px-5 h-[42px] bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-medium rounded-[6px] transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isRecoverSubmitting ? 'Отправляем…' : 'Получить код'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                {/* 6 Digit Code */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    6-значный проверочный код
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    pattern="[0-9]{6}"
+                    inputMode="numeric"
+                    value={recoverCode}
+                    onChange={(e) => setRecoverCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    className="w-full h-[46px] px-3.5 font-mono text-center tracking-widest text-lg font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-slate-900 dark:text-white focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626]"
+                  />
+                </div>
+
+                {/* New Password */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Новый пароль
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={recoverShowPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="new-password"
+                      value={recoverPassword}
+                      onChange={(e) => setRecoverPassword(e.target.value)}
+                      placeholder="Придумайте надёжный пароль"
+                      className="w-full h-[46px] pl-3.5 pr-10 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setRecoverShowPassword(!recoverShowPassword)}
+                      aria-label={recoverShowPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {recoverShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {/* Password Strength Meter */}
+                  <div className="mt-2 space-y-1.5" aria-live="polite">
+                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700/60 rounded-full overflow-hidden">
+                      <div
+                        className={clsx(
+                          'h-full transition-all duration-300 rounded-full',
+                          recoverPasswordStrength.widthClass,
+                          recoverPasswordStrength.colorClass
+                        )}
+                      />
+                    </div>
+                    {recoverPassword.length > 0 && (
+                      <div className="flex items-center justify-between text-xs transition-opacity duration-200">
+                        <span className={clsx('font-semibold', recoverPasswordStrength.textColorClass)}>
+                          {recoverPasswordStrength.label}
+                        </span>
+                        {recoverPasswordStrength.hint && (
+                          <span className="text-slate-500 dark:text-slate-400 text-[11px] text-right truncate ml-2">
+                            {recoverPasswordStrength.hint}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Confirm New Password */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Подтвердите новый пароль
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={recoverShowConfirmPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="new-password"
+                      value={recoverConfirmPassword}
+                      onChange={(e) => {
+                        setRecoverConfirmPassword(e.target.value);
+                        setIsRecoverConfirmTouched(true);
+                      }}
+                      placeholder="Повторите новый пароль"
+                      className={clsx(
+                        'w-full h-[46px] pl-3.5 pr-10 bg-white dark:bg-slate-800 border rounded-[6px] text-sm text-slate-900 dark:text-white focus:outline-none',
+                        isRecoverMismatch
+                          ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'
+                          : 'border-slate-300 dark:border-slate-700 focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626]'
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setRecoverShowConfirmPassword(!recoverShowConfirmPassword)}
+                      aria-label={recoverShowConfirmPassword ? 'Скрыть подтверждение пароля' : 'Показать подтверждение пароля'}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {recoverShowConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {isRecoverMismatch && (
+                    <p role="alert" className="mt-1.5 text-[11px] font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1.5 animate-fade-in">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>Пароли не совпадают</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setRecoverStage('email')}
+                    className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Назад к email</span>
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isRecoverSubmitting}
+                    className="px-5 h-[42px] bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-medium rounded-[6px] transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isRecoverSubmitting ? 'Сохраняем…' : 'Сохранить и войти'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

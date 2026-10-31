@@ -1,34 +1,12 @@
-import { NextRequest, NextResponse, connection } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { isGoogleCalendarConfigured, getGoogleAuthUrl } from '@/lib/calendar/google';
-import { cookies } from 'next/headers';
-
+import { getServerSessionContext } from '@/src/server/auth/session';
 export async function GET(req: NextRequest) {
-  await connection();
-  try {
-    const { searchParams } = new URL(req.url);
-    const cookieStore = await cookies();
-    const workspaceId =
-      searchParams.get('workspaceId') ||
-      cookieStore.get('ai_os_workspace_id')?.value ||
-      'default';
-
-    if (!isGoogleCalendarConfigured()) {
-      return NextResponse.json(
-        {
-          success: false,
-          configured: false,
-          error:
-            'Google Calendar API не настроен в .env.local. Укажите GOOGLE_CLIENT_ID и GOOGLE_CLIENT_SECRET.',
-        },
-        { status: 400 }
-      );
-    }
-
-    const origin = req.nextUrl.origin;
-    const authUrl = getGoogleAuthUrl(workspaceId, origin);
-    return NextResponse.redirect(authUrl);
-  } catch (error: any) {
-    console.error('Error in calendar auth route:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  const session = await getServerSessionContext();
+  if (!session.workspaceId) return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+  if (!isGoogleCalendarConfigured()) return NextResponse.json({ success: false, error: 'Подключение календаря пока недоступно' }, { status: 503 });
+  const state = crypto.randomUUID();
+  const response = NextResponse.redirect(getGoogleAuthUrl(state, req.nextUrl.origin));
+  response.cookies.set('chorla_calendar_state', `${session.workspaceId}:${state}`, { httpOnly: true, sameSite: 'lax', secure: req.nextUrl.protocol === 'https:', path: '/', maxAge: 600 });
+  return response;
 }

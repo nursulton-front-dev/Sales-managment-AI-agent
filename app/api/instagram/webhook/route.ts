@@ -1,181 +1,63 @@
-import { NextRequest, NextResponse, connection } from 'next/server';
-import {
-  verifyMetaSignature,
-} from '@/lib/instagram/config';
-import {
-  getWorkspaceByInstagramUserId,
-  getInstagramEventByEventId,
-  createInstagramEvent,
-  getAllWorkspaces,
-} from '@/src/db';
-import { processInstagramMessageJob } from '@/lib/instagram/processor';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { verifyMetaSignature } from '@/lib/instagram/config';
+import { getWorkspaceByInstagramUserId, getInstagramEventByEventId, getAllConversations } from '@/src/db';
+import { channelId, enqueueEvent } from '@/lib/server/channels/events';
+import { processChannelEvent } from '@/lib/server/channels/processor';
+import { readLimitedText, RequestBodyError } from '@/lib/server/request-body';
 
-/**
- * 1. GET: Webhook Verification Endpoint for Meta
- * Meta sends:
- *  - hub.mode = 'subscribe'
- *  - hub.verify_token = '<your_configured_verify_token>'
- *  - hub.challenge = '<numeric_or_string_challenge>'
- */
+export const maxDuration = 60;
 export async function GET(req: NextRequest) {
-  await connection();
-  try {
-    const { searchParams } = new URL(req.url);
-    const mode = searchParams.get('hub.mode');
-    const token = searchParams.get('hub.verify_token');
-    const challenge = searchParams.get('hub.challenge');
-
-    const expectedToken = process.env.INSTAGRAM_VERIFY_TOKEN;
-
-    if (mode === 'subscribe' && token && expectedToken && token === expectedToken) {
-      // Respond with the challenge token from the request
-      return new Response(challenge || '', {
-        status: 200,
-        headers: { 'Content-Type': 'text/plain' },
-      });
-    }
-
-    return new Response('Verification token mismatch or invalid mode', { status: 403 });
-  } catch (error: any) {
-    return new Response(error.message, { status: 500 });
-  }
+  const mode = req.nextUrl.searchParams.get('hub.mode');
+  const token = req.nextUrl.searchParams.get('hub.verify_token');
+  if (mode !== 'subscribe' || !token || token !== process.env.INSTAGRAM_VERIFY_TOKEN) return new Response('Verification failed', { status: 403 });
+  return new Response(req.nextUrl.searchParams.get('hub.challenge') || '', { headers: { 'Content-Type': 'text/plain' } });
 }
 
-/**
- * 2. POST: Inbound Events from Instagram Direct
- * Validates X-Hub-Signature-256 against raw body and INSTAGRAM_APP_SECRET.
- * Fast 200 acknowledgment with durable idempotency queue.
- */
+type MetaMessage = { sender?: { id?: string }; recipient?: { id?: string }; message?: { mid?: string; text?: string; is_echo?: boolean } };
+type MetaPayload = { object?: string; entry?: Array<{ id?: string; messaging?: MetaMessage[] }> };
 export async function POST(req: NextRequest) {
   try {
-    // 1. Read raw body buffer for cryptographically accurate HMAC validation
-    const rawBodyBuffer = await req.arrayBuffer();
-    const rawBodyString = Buffer.from(rawBodyBuffer).toString('utf-8');
-
-    // 2. Validate X-Hub-Signature-256
-    const signature = req.headers.get('x-hub-signature-256');
-    const appSecret = process.env.INSTAGRAM_APP_SECRET;
-
-    if (!appSecret) {
-      console.error('INSTAGRAM_APP_SECRET is not configured on server');
-      return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
-    }
-
-    const isValid = verifyMetaSignature(rawBodyString, signature, appSecret);
-    if (!isValid) {
-      console.warn('Invalid Meta X-Hub-Signature-256 rejected');
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    }
-
-    // 3. Parse JSON payload
-    let payload: any;
-    try {
-      payload = JSON.parse(rawBodyString);
-    } catch (parseErr) {
-      return NextResponse.json({ error: 'Malformed JSON payload' }, { status: 400 });
-    }
-
-    // Must be instagram or page object
-    if (payload.object !== 'instagram' && payload.object !== 'page') {
-      return NextResponse.json({ ok: true, ignored: 'Unknown object type' });
-    }
-
-    const entries = payload.entry || [];
-    const jobsToProcess: Array<{
-      eventId: string;
-      senderId: string;
-      recipientId: string;
-      messageText: string;
-      timestamp: number;
-      workspaceId: string;
-    }> = [];
-
-    for (const entry of entries) {
-      const messaging = entry.messaging || [];
-      const entryId = entry.id; // Instagram account / Page ID
-
-      for (const item of messaging) {
-        // Exclude echo messages sent by our own bot / manager
-        if (item.message?.is_echo) {
+    const raw = await readLimitedText(req, 1_000_000);
+    const secret = process.env.INSTAGRAM_APP_SECRET;
+    if (!secret) return NextResponse.json({ error: 'Integration unavailable' }, { status: 503 });
+    if (!verifyMetaSignature(raw, req.headers.get('x-hub-signature-256'), secret)) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    let payload: MetaPayload;
+    try { payload = JSON.parse(raw); } catch { return NextResponse.json({ error: 'Malformed JSON' }, { status: 400 }); }
+    if (!['instagram', 'page'].includes(payload?.object || '')) return NextResponse.json({ ok: true });
+    const eventIds: string[] = [];
+    if (!Array.isArray(payload.entry)) return NextResponse.json({ error: 'Invalid entries' }, { status: 400 });
+    for (const entry of payload.entry) {
+      if (!Array.isArray(entry.messaging)) continue;
+      for (const item of entry.messaging) {
+        const message = item?.message;
+        const sender = item?.sender?.id;
+        const recipient = item?.recipient?.id;
+        if (message?.is_echo || typeof message?.text !== 'string' || !message.text.trim() || message.text.length > 8000 || typeof message.mid !== 'string' || typeof sender !== 'string' || typeof recipient !== 'string') continue;
+        // Only a stored account identifier can route a message to a workspace.
+        const workspace = await getWorkspaceByInstagramUserId(recipient);
+        if (!workspace?.instagramConnected || !workspace.instagramAgentId) {
+          console.warn(JSON.stringify({ time: new Date().toISOString(), channel: 'Instagram', code: 'unmapped_recipient' }));
           continue;
         }
-
-        const message = item.message;
-        if (!message || !message.text) {
+        // Previously confirmed legacy deliveries must not be replayed during the queue migration.
+        const legacy = await getInstagramEventByEventId(message.mid);
+        if (legacy) {
+          console.warn(JSON.stringify({ time: new Date().toISOString(), channel: 'Instagram', code: 'legacy_event_requires_review' }));
           continue;
         }
-
-        const senderId = item.sender?.id;
-        const recipientId = item.recipient?.id;
-        const messageId = message.mid;
-        const text = message.text;
-        const timestamp = item.timestamp || Date.now();
-
-        if (!senderId || !recipientId || !messageId) {
-          continue;
-        }
-
-        // 4. Resolve destination Workspace by recipientId (which is our connected Instagram User ID)
-        let ws = await getWorkspaceByInstagramUserId(recipientId);
-        if (!ws) {
-          // Fallback check: entryId
-          ws = await getWorkspaceByInstagramUserId(entryId);
-        }
-
-        if (!ws) {
-          // If in test single-account mode, look for workspace with active Instagram connection
-          const allWorkspaces = await getAllWorkspaces();
-          ws = allWorkspaces.find((w) => w.instagramConnected) || null;
-        }
-
-        if (!ws) {
-          console.warn(`No active workspace found for Instagram recipient ${recipientId}`);
-          continue;
-        }
-
-        // 5. Deduplication & Idempotency check:
-        // Do not process twice if Meta retries the webhook
-        const existingEvent = await getInstagramEventByEventId(messageId);
-        if (existingEvent) {
-          // Already recorded or replied
-          continue;
-        }
-
-        // 6. Durable queue: record event in Neon Postgres
-        await createInstagramEvent({
-          workspaceId: ws.id,
-          eventId: messageId,
-          senderId,
-          recipientId,
-          messageText: text,
-          rawPayload: item,
-          status: 'received',
+        const conversation = (await getAllConversations(workspace.id)).find((item) => item.channel === 'Instagram' && item.clientPhone === `ig:${sender}`);
+        const event = await enqueueEvent({ id: channelId('Instagram', workspace.id, message.mid), workspaceId: workspace.id, channel: 'Instagram',
+          conversationId: conversation?.id || channelId('conversation', workspace.id, 'Instagram', workspace.instagramAgentId, sender),
+          payload: { agentId: workspace.instagramAgentId, contact: `ig:${sender}`, clientName: `Посетитель Instagram ${sender.slice(-4)}`, text: message.text },
         });
-
-        jobsToProcess.push({
-          eventId: messageId,
-          senderId,
-          recipientId,
-          messageText: text,
-          timestamp,
-          workspaceId: ws.id,
-        });
+        eventIds.push(event.id);
       }
     }
-
-    // 7. Fire background worker execution for queued jobs
-    // In serverless / edge, process immediately in the background loop before completing
-    for (const job of jobsToProcess) {
-      // Process job asynchronously without blocking HTTP 200 response if possible
-      processInstagramMessageJob(job).catch((err) => {
-        console.error('Async Instagram message worker failure:', err);
-      });
-    }
-
-    // 8. Return fast 200 OK to Meta
-    return NextResponse.json({ ok: true, queued: jobsToProcess.length });
-  } catch (error: any) {
-    console.error('Meta webhook processing error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    after(async () => { await Promise.all(eventIds.slice(0, 4).map(processChannelEvent)); });
+    return NextResponse.json({ ok: true, queued: eventIds.length });
+  } catch (error) {
+    if (error instanceof RequestBodyError) return NextResponse.json({ error: 'Invalid payload' }, { status: error.status });
+    console.error(JSON.stringify({ time: new Date().toISOString(), channel: 'Instagram', code: 'webhook_persistence_failed' }));
+    return NextResponse.json({ error: 'Could not persist event' }, { status: 500 });
   }
 }

@@ -1,78 +1,54 @@
-import { cookies } from 'next/headers';
-import { getWorkspaceById, getAllWorkspaces, getActiveSupportSession } from '@/src/db';
-import { Workspace } from '@/src/db/schema';
+import { cookies, headers } from 'next/headers';
+import { getWorkspaceById, getWorkspaceByEmail, getActiveSupportSession } from '@/src/db';
+import type { Workspace } from '@/src/db/schema';
+import { auth } from '@/lib/auth';
 
-export const FOUNDER_SUPERADMIN_EMAIL =
-  process.env.ADMIN_EMAIL ||
-  process.env.SUPERADMIN_EMAIL ||
-  'maxramovnursulton1@gmail.com';
-
+export const FOUNDER_SUPERADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.SUPERADMIN_EMAIL || 'maxramovnursulton1@gmail.com';
 export interface UserSessionContext {
-  workspace: Workspace | null;
-  workspaceId: string | null;
-  userEmail: string | null;
-  userName: string | null;
-  role: 'super_admin' | 'owner' | 'admin' | 'member';
-  isSuperAdmin: boolean;
-  isImpersonating: boolean;
+  workspace: Workspace | null; workspaceId: string | null; userEmail: string | null; userName: string | null;
+  userEmailVerified: boolean;
+  role: 'super_admin' | 'owner' | 'admin' | 'member'; isSuperAdmin: boolean; isImpersonating: boolean;
   supportSessionReason?: string;
 }
 
-/**
- * Server-side session verification.
- * Resolves current workspace, ensures client cannot forge arbitrary workspaceId.
- */
 export async function getServerSessionContext(explicitWorkspaceId?: string): Promise<UserSessionContext> {
-  const cookieStore = await cookies();
-  const cookieWsId = cookieStore.get('ai_os_workspace_id')?.value;
-  const targetId = explicitWorkspaceId || cookieWsId;
+  const identity = await auth.api.getSession({ headers: await headers() });
+  const empty: UserSessionContext = { workspace: null, workspaceId: null, userEmail: null, userName: null, userEmailVerified: false, role: 'member', isSuperAdmin: false, isImpersonating: false };
+  if (!identity) return empty;
+  const email = identity.user.email.toLowerCase();
+  const isVerified = Boolean(identity.user.emailVerified);
+  const isSuperAdmin = isVerified && email === FOUNDER_SUPERADMIN_EMAIL.toLowerCase();
 
-  let workspace: Workspace | null = null;
-  if (targetId) {
-    workspace = await getWorkspaceById(targetId);
+  // REQUIREMENT 1: Forbid company access and ownership resolution if email is not verified
+  if (!isVerified) {
+    return {
+      workspace: null,
+      workspaceId: null,
+      userEmail: email,
+      userName: identity.user.name,
+      userEmailVerified: false,
+      role: 'member',
+      isSuperAdmin: false,
+      isImpersonating: false,
+    };
   }
 
-  // Multi-tenant security isolation:
-  // Strictly prevent unauthenticated visitors or cross-tenant forged requests
-  // from inheriting arbitrary first workspaces in the database.
-  const userEmail = workspace?.ownerEmail || null;
-  const isSuperAdmin = Boolean(
-    userEmail && userEmail.toLowerCase() === FOUNDER_SUPERADMIN_EMAIL.toLowerCase()
-  );
-
-  // Check if super_admin is currently in support session
+  const owned = await getWorkspaceByEmail(email);
+  const targetId = explicitWorkspaceId || (await cookies()).get('ai_os_workspace_id')?.value;
+  let workspace = owned;
   let isImpersonating = false;
-  let supportSessionReason: string | undefined = undefined;
-
-  if (workspace) {
-    const activeSupport = await getActiveSupportSession(workspace.id);
-    if (activeSupport) {
-      isImpersonating = true;
-      supportSessionReason = activeSupport.reason;
-    }
+  let supportSessionReason: string | undefined;
+  if (targetId && targetId !== owned?.id) {
+    if (!isSuperAdmin) return empty;
+    const support = await getActiveSupportSession(targetId);
+    if (!support || support.superAdminEmail.toLowerCase() !== email || Date.now() - new Date(support.startedAt).getTime() > 2 * 3600000) return empty;
+    workspace = await getWorkspaceById(targetId);
+    isImpersonating = true;
+    supportSessionReason = support.reason;
   }
-
-  const role: 'super_admin' | 'owner' | 'admin' | 'member' = isSuperAdmin
-    ? 'super_admin'
-    : 'owner';
-
-  return {
-    workspace,
-    workspaceId: workspace?.id || null,
-    userEmail,
-    userName: workspace?.ownerName || null,
-    role,
-    isSuperAdmin,
-    isImpersonating,
-    supportSessionReason,
-  };
+  if (workspace && !isImpersonating) workspace = { ...workspace, emailVerified: identity.user.emailVerified };
+  return { workspace, workspaceId: workspace?.id || null, userEmail: email, userName: identity.user.name,
+    userEmailVerified: Boolean(identity.user.emailVerified),
+    role: isSuperAdmin ? 'super_admin' : owned ? 'owner' : 'member', isSuperAdmin, isImpersonating, supportSessionReason };
 }
-
-/**
- * Asserts that the current request has super_admin rights.
- * Throws an error or returns false if unauthorized.
- */
-export async function assertSuperAdmin(): Promise<boolean> {
-  const session = await getServerSessionContext();
-  return session.isSuperAdmin;
-}
+export async function assertSuperAdmin() { return (await getServerSessionContext()).isSuperAdmin; }

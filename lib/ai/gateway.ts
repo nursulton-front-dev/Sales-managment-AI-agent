@@ -1,15 +1,8 @@
 import {
   getAllAgents,
   getWorkspaceById,
-  updateWorkspace,
   recordTokenTransaction,
-  createLead,
-  createAppointment,
-  createMessage,
-  createConversation,
-  getAllConversations,
 } from '@/src/db';
-import { createGoogleCalendarEvent, generateDirectGoogleCalendarLink } from '@/lib/calendar/google';
 
 export interface ChatCompletionOptions {
   message: string;
@@ -22,12 +15,13 @@ export interface ChatCompletionOptions {
   isSandbox?: boolean;
 }
 
+export class AgentReplyUnavailableError extends Error {}
+
 export interface ChatCompletionResult {
   reply: string;
   tokensCost: number;
   isBooking: boolean;
   appointmentTime?: string;
-  leadCreated?: any;
   provider: 'openai' | 'gemini' | 'deepseek' | 'rules_engine';
   model: string;
 }
@@ -62,6 +56,7 @@ async function callOpenAI(
         temperature: 0.3,
         max_tokens: 400,
       }),
+      signal: AbortSignal.timeout(12_000),
     });
 
     if (!res.ok) {
@@ -71,8 +66,8 @@ async function callOpenAI(
 
     const data = await res.json();
     return data.choices?.[0]?.message?.content || null;
-  } catch (err) {
-    console.warn('OpenAI fetch error:', err);
+  } catch {
+    console.warn('OpenAI request failed');
     return null;
   }
 }
@@ -80,7 +75,7 @@ async function callOpenAI(
 /**
  * Call Gemini API as backup fallback if configured
  */
-async function callGemini(systemPrompt: string, userMessage: string): Promise<string | null> {
+async function callGemini(systemPrompt: string, userMessage: string, history: ChatCompletionOptions['history'] = []): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey.includes('placeholder')) return null;
 
@@ -91,16 +86,17 @@ async function callGemini(systemPrompt: string, userMessage: string): Promise<st
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\nПользователь: ${userMessage}` }] },
+          { role: 'user', parts: [{ text: `${systemPrompt}\n\nИстория диалога:\n${history.slice(-6).map((item) => `${item.role}: ${item.content}`).join('\n')}\n\nПользователь: ${userMessage}` }] },
         ],
       }),
+      signal: AbortSignal.timeout(12_000),
     });
 
     if (!res.ok) return null;
     const data = await res.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-  } catch (err) {
-    console.warn('Gemini fetch error:', err);
+  } catch {
+    console.warn('Gemini request failed');
     return null;
   }
 }
@@ -109,46 +105,25 @@ export async function processAgentMessage({
   message,
   agentId,
   workspaceId,
-  clientName,
-  clientPhone,
-  channel = 'Telegram',
   history = [],
   isSandbox = false,
 }: ChatCompletionOptions): Promise<ChatCompletionResult> {
   const query = message.trim();
-  const lower = query.toLowerCase();
 
   // Find agent
   const agents = await getAllAgents(workspaceId);
-  const agent = agents.find((a) => a.id === agentId) || agents[0];
+  const agent = agentId ? agents.find((a) => a.id === agentId) : agents[0];
+  if (!agent) throw new Error('Сотрудник не найден');
 
   const targetWsId = workspaceId || agent?.workspaceId;
   const ws = targetWsId ? await getWorkspaceById(targetWsId) : null;
 
-  // Check booking intent
-  const isBooking =
-    lower.includes('запис') ||
-    lower.includes('забронир') ||
-    lower.includes('завтра') ||
-    lower.includes('время') ||
-    lower.includes('слот') ||
-    lower.includes('давайте в') ||
-    lower.includes('урок') ||
-    lower.includes('14:00') ||
-    lower.includes('15:00') ||
-    lower.includes('16:00') ||
-    lower.includes('10:00') ||
-    lower.includes('11:00') ||
-    lower.includes('понедельник');
-
-  // Token cost calculation:
-  // In sandbox, real model response costs 1 token. Booking is a simulation (0 extra tokens charged).
-  // In production, normal message costs 1 token, actual calendar booking costs 5 tokens.
-  const tokensCost = isSandbox ? 1 : isBooking ? 5 : 1;
+  // Messaging produces an answer only; bookings require a separate confirmed workflow.
+  const tokensCost = 1;
 
   // Check balance before proceeding
   if (ws && ws.tokenBalance < tokensCost) {
-    throw new Error(
+    throw new AgentReplyUnavailableError(
       `Недостаточно токенов на балансе компании (баланс: ${ws.tokenBalance}, требуется: ${tokensCost}). Пополните баланс в разделе "Тарифы и Баланс".`
     );
   }
@@ -159,7 +134,7 @@ export async function processAgentMessage({
 
   // Construct system prompt
   const basePrompt = agent?.systemPrompt || `Вы — профессиональный ИИ-сотрудник компании. Ваша задача — квалифицировать клиента и записать на пробный урок/прием.`;
-  const fullSystemPrompt = `${basePrompt}\n\nБаза знаний и прайс:\n${agent?.knowledgeBase || 'Стандартные условия'}\n\nВопросы квалификации:\n${((agent?.qualificationQuestions as string[]) || []).join('\n')}`;
+  const fullSystemPrompt = `${basePrompt}\n\nБаза знаний и прайс:\n${agent?.knowledgeBase || 'Стандартные условия'}\n\nВопросы квалификации:\n${((agent?.qualificationQuestions as string[]) || []).join('\n')}\n\nЗапись на конкретное время требует подтверждения сотрудником. Не утверждай, что запись, оплата или заказ уже оформлены. При запросе записи собери пожелания и предложи обратиться к сотруднику.`;
 
   // Sandbox provider override: if AI_SANDBOX_PROVIDER=deepseek (or in sandbox mode with deepseek key)
   const useDeepSeek = (isSandbox && (process.env.AI_SANDBOX_PROVIDER === 'deepseek' || process.env.DEEPSEEK_API_KEY)) || process.env.AI_DEFAULT_PROVIDER === 'deepseek';
@@ -182,8 +157,8 @@ export async function processAgentMessage({
         provider = 'deepseek';
         modelName = ds.defaultModel;
       }
-    } catch (dsErr) {
-      console.warn('DeepSeek provider error, falling back:', dsErr);
+    } catch {
+      console.warn('DeepSeek request failed; trying configured fallback');
     }
   }
 
@@ -199,7 +174,7 @@ export async function processAgentMessage({
 
   // 2. Attempt Gemini backup if not already answered
   if (!reply) {
-    const geminiReply = await callGemini(fullSystemPrompt, query);
+    const geminiReply = await callGemini(fullSystemPrompt, query, history);
     if (geminiReply) {
       reply = geminiReply;
       provider = 'gemini';
@@ -207,115 +182,27 @@ export async function processAgentMessage({
     }
   }
 
-  // 3. Fallback to structured rules engine
-  if (!reply) {
-    provider = 'rules_engine';
-    modelName = 'local-rules-v1';
-    const questions = (agent?.qualificationQuestions as string[]) || [];
-
-    if (isBooking) {
-      reply = `Отлично! Я проверил расписание. Ближайший свободный слот: завтра в 14:30. Подскажите, пожалуйста, ваше имя и номер телефона для подтверждения брони?`;
-    } else if (lower.includes('цен') || lower.includes('скольк') || lower.includes('прайс') || lower.includes('стоим')) {
-      reply = `Вот наш прайс-лист:\n\n${agent?.knowledgeBase || 'Стандартный тариф: от 150 000 сум.'}\n\n${questions[0] || 'Какой формат вам больше подходит?'}`;
-    } else if (lower.includes('уровен') || lower.includes('возраст') || lower.includes('симптом') || lower.includes('мастер')) {
-      reply = `Понял вас! ${questions[1] || 'В какие дни и часы вам удобнее подойти на встречу?'}`;
-    } else {
-      reply = `Здравствуйте! Я виртуальный консультант компании. ${questions[0] || 'Чем могу помочь вам сегодня?'}`;
-    }
-  }
-
-  let appointmentTime: string | undefined = undefined;
-  let leadCreated = null;
-
-  // Handle actual booking side effects (ONLY in production mode, NEVER in sandbox)
-  if (isBooking && !isSandbox && ws) {
-    const tomorrow = new Date(Date.now() + 86400000);
-    tomorrow.setHours(14, 30, 0, 0);
-    const tomorrowEnd = new Date(tomorrow.getTime() + (ws.googleCalendarSlotDuration || 45) * 60000);
-    appointmentTime = tomorrow.toISOString();
-
-    let googleEventId: string | undefined = undefined;
-    let googleEventLink: string | undefined = undefined;
-
-    if (ws.googleRefreshToken) {
-      try {
-        const gEvent = await createGoogleCalendarEvent(ws.googleRefreshToken, {
-          summary: `Запись: ${clientName || 'Клиент'} (${ws.companyName})`,
-          description: `Клиент: ${clientName || 'Клиент'}\nТелефон: ${clientPhone || '+998 90 000 00 00'}\nКанал: ${channel}\nЗаписано ИИ-сотрудником "${agent?.name || 'ИИ-сотрудник'}"`,
-          startTime: tomorrow.toISOString(),
-          endTime: tomorrowEnd.toISOString(),
-          attendeeName: clientName,
-          attendeePhone: clientPhone,
-        });
-        googleEventId = gEvent.id;
-        googleEventLink = gEvent.htmlLink;
-      } catch (err) {
-        console.warn('Google Calendar live API insert error:', err);
-      }
-    }
-
-    if (!googleEventLink) {
-      googleEventLink = generateDirectGoogleCalendarLink({
-        title: `Запись — ${clientName || 'Клиент'}`,
-        details: `Запись через ИИ-сотрудника AI Business OS`,
-        startTime: tomorrow,
-        endTime: tomorrowEnd,
-      });
-    }
-
-    // Save lead in Neon Postgres
-    leadCreated = await createLead({
-      workspaceId: ws.id,
-      agentId: agent?.id || null,
-      clientName: clientName || 'Клиент из чата',
-      clientPhone: clientPhone || '+998 90 000 00 00',
-      channel,
-      status: 'booked',
-      appointmentTime: tomorrow,
-      googleEventId,
-      googleEventLink,
-      tokensSpent: tokensCost,
-    });
-
-    // Save appointment
-    await createAppointment({
-      workspaceId: ws.id,
-      leadId: leadCreated.id,
-      agentId: agent?.id || null,
-      clientName: clientName || 'Клиент из чата',
-      clientPhone: clientPhone || '+998 90 000 00 00',
-      serviceName: 'Пробный урок / Первичная консультация',
-      specialistName: 'Дежурный специалист',
-      startTime: tomorrow,
-      endTime: tomorrowEnd,
-      status: 'confirmed',
-      googleEventId,
-      googleEventLink,
-    });
-  }
+  if (!reply) throw new AgentReplyUnavailableError('Сервис ответов временно недоступен. Попробуйте позже. Токены не списаны.');
 
   // Deduct tokens atomically
   if (ws) {
     const desc = isSandbox
       ? 'Тестовый ответ в песочнице (-1 токен)'
-      : isBooking
-      ? 'Запись в календарь через ИИ (-5 токенов)'
       : 'Ответ ИИ-сотрудника в диалоге (-1 токен)';
 
-    await recordTokenTransaction({
+    const transaction = await recordTokenTransaction({
       workspaceId: ws.id,
-      actionType: isBooking && !isSandbox ? 'calendar_booking' : 'chat_reply',
+      actionType: 'chat_reply',
       tokensDelta: -tokensCost,
       description: desc,
     });
+    if (!transaction.success) throw new Error(transaction.error || 'Не удалось списать токены');
   }
 
   return {
     reply,
     tokensCost,
-    isBooking,
-    appointmentTime,
-    leadCreated,
+    isBooking: false,
     provider,
     model: modelName,
   };

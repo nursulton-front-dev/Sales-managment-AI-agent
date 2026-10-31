@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-10-26T07:20:48.160Z",
+  "scope": "Real local ledger and support storage. Mocked model transport, database adapter and role identities in unit tests. No live PostgreSQL/provider verification.",
+  "checks": [
+    "Parallel local debits cannot overdraw or lose updates",
+    "Every accepted debit has exactly one ledger entry",
+    "Invalid debit leaves persisted balance unchanged",
+    "Database inserts succeed without writable local disk",
+    "Database edits return the persisted row without a local mirror",
+    "Successful booking-intent sandbox never writes leads, conversations or calendar events",
+    "Sandbox charges the response policy and preserves history",
+    "Fallback model receives the conversation history",
+    "Unavailable model returns an error without charging or fabricated answers",
+    "Rejected debit cannot be reported as a successful paid response",
+    "Customer cannot call the administrator reply handler",
+    "Authorized support answer is saved",
+    "Customer sees support answer without internal notes",
+    "Customer can reopen a closed ticket"
+  ]
+}

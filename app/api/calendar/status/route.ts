@@ -1,3 +1,4 @@
+import { getServerSessionContext } from '@/src/server/auth/session';
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { isGoogleCalendarConfigured } from '@/lib/calendar/google';
 import { getWorkspaceById, getAllWorkspaces } from '@/src/db';
@@ -6,26 +7,9 @@ import { cookies } from 'next/headers';
 export async function GET(req: NextRequest) {
   await connection();
   try {
-    const { searchParams } = new URL(req.url);
-    const cookieStore = await cookies();
-    const workspaceId =
-      searchParams.get('workspaceId') || cookieStore.get('ai_os_workspace_id')?.value;
-
-    let ws = null;
-    if (workspaceId) {
-      ws = await getWorkspaceById(workspaceId);
-    }
-    if (!ws) {
-      return NextResponse.json({
-        success: true,
-        configured: isGoogleCalendarConfigured(),
-        connected: false,
-        email: null,
-        workingHours: '10:00-18:00',
-        slotDuration: 45,
-        clientIdConfigured: Boolean(process.env.GOOGLE_CLIENT_ID),
-      });
-    }
+    const session = await getServerSessionContext();
+    const ws = session.workspace;
+    if (!ws) return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
 
     const isConfigured = isGoogleCalendarConfigured();
     const isConnected = Boolean(ws?.googleCalendarConnected && ws?.googleRefreshToken);
@@ -39,7 +23,7 @@ export async function GET(req: NextRequest) {
       slotDuration: ws?.googleCalendarSlotDuration || 45,
       clientIdConfigured: Boolean(process.env.GOOGLE_CLIENT_ID),
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
 }

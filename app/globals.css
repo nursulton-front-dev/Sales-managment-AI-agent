@@ -2,90 +2,73 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
 
-:root, [data-theme="light"] {
+:root {
   --background: #F8FAFC;
   --surface: #FFFFFF;
   --surface-secondary: #F1F5F9;
   --surface-elevated: #FFFFFF;
-  --foreground: #0F172A;
   --text-primary: #0F172A;
   --text-secondary: #475569;
   --text-muted: #64748B;
-  --muted-foreground: #475569;
   --border: #E2E8F0;
   --border-strong: #CBD5E1;
   --accent: #E52329;
   --accent-hover: #C91C22;
   --accent-text: #FFFFFF;
-  --accent-link: #C91C22;
+  --accent-link: #B91C1C;
   --accent-soft: #FFF1F2;
   --accent-soft-text: #B91C1C;
-  --focus-ring: rgba(229, 35, 41, 0.25);
-  --focus: #2563EB;
+  --focus-ring: #2563EB;
   --card-business: #18232D;
-
-  --radius-card: 8px;
-  --radius-control: 6px;
-  --shadow-card: 0 1px 2px rgb(15 23 42 / .04);
-  --sidebar-width: 240px;
-  --header-height: 64px;
 
   --success: #16A34A;
   --success-bg: #DCFCE7;
   --success-border: #BBF7D0;
-  --success-text: #166534;
+  --success-text: #15803D;
 
   --warning: #D97706;
   --warning-bg: #FEF3C7;
   --warning-border: #FDE68A;
-  --warning-text: #92400E;
+  --warning-text: #B45309;
 
-  --danger: #E52329;
+  --danger: #DC2626;
   --danger-bg: #FEE2E2;
   --danger-border: #FECACA;
   --danger-text: #B91C1C;
 }
 
-[data-theme="dark"], .dark {
+.dark {
+  color-scheme: dark;
   --background: #0B1220;
   --surface: #111C2F;
   --surface-secondary: #1A2740;
-  --surface-elevated: #111C2F;
-  --foreground: #F1F5F9;
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
-  --muted-foreground: #94A3B8;
+  --surface-elevated: #1E293B;
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
   --border: #29364B;
   --border-strong: #475569;
   --accent: #F87171;
   --accent-hover: #FCA5A5;
   --accent-text: #0B1220;
   --accent-link: #FCA5A5;
-  --accent-soft: #3A1C25;
+  --accent-soft: rgba(220, 38, 38, 0.16);
   --accent-soft-text: #FCA5A5;
-  --focus-ring: rgba(248, 113, 113, 0.35);
-  --focus: #93C5FD;
+  --focus-ring: #93C5FD;
   --card-business: #18232D;
 
-  --radius-card: 8px;
-  --radius-control: 6px;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / .18);
-  --sidebar-width: 240px;
-  --header-height: 64px;
-
   --success: #4ADE80;
-  --success-bg: #123829;
+  --success-bg: rgba(74, 222, 128, 0.12);
   --success-border: rgba(74, 222, 128, 0.28);
   --success-text: #86EFAC;
 
   --warning: #FBBF24;
-  --warning-bg: #3B2E17;
+  --warning-bg: rgba(251, 191, 36, 0.12);
   --warning-border: rgba(251, 191, 36, 0.28);
-  --warning-text: #FCD34D;
+  --warning-text: #FDE68A;
 
   --danger: #F87171;
-  --danger-bg: rgba(248, 113, 113, 0.16);
+  --danger-bg: rgba(248, 113, 113, 0.12);
   --danger-border: rgba(248, 113, 113, 0.28);
   --danger-text: #FCA5A5;
 }
@@ -152,6 +135,22 @@ body {
   background: #3B4D68;
 }
 
-* {
-  border-color: var(--border);
+@layer base {
+  * { border-color: var(--border); }
+}
+
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.chorla-dialog { color: var(--text-primary); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin: auto; max-height: 90dvh; max-width: calc(100vw - 32px); padding: 0; }
+.chorla-dialog::backdrop { background: rgb(15 23 42 / .45); }
+.chorla-dialog.drawer { margin: 0 0 0 auto; width: 600px; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+.chorla-dialog.navigation-drawer { margin: 0 auto 0 0; width: 288px; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+.chorla-dialog[open].drawer { display: flex; flex-direction: column; }
+.dashboard-content { overflow-wrap: anywhere; }
+.dashboard-content h1 { font-size: clamp(24px, 2vw, 28px); font-weight: 600; line-height: 1.3; }
+@media (max-width: 640px) {
+  .dashboard-shell button, .dashboard-shell a { min-height: 44px; }
+  .dashboard-shell button:has(> svg:only-child) { min-width: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }

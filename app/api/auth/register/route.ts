@@ -1,153 +1,87 @@
-import { NextRequest, NextResponse, connection } from 'next/server';
-import { createWorkspace, getWorkspaceByEmail, updateWorkspace } from '@/src/db';
-import { cookies } from 'next/headers';
-import { Resend } from 'resend';
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { createWorkspace, getWorkspaceByEmail, hasClaimedTrial, recordTrialGrant, recordTokenTransaction } from '@/src/db';
+import { publicWorkspace } from '@/lib/server/public-data';
 
 export async function POST(req: NextRequest) {
-  await connection();
   try {
-    const body = await req.json();
-    const {
-      companyName,
-      niche = 'education',
-      ownerPhone = '+998 90 000 00 00',
-      teamSize = '1',
-      dailyLeadsVolume = '<20',
-      plan = 'trial',
-      ownerName,
-      ownerEmail,
-      password = 'password123',
-      timezone = 'Asia/Tashkent',
-      isSoleProprietor = false,
-      logoUrl = null,
-      selectedAgentNiche = null,
-    } = body;
-
-    if (!ownerEmail || !ownerName) {
-      return NextResponse.json(
-        { error: 'Необходимо указать имя и email владельца' },
-        { status: 400 }
-      );
+    const identity = await auth.api.getSession({ headers: req.headers });
+    if (!identity?.user) {
+      return NextResponse.json({ success: false, error: 'Сначала выполните вход или подтвердите email' }, { status: 401 });
     }
 
-    const cleanEmail = ownerEmail.trim().toLowerCase();
-
-    // Check if email already registered
-    const existing = await getWorkspaceByEmail(cleanEmail);
-    if (existing) {
-      // Idempotent: update company parameters if provided, and set session
-      const updates: any = {};
-      if (companyName && companyName !== existing.companyName) updates.companyName = companyName;
-      if (ownerPhone && ownerPhone !== existing.ownerPhone) updates.ownerPhone = ownerPhone;
-      if (niche && niche !== existing.niche) updates.niche = niche;
-
-      let ws = existing;
-      if (Object.keys(updates).length > 0) {
-        ws = (await updateWorkspace(existing.id, updates)) || existing;
-      }
-
-      const cookieStore = await cookies();
-      cookieStore.set('ai_os_workspace_id', ws.id, {
-        path: '/',
-        maxAge: 86400 * 30,
-        sameSite: 'lax',
-      });
-
+    // REQUIREMENT 1: Prohibit workspace creation or binding ownership to unverified email
+    if (!identity.user.emailVerified) {
       return NextResponse.json({
-        success: true,
-        workspace: ws,
-        verificationCode: ws.verificationCode || '123456',
-        message: 'Организация уже существует, выполнен вход',
-      });
+        success: false,
+        error: 'Создание компании и привязка владения разрешены только для подтверждённого адреса электронной почты.',
+      }, { status: 403 });
     }
 
-    // Generate 6-digit OTP code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const body = await req.json();
+    const email = identity.user.email.toLowerCase();
+    const existing = await getWorkspaceByEmail(email);
+    let workspace = existing;
 
-    // If trial plan, tokens remain 0 until email is verified (anti-abuse protection)
-    let initialTokens = 0;
-    if (plan === 'start') initialTokens = 2000;
-    else if (plan === 'business') initialTokens = 6000;
-    else if (plan === 'pro') initialTokens = 15000;
+    if (!workspace) {
+      if (typeof body.companyName !== 'string' || !body.companyName.trim() || body.companyName.length > 200) {
+        return NextResponse.json({ success: false, error: 'Укажите название компании (до 200 символов)' }, { status: 400 });
+      }
 
-    const finalCompanyName = companyName?.trim() || (isSoleProprietor ? `Частный специалист (${ownerName})` : 'Моя компания');
+      const phone = typeof body.ownerPhone === 'string' ? body.ownerPhone.slice(0, 40) : '';
+      const isEmailVerified = Boolean(identity.user.emailVerified);
+      const trialClaimed = await hasClaimedTrial(email, phone);
+      const trialEligible = isEmailVerified && !trialClaimed;
 
-    const newWorkspace = await createWorkspace({
-      id: `ws_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      companyName: finalCompanyName,
-      niche,
-      ownerName,
-      ownerEmail: cleanEmail,
-      ownerPhone,
-      passwordHash: `hash_${Date.now()}`,
-      teamSize: isSoleProprietor ? '1' : teamSize,
-      dailyLeadsVolume,
-      plan,
-      tokenBalance: initialTokens,
-      status: 'active',
-      emailVerified: false,
-      verificationCode,
-      verificationSentAt: new Date(),
-      subExpiresAt: new Date(Date.now() + 86400000 * 30),
-      googleCalendarWorkingHours: '10:00-18:00',
-      googleCalendarSlotDuration: 45,
-    });
+      // All newly created workspaces start on 'trial'. Paid plans require checkout.
+      // Initial balance is 0, and if trialEligible, 100 tokens are granted via recordTokenTransaction
+      // to ensure single ledger entry and prevent double-granting.
+      workspace = await createWorkspace({
+        id: `ws_${crypto.randomUUID()}`,
+        companyName: body.companyName.trim(),
+        niche: typeof body.niche === 'string' ? body.niche.slice(0, 100) : 'other',
+        ownerName: identity.user.name || (typeof body.ownerName === 'string' ? body.ownerName.slice(0, 200) : 'Владелец'),
+        ownerEmail: email,
+        ownerPhone: phone,
+        passwordHash: 'managed-by-auth',
+        teamSize: typeof body.teamSize === 'string' ? body.teamSize : '1',
+        dailyLeadsVolume: typeof body.dailyLeadsVolume === 'string' ? body.dailyLeadsVolume : '<20',
+        plan: 'trial',
+        tokenBalance: 0,
+        status: 'active',
+        emailVerified: isEmailVerified,
+        subExpiresAt: new Date(Date.now() + 3 * 86400000),
+      });
 
-    console.log('\n==========================================');
-    console.log('🔑 [NEW WORKSPACE REGISTRATION - OTP CODE]');
-    console.log(`🏢 Компания: ${finalCompanyName}`);
-    console.log(`✉️  Email: ${cleanEmail}`);
-    console.log(`⚡ 6-значный код подтверждения: ${verificationCode}`);
-    console.log('==========================================\n');
-
-    // Send email via Resend if API key available
-    if (process.env.RESEND_API_KEY && !process.env.RESEND_API_KEY.includes('your_api_key')) {
-      try {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        await resend.emails.send({
-          from: 'Chorla AI <onboarding@resend.dev>',
-          to: cleanEmail,
-          subject: `${verificationCode} — ваш код подтверждения в Chorla AI`,
-          html: `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #E2E8F0; border-radius: 16px; background: #FFFFFF;">
-              <div style="text-align: center; margin-bottom: 20px;">
-                <img src="https://chorla-ai.vercel.app/brand/chorla-ai-logo-light.png" alt="Chorla AI" width="160" style="display: inline-block; max-width: 160px; height: auto;" />
-              </div>
-              <h2 style="font-size: 20px; font-weight: 700; color: #0F172A; margin: 0 0 8px 0; text-align: center;">Подтверждение Email адреса</h2>
-              <p style="font-size: 14px; color: #475569; line-height: 1.5; margin: 0 0 20px 0; text-align: center;">
-                Добро пожаловать в Chorla AI! Введите этот 6-значный код для активации вашей организации и начисления <strong>100 бонусных токенов</strong>:
-              </p>
-              <div style="background: #F8FAFC; border: 2px dashed #DC2626; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 20px;">
-                <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #DC2626; font-family: monospace;">${verificationCode}</span>
-              </div>
-              <p style="font-size: 12px; color: #94A3B8; margin: 0;">
-                Код действителен 15 минут.
-              </p>
-            </div>
-          `,
+      if (trialEligible) {
+        await recordTrialGrant(email, phone, workspace.id, 100);
+        await recordTokenTransaction({
+          workspaceId: workspace.id,
+          actionType: 'trial_grant',
+          tokensDelta: 100,
+          description: 'Бонус за регистрацию и подтверждение email',
         });
-      } catch (err: any) {
-        console.warn('Resend send warning:', err?.message || err);
+        workspace.tokenBalance = 100;
       }
     }
 
-    const cookieStore = await cookies();
-    cookieStore.set('ai_os_workspace_id', newWorkspace.id, {
-      path: '/',
-      maxAge: 86400 * 30,
-      sameSite: 'lax',
+    const response = NextResponse.json({
+      success: true,
+      workspace: publicWorkspace(workspace),
+      message: 'Рабочее пространство успешно настроено',
     });
 
-    return NextResponse.json({
-      success: true,
-      workspace: newWorkspace,
-      verificationCode,
+    response.cookies.set('ai_os_workspace_id', workspace.id, {
+      path: '/',
+      httpOnly: true,
+      secure: req.nextUrl.protocol === 'https:',
+      sameSite: 'lax',
+      maxAge: 86400 * 30,
     });
-  } catch (error: any) {
-    console.error('Error registering workspace:', error);
-    return NextResponse.json(
-      { error: error.message || 'Ошибка регистрации' },
-      { status: 500 }
-    );
+
+    return response;
+  } catch (err: unknown) {
+    console.error('Registration finish error:', err);
+    return NextResponse.json({ success: false, error: 'Не удалось создать компанию. Повторите позже.' }, { status: 500 });
   }
 }

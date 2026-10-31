@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
 
     // 5. Upgrade to long-lived 60-day token
     let longLivedToken = tokenData.access_token;
-    let expiresAt = new Date(Date.now() + 60 * 86400 * 1000); // Default 60 days
+    let expiresAt = new Date(Date.now() + 3600 * 1000); // Short-lived token if upgrade fails.
 
     try {
       const longLived = await getLongLivedInstagramToken(tokenData.access_token);
@@ -99,7 +99,9 @@ export async function GET(req: NextRequest) {
     const profile = await getInstagramUserProfile(longLivedToken, tokenData.user_id);
 
     // 7. Subscribe to Meta Webhooks for messages
-    await subscribeInstagramWebhook(profile.id, longLivedToken);
+    if (!await subscribeInstagramWebhook(profile.id, longLivedToken)) {
+      throw new Error('Instagram не подтвердил подписку на сообщения. Проверьте разрешения приложения.');
+    }
 
     // 8. Encrypt access token at rest using AES-256-GCM
     const encryptedToken = encryptToken(longLivedToken);
@@ -125,12 +127,12 @@ export async function GET(req: NextRequest) {
         req.url
       )
     );
-  } catch (error: any) {
-    console.error('Error in Instagram OAuth callback:', error);
+  } catch {
+    console.error('Instagram OAuth connection failed');
     return NextResponse.redirect(
       new URL(
         `/dashboard/integrations?instagram_error=${encodeURIComponent(
-          error.message || 'Ошибка подключения'
+          'Не удалось подключить Instagram. Проверьте разрешения приложения и настройки сервера.'
         )}`,
         req.url
       )
