@@ -12,17 +12,17 @@ import {
   Terminal,
   Sliders,
   Sparkles,
-  ExternalLink,
   ShieldCheck,
   Send,
   HelpCircle,
+  X,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import { Card, CardBody } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Dialog } from '@/components/ui/Dialog';
 import { DataState } from '@/components/ui/DataState';
 import { useUnsavedChanges } from '@/lib/useUnsavedChanges';
 import { widgetTextColor } from '@/lib/widget-presentation';
@@ -63,7 +63,7 @@ const COLOR_PRESETS = [
 ];
 
 const textAreaClass =
-  'w-full min-h-24 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] transition-colors';
+  'w-full min-h-20 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] transition-colors';
 
 const settingsOnly = (widget: Settings): Settings => ({
   agentId: widget.agentId,
@@ -75,7 +75,13 @@ const settingsOnly = (widget: Settings): Settings => ({
   allowedOrigins: widget.allowedOrigins,
 });
 
-export function WebsiteWidgetIntegration() {
+export function WebsiteWidgetModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const { agents, showToast } = useApp();
   const [widget, setWidget] = useState<Widget | null>(null);
   const [form, setForm] = useState<Settings>(defaults);
@@ -88,8 +94,8 @@ export function WebsiteWidgetIntegration() {
   const [helping, setHelping] = useState(false);
   const [ticket, setTicket] = useState<number | null>(null);
 
-  // Installation mode tab: ready snippet (default for business) vs REST API (for developers)
-  const [installMode, setInstallMode] = useState<'snippet' | 'api'>('snippet');
+  // Tabs inside modal: 'snippet' | 'api' | 'appearance'
+  const [modalTab, setModalTab] = useState<'snippet' | 'api' | 'appearance'>('snippet');
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [copiedApi, setCopiedApi] = useState(false);
 
@@ -123,7 +129,7 @@ export function WebsiteWidgetIntegration() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial asynchronous settings request.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Asynchronous settings request.
   useEffect(() => {
     void load();
   }, [load]);
@@ -153,7 +159,7 @@ export function WebsiteWidgetIntegration() {
       setWidget(data.widget);
       setForm(settingsOnly(data.widget));
       setOrigins(data.widget.allowedOrigins.join('\n'));
-      showToast('Настройки чата сохранены');
+      showToast('Настройки чата сохранены и активированы');
     } catch (failure) {
       showToast(
         'Настройки не сохранены',
@@ -215,9 +221,12 @@ export function WebsiteWidgetIntegration() {
     }
   };
 
-  const curlExample = widget && embedOrigin ? `curl -X POST "${embedOrigin}/api/widget/${widget.id}/messages" \\
+  const curlExample =
+    widget && embedOrigin
+      ? `curl -X POST "${embedOrigin}/api/widget/${widget.id}/messages" \\
   -H "Content-Type: application/json" \\
-  -d '{"text": "Здравствуйте! Сколько стоят ваши услуги?"}'` : '';
+  -d '{"text": "Здравствуйте! Сколько стоят ваши услуги?"}'`
+      : '';
 
   const handleCopyCurl = async () => {
     if (!curlExample) return;
@@ -232,100 +241,110 @@ export function WebsiteWidgetIntegration() {
   };
 
   return (
-    <section className="space-y-6" aria-labelledby="website-widget-title">
-      {/* Top Banner / Status bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs">
-        <div className="flex items-center gap-4">
-          <div className="size-12 rounded-xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center text-[var(--accent)] shrink-0 border border-red-100 dark:border-red-900/40">
-            <Globe size={24} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h2 id="website-widget-title" className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">
-                Чат на сайте
-              </h2>
-              <Badge variant={widget?.enabled ? 'success' : 'neutral'}>
-                {widget?.enabled ? '● Активен' : '○ Выключен'}
-              </Badge>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      label="Настройки виджета чата на сайте"
+      className="w-full max-w-4xl p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
+    >
+      <form onSubmit={save} className="flex flex-col max-h-[90dvh]" aria-labelledby="website-widget-title">
+        {/* Modal Header */}
+        <div className="p-5 sm:p-6 border-b border-[var(--border)] bg-[var(--surface)] flex items-center justify-between gap-4 shrink-0">
+          <div className="flex items-center gap-3.5">
+            <div className="size-11 rounded-xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center text-[var(--accent)] shrink-0 border border-red-100 dark:border-red-900/40">
+              <Globe size={22} />
             </div>
-            <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
-              ИИ-консультант для вашего сайта. Квалифицирует лидов и переводит диалоги в продажи.
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 id="website-widget-title" className="text-base sm:text-lg font-semibold text-[var(--text-primary)]">
+                  Чат на сайте (Веб-виджет)
+                </h2>
+                <Badge variant={widget?.enabled ? 'success' : 'neutral'}>
+                  {widget?.enabled ? '● Активен' : '○ Выключен'}
+                </Badge>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                ИИ-консультант для любого сайта: Tilda, WordPress, Taplink, HTML или через REST API.
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <label className="relative inline-flex items-center cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={form.enabled}
-              onChange={(event) => update('enabled', event.target.checked)}
+          <div className="flex items-center gap-3">
+            <label className="relative inline-flex items-center cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.enabled}
+                onChange={(event) => update('enabled', event.target.checked)}
+                disabled={busy}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5.5 bg-slate-200 peer-focus:outline-hidden peer-focus:ring-2 peer-focus:ring-[var(--focus-ring)] rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all dark:border-slate-600 peer-checked:bg-[var(--accent)]" />
+              <span className="ms-2 text-xs font-medium text-[var(--text-secondary)] hidden md:inline">
+                {form.enabled ? 'Включён' : 'Выключен'}
+              </span>
+            </label>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               disabled={busy}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden peer-focus:ring-2 peer-focus:ring-[var(--focus-ring)] rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-[var(--accent)]" />
-            <span className="ms-2.5 text-xs font-medium text-[var(--text-secondary)] hidden sm:inline">
-              {form.enabled ? 'Приём включён' : 'Приём выключен'}
-            </span>
-          </label>
+              onClick={onClose}
+              aria-label="Закрыть"
+              className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            >
+              <X size={19} />
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <DataState loading={loading} error={error} retry={load} />
+        {/* Modal Inner Nav Tabs */}
+        <div className="px-6 py-2.5 border-b border-[var(--border)] bg-[var(--surface-secondary)]/40 flex gap-2 overflow-x-auto shrink-0">
+          {[
+            { id: 'snippet', label: '⚡ Готовый скрипт (1 строка)', icon: Code2 },
+            { id: 'api', label: '🔌 REST API (Для разработчиков)', icon: Terminal },
+            { id: 'appearance', label: '🎨 Оформление и сайты', icon: Sliders },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = modalTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setModalTab(tab.id as typeof modalTab)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                  active
+                    ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-xs font-semibold border border-[var(--border)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <Icon size={14} className={active ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-      {!loading && !error && (
-        <div className="space-y-6">
-          {/* Quick Installation Section (Snippet vs API) */}
-          <Card className="overflow-hidden border border-[var(--border)] shadow-xs">
-            <div className="border-b border-[var(--border)] bg-[var(--surface-secondary)]/50 px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <Sparkles size={18} className="text-[var(--accent)]" />
-                <span className="text-sm font-semibold text-[var(--text-primary)]">Способ установки</span>
-              </div>
+        {/* Modal Body (Scrollable) */}
+        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+          <DataState loading={loading} error={error} retry={load} />
 
-              {/* Mode Toggle Pills */}
-              <div className="inline-flex p-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-xs font-medium">
-                <button
-                  type="button"
-                  onClick={() => setInstallMode('snippet')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                    installMode === 'snippet'
-                      ? 'bg-[var(--accent)] text-white shadow-xs font-semibold'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  <Code2 size={14} />
-                  <span>Готовый виджет (1 строка)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInstallMode('api')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                    installMode === 'api'
-                      ? 'bg-[var(--accent)] text-white shadow-xs font-semibold'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  <Terminal size={14} />
-                  <span>REST API (Для разработчиков)</span>
-                </button>
-              </div>
-            </div>
-
-            <CardBody className="p-5 sm:p-6 space-y-4">
-              {installMode === 'snippet' ? (
-                <>
+          {!loading && !error && (
+            <>
+              {/* TAB 1: Ready Snippet */}
+              {modalTab === 'snippet' && (
+                <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm">
                     <p className="text-[var(--text-secondary)]">
-                      Скопируйте и вставьте эту строку перед закрывающим тегом{' '}
+                      Вставьте эту строчку перед закрывающим тегом{' '}
                       <code className="px-1.5 py-0.5 rounded-md bg-[var(--surface-secondary)] text-[var(--accent-link)] font-mono text-xs">
                         &lt;/body&gt;
                       </code>{' '}
                       вашего сайта (Tilda, WordPress, Taplink или чистый HTML):
                     </p>
-                    <div className="flex items-center gap-1.5 shrink-0 text-xs text-[var(--text-muted)]">
-                      <span className="inline-block size-2 rounded-full bg-emerald-500" />
-                      <span>Подходит для любого сайта</span>
+                    <div className="flex items-center gap-1.5 shrink-0 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                      <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Установка за 30 секунд</span>
                     </div>
                   </div>
 
@@ -335,7 +354,7 @@ export function WebsiteWidgetIntegration() {
                       aria-label="Код установки чата"
                       readOnly
                       rows={2}
-                      value={snippet || 'Сначала сохраните настройки ниже, чтобы сгенерировать код…'}
+                      value={snippet || 'Сначала сохраните настройки на соседней вкладке, чтобы сгенерировать код…'}
                       className="w-full bg-transparent resize-none font-mono text-xs text-slate-200 focus:outline-hidden selection:bg-red-500/30 select-all"
                       onFocus={(event) => event.target.select()}
                     />
@@ -345,6 +364,7 @@ export function WebsiteWidgetIntegration() {
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <Button
+                        type="button"
                         variant="primary"
                         size="sm"
                         disabled={!snippet || dirty}
@@ -355,6 +375,7 @@ export function WebsiteWidgetIntegration() {
                       </Button>
 
                       <Button
+                        type="button"
                         variant="outline"
                         size="sm"
                         disabled={!widget || dirty}
@@ -367,6 +388,7 @@ export function WebsiteWidgetIntegration() {
                     </div>
 
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
                       disabled={!widget || dirty || Boolean(ticket)}
@@ -380,16 +402,16 @@ export function WebsiteWidgetIntegration() {
                   </div>
 
                   {/* Status Banner */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 rounded-xl bg-[var(--surface-secondary)]/50 border border-[var(--border)] text-xs text-[var(--text-secondary)]">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 border border-[var(--border)] text-xs text-[var(--text-secondary)]">
+                    <div className="flex items-center gap-2.5">
                       <span
-                        className={`size-2 rounded-full ${
+                        className={`size-2.5 rounded-full ${
                           widget?.lastSeenAt ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
                         }`}
                       />
                       <span role="status">
                         {widget?.lastSeenAt
-                          ? `Последний запрос с сайта: ${widget.lastSeenOrigin} (${new Date(
+                          ? `Запрос с сайта зафиксирован: ${widget.lastSeenOrigin} (${new Date(
                               widget.lastSeenAt
                             ).toLocaleString('ru-RU')})`
                           : 'Запросы виджета с сайта пока не обнаружены'}
@@ -397,28 +419,30 @@ export function WebsiteWidgetIntegration() {
                     </div>
                     {dirty && (
                       <span className="text-[var(--warning-text)] font-medium">
-                        Сохраните изменения формы перед установкой
+                        Сохраните настройки перед проверкой
                       </span>
                     )}
                   </div>
-                </>
-              ) : (
-                /* REST API View */
+                </div>
+              )}
+
+              {/* TAB 2: REST API */}
+              {modalTab === 'api' && (
                 <div className="space-y-4">
-                  <div className="text-xs sm:text-sm text-[var(--text-secondary)]">
-                    Прямая отправка сообщений ИИ-агенту без загрузки скрипта виджета. Подходит для мобильных
-                    приложений (Flutter, iOS, Android), кастомных фронтендов и Telegram Web Apps.
-                  </div>
+                  <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+                    Отправляйте сообщения напрямую ИИ-агенту через HTTP REST API. Подходит для мобильных приложений
+                    (Flutter, iOS, Android), кастомных веб-порталов и Telegram Mini Apps.
+                  </p>
 
                   <div className="grid md:grid-cols-2 gap-3 text-xs">
-                    <div className="p-3 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] space-y-1">
+                    <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] space-y-1">
                       <span className="text-[var(--text-muted)] block font-medium">Widget ID / Token:</span>
                       <code className="font-mono font-semibold text-[var(--text-primary)] select-all block break-all">
                         {widget?.id || 'Сохраните настройки для генерации ID'}
                       </code>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] space-y-1">
+                    <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] space-y-1">
                       <span className="text-[var(--text-muted)] block font-medium">HTTP Endpoint:</span>
                       <code className="font-mono font-semibold text-[var(--text-primary)] select-all block break-all">
                         POST {embedOrigin}/api/widget/{widget?.id || ':id'}/messages
@@ -439,70 +463,49 @@ export function WebsiteWidgetIntegration() {
                   </div>
                 </div>
               )}
-            </CardBody>
-          </Card>
 
-          {/* Form Settings & Live Preview Split Grid */}
-          <div className="grid xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-6 items-start">
-            {/* Left: Configuration Form */}
-            <Card className="border border-[var(--border)] shadow-xs">
-              <CardBody className="p-5 sm:p-6">
-                <form onSubmit={save} className="space-y-5">
-                  <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
-                    <div className="flex items-center gap-2">
-                      <Sliders size={18} className="text-[var(--accent)]" />
-                      <h3 className="font-semibold text-sm text-[var(--text-primary)]">
-                        Настройки чата и поведение
-                      </h3>
-                    </div>
-                    {dirty && (
-                      <span className="text-xs text-[var(--warning-text)] font-medium">
-                        Есть несохранённые изменения
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Responsible AI Agent */}
-                  <Select
-                    label="Ответственный ИИ-сотрудник"
-                    value={form.agentId}
-                    disabled={busy}
-                    onChange={(event) => update('agentId', event.target.value)}
-                    required
-                    options={[
-                      { value: '', label: 'Выберите сотрудника' },
-                      ...agents.map((agent) => ({
-                        value: agent.id,
-                        label: `${agent.name}${agent.isActive === false ? ' (выключен)' : ''}`,
-                      })),
-                    ]}
-                  />
-
-                  {/* Allowed Origins */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <label htmlFor="widget-origins" className="block text-xs font-semibold text-[var(--text-primary)]">
-                        Разрешённые сайты (Origins)
-                      </label>
-                      <span className="text-[11px] text-[var(--text-muted)]">До 10 адресов</span>
-                    </div>
-                    <textarea
-                      id="widget-origins"
-                      className={textAreaClass}
-                      value={origins}
-                      onChange={(event) => setOrigins(event.target.value)}
-                      placeholder={'https://example.uz\nhttps://www.example.uz'}
-                      required
-                      disabled={busy}
-                      aria-describedby="widget-origins-help"
-                    />
-                    <p id="widget-origins-help" className="text-xs text-[var(--text-muted)]">
-                      Каждый адрес с новой строки. Формат: <code>https://domain.com</code> (без пути и слэша в конце).
-                    </p>
-                  </div>
-
-                  {/* Title & Greeting */}
+              {/* TAB 3: Appearance, Origins & Live Preview */}
+              {modalTab === 'appearance' && (
+                <div className="grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-6 items-start">
+                  {/* Left: Fields */}
                   <div className="space-y-4">
+                    <Select
+                      label="Ответственный ИИ-сотрудник"
+                      value={form.agentId}
+                      disabled={busy}
+                      onChange={(event) => update('agentId', event.target.value)}
+                      required
+                      options={[
+                        { value: '', label: 'Выберите сотрудника' },
+                        ...agents.map((agent) => ({
+                          value: agent.id,
+                          label: `${agent.name}${agent.isActive === false ? ' (выключен)' : ''}`,
+                        })),
+                      ]}
+                    />
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label htmlFor="widget-origins" className="block text-xs font-semibold text-[var(--text-primary)]">
+                          Разрешённые сайты (Origins)
+                        </label>
+                        <span className="text-[11px] text-[var(--text-muted)]">До 10 адресов</span>
+                      </div>
+                      <textarea
+                        id="widget-origins"
+                        className={textAreaClass}
+                        value={origins}
+                        onChange={(event) => setOrigins(event.target.value)}
+                        placeholder={'https://example.uz\nhttps://www.example.uz'}
+                        required
+                        disabled={busy}
+                        aria-describedby="widget-origins-help"
+                      />
+                      <p id="widget-origins-help" className="text-xs text-[var(--text-muted)]">
+                        Каждый адрес с новой строки. Формат: <code>https://domain.com</code> (без слэша на конце).
+                      </p>
+                    </div>
+
                     <Input
                       label="Заголовок чата"
                       value={form.title}
@@ -515,7 +518,7 @@ export function WebsiteWidgetIntegration() {
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
                         <label htmlFor="widget-greeting" className="block text-xs font-semibold text-[var(--text-primary)]">
-                          Приветственное сообщение
+                          Приветствие
                         </label>
                         <span className="text-[11px] text-[var(--text-muted)]">{form.greeting.length}/500</span>
                       </div>
@@ -529,39 +532,36 @@ export function WebsiteWidgetIntegration() {
                         disabled={busy}
                       />
                     </div>
-                  </div>
 
-                  {/* Color & Position */}
-                  <div className="space-y-3 pt-1">
-                    <label className="block text-xs font-semibold text-[var(--text-primary)]">Цвет оформления</label>
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      {COLOR_PRESETS.map((preset) => (
-                        <button
-                          key={preset.value}
-                          type="button"
-                          onClick={() => update('color', preset.value)}
-                          className={`size-7 rounded-full transition-transform cursor-pointer relative flex items-center justify-center ${
-                            form.color.toLowerCase() === preset.value.toLowerCase()
-                              ? 'scale-115 ring-2 ring-offset-2 ring-[var(--focus-ring)]'
-                              : 'hover:scale-105 opacity-90 hover:opacity-100'
-                          }`}
-                          style={{ backgroundColor: preset.value }}
-                          title={preset.name}
-                        >
-                          {form.color.toLowerCase() === preset.value.toLowerCase() && (
-                            <Check size={14} className="text-white drop-shadow-xs" />
-                          )}
-                        </button>
-                      ))}
-
-                      <div className="flex items-center gap-2 ml-2 pl-3 border-l border-[var(--border)]">
+                    {/* Colors */}
+                    <div className="space-y-2 pt-1">
+                      <label className="block text-xs font-semibold text-[var(--text-primary)]">Цвет оформления</label>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {COLOR_PRESETS.map((preset) => (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => update('color', preset.value)}
+                            className={`size-6 rounded-full transition-transform cursor-pointer relative flex items-center justify-center ${
+                              form.color.toLowerCase() === preset.value.toLowerCase()
+                                ? 'scale-115 ring-2 ring-offset-2 ring-[var(--focus-ring)]'
+                                : 'hover:scale-105 opacity-90'
+                            }`}
+                            style={{ backgroundColor: preset.value }}
+                            title={preset.name}
+                          >
+                            {form.color.toLowerCase() === preset.value.toLowerCase() && (
+                              <Check size={12} className="text-white drop-shadow-xs" />
+                            )}
+                          </button>
+                        ))}
                         <input
                           type="color"
                           value={form.color}
                           onChange={(event) => update('color', event.target.value)}
                           disabled={busy}
-                          className="size-7 rounded-lg cursor-pointer border-0 p-0 bg-transparent"
-                          title="Выбрать свой цвет"
+                          className="size-6 rounded-lg cursor-pointer border-0 p-0 bg-transparent ml-2"
+                          title="Свой цвет"
                         />
                         <span className="text-xs font-mono uppercase text-[var(--text-secondary)]">
                           {form.color}
@@ -569,156 +569,92 @@ export function WebsiteWidgetIntegration() {
                       </div>
                     </div>
 
-                    <div className="pt-2">
-                      <Select
-                        label="Расположение на экране"
-                        value={form.position}
-                        onChange={(event) => update('position', event.target.value)}
-                        disabled={busy}
-                        options={[
-                          { value: 'right', label: 'Справа внизу (стандарт)' },
-                          { value: 'left', label: 'Слева внизу' },
-                        ]}
-                      />
-                    </div>
+                    <Select
+                      label="Расположение"
+                      value={form.position}
+                      onChange={(event) => update('position', event.target.value)}
+                      disabled={busy}
+                      options={[
+                        { value: 'right', label: 'Справа внизу' },
+                        { value: 'left', label: 'Слева внизу' },
+                      ]}
+                    />
                   </div>
 
-                  {/* Submit Button */}
-                  <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between">
-                    {!agents.length ? (
-                      <p className="text-xs text-[var(--text-muted)]">
-                        Сначала{' '}
-                        <Link href="/dashboard/agents/new" className="underline text-[var(--accent-link)]">
-                          создайте сотрудника
-                        </Link>
-                        .
-                      </p>
-                    ) : (
-                      <span className="text-xs text-[var(--text-muted)]">
-                        {dirty ? 'Не забудьте сохранить' : 'Все изменения сохранены'}
-                      </span>
-                    )}
-
-                    <Button type="submit" variant="primary" isLoading={busy} disabled={!dirty || !agents.length}>
-                      Сохранить настройки
-                    </Button>
-                  </div>
-                </form>
-              </CardBody>
-            </Card>
-
-            {/* Right: Interactive Real-Time Preview */}
-            <div className="space-y-4 sticky top-6">
-              <Card className="border border-[var(--border)] shadow-xs overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-[var(--border)] bg-[var(--surface-secondary)]/50 flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                    Интерактивный предпросмотр
-                  </span>
-                  <span className="text-xs text-[var(--text-secondary)]">
-                    Положение: {form.position === 'left' ? 'Слева' : 'Справа'}
-                  </span>
-                </div>
-
-                <CardBody className="p-6 bg-slate-50 dark:bg-slate-950/60 flex flex-col items-center justify-center min-h-[460px] relative">
-                  {/* Phone / Device Mockup Container */}
-                  <div className="w-full max-w-[340px] rounded-2xl bg-white dark:bg-[#111C2F] shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
-                    {/* Chat Header */}
-                    <div
-                      className="px-4 py-3.5 flex items-center justify-between transition-colors"
-                      style={{
-                        backgroundColor: form.color,
-                        color: widgetTextColor(form.color),
-                      }}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="size-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                          <MessageCircle size={16} />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-semibold text-sm truncate leading-tight">{form.title}</h4>
-                          <span className="text-[11px] opacity-80 block truncate">ИИ онлайн · Отвечает за секунды</span>
-                        </div>
-                      </div>
-                      <span className="opacity-80 text-lg leading-none cursor-default">×</span>
-                    </div>
-
-                    {/* Chat Body */}
-                    <div className="p-4 space-y-3 min-h-[220px] max-h-[260px] overflow-y-auto bg-slate-50/70 dark:bg-[#0B1220]/60">
-                      {/* Incoming AI Greeting Message */}
-                      <div className="flex items-start gap-2">
-                        <div
-                          className="size-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
-                          style={{
-                            backgroundColor: form.color,
-                            color: widgetTextColor(form.color),
-                          }}
-                        >
-                          AI
-                        </div>
-                        <div className="bg-white dark:bg-[#1A2740] rounded-2xl rounded-tl-sm p-3 text-xs text-slate-800 dark:text-slate-100 shadow-2xs border border-slate-200/60 dark:border-slate-800/80 leading-relaxed max-w-[85%] whitespace-pre-wrap break-words">
-                          {form.greeting}
-                        </div>
-                      </div>
-
-                      {/* Mock client reply */}
-                      <div className="flex justify-end">
-                        <div className="bg-blue-600 text-white rounded-2xl rounded-tr-sm p-2.5 text-xs shadow-2xs max-w-[80%]">
-                          Здравствуйте! Подскажите подробнее.
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Chat Input Bar */}
-                    <div className="p-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-white dark:bg-[#111C2F] flex items-center gap-2">
-                      <input
-                        type="text"
-                        disabled
-                        placeholder="Напишите сообщение…"
-                        className="w-full text-xs bg-slate-100 dark:bg-slate-800/60 rounded-full px-3 py-2 text-slate-500 cursor-not-allowed"
-                      />
+                  {/* Right: Preview */}
+                  <div className="rounded-xl border border-[var(--border)] p-4 bg-slate-50 dark:bg-slate-950/60 flex flex-col items-center justify-center min-h-[360px]">
+                    <div className="w-full max-w-[280px] rounded-2xl bg-white dark:bg-[#111C2F] shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col text-xs">
                       <div
-                        className="size-8 rounded-full flex items-center justify-center shrink-0 cursor-default"
+                        className="px-3.5 py-3 flex items-center justify-between text-white"
                         style={{
                           backgroundColor: form.color,
                           color: widgetTextColor(form.color),
                         }}
                       >
-                        <Send size={13} />
+                        <div className="flex items-center gap-2 min-w-0">
+                          <MessageCircle size={15} />
+                          <span className="font-semibold truncate">{form.title}</span>
+                        </div>
+                        <span className="text-base leading-none">×</span>
+                      </div>
+                      <div className="p-3 space-y-2 bg-slate-50/70 dark:bg-[#0B1220]/60 min-h-[140px]">
+                        <div className="bg-white dark:bg-[#1A2740] rounded-xl p-2.5 text-slate-800 dark:text-slate-100 shadow-2xs leading-relaxed break-words text-[11px]">
+                          {form.greeting}
+                        </div>
+                      </div>
+                      <div className="p-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          disabled
+                          placeholder="Напишите сообщение…"
+                          className="w-full text-[11px] bg-slate-100 dark:bg-slate-800 rounded-full px-2.5 py-1 text-slate-400"
+                        />
+                        <div
+                          className="size-6 rounded-full flex items-center justify-center shrink-0"
+                          style={{
+                            backgroundColor: form.color,
+                            color: widgetTextColor(form.color),
+                          }}
+                        >
+                          <Send size={10} />
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Launcher Floating Button Mockup */}
-                  <div
-                    className={`mt-4 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg text-xs font-semibold cursor-default transition-all ${
-                      form.position === 'left' ? 'self-start' : 'self-end'
-                    }`}
-                    style={{
-                      backgroundColor: form.color,
-                      color: widgetTextColor(form.color),
-                    }}
-                  >
-                    <MessageCircle size={15} />
-                    <span>Написать нам</span>
-                  </div>
-                </CardBody>
-              </Card>
-
-              {ticket && (
-                <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-                  <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
-                  <span>
-                    Заявка на установку №{ticket} создана.{' '}
-                    <Link href="/dashboard/support" className="underline font-medium hover:opacity-80">
-                      Перейти в поддержку
-                    </Link>
-                  </span>
                 </div>
               )}
-            </div>
+            </>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="p-4 sm:p-5 border-t border-[var(--border)] bg-[var(--surface)] flex items-center justify-between gap-3 shrink-0">
+          <div className="text-xs text-[var(--text-muted)]">
+            {dirty ? (
+              <span className="text-[var(--warning-text)] font-medium">Есть несохранённые изменения</span>
+            ) : (
+              <span>Все настройки сохранены</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <Button type="button" variant="ghost" disabled={busy} onClick={onClose}>
+              Отмена
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={busy}
+              disabled={!dirty || !agents.length}
+            >
+              Сохранить и подключить
+            </Button>
           </div>
         </div>
-      )}
-    </section>
+      </form>
+    </Dialog>
   );
 }
+
+// Backward-compatible alias
+export { WebsiteWidgetModal as WebsiteWidgetIntegration };
