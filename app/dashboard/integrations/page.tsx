@@ -25,6 +25,8 @@ import {
   Sliders,
   CheckCircle2,
   ExternalLink,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { WebsiteWidgetModal } from '@/components/integrations/WebsiteWidgetIntegration';
 import { ChannelEventLog } from '@/components/integrations/ChannelEventLog';
@@ -75,11 +77,19 @@ export default function IntegrationsPage() {
   const [token, setToken] = useState('');
   const [hours, setHours] = useState('');
   const [duration, setDuration] = useState('45');
+  const [copiedCmd, setCopiedCmd] = useState(false);
 
   const dirty = Boolean(
     calendar && (hours !== calendar.workingHours || duration !== String(calendar.slotDuration))
   );
   useUnsavedChanges(dirty || Boolean(token));
+
+  // Auto-select first agent if none selected
+  useEffect(() => {
+    if (agents.length > 0 && !agentId) {
+      setAgentId(agents[0].id);
+    }
+  }, [agents, agentId]);
 
   const load = useCallback(async () => {
     try {
@@ -137,6 +147,8 @@ export default function IntegrationsPage() {
   };
 
   const connectedAgents = agents.filter((agent) => agent.telegramConnected);
+  const selectedAgent = agents.find((agent) => agent.id === agentId);
+  const isSelectedConnected = Boolean(selectedAgent?.telegramConnected);
 
   const activeCount =
     (connectedAgents.length > 0 ? 1 : 0) +
@@ -237,6 +249,7 @@ export default function IntegrationsPage() {
                     className="w-full text-xs"
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (connectedAgents[0]) setAgentId(connectedAgents[0].id);
                       setTelegramOpen(true);
                     }}
                   >
@@ -486,22 +499,23 @@ export default function IntegrationsPage() {
           }
         }}
         label="Подключить Telegram"
-        className="w-full max-w-lg p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
+        className="w-[calc(100vw-32px)] sm:w-[500px] max-w-[500px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
       >
         <form
-          className="p-6 space-y-5"
+          className="p-5 sm:p-6 space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
-            if (await update('/api/agents', { id: agentId, tgBotToken: token }, 'PATCH')) {
+            if (await update('/api/agents', { id: agentId, tgBotToken: token.trim() }, 'PATCH')) {
               setTelegramOpen(false);
               setToken('');
             }
           }}
         >
-          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded-xl bg-[#229ED9]/10 flex items-center justify-center text-[#229ED9]">
-                <MessageCircle size={20} />
+          {/* Header */}
+          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3.5">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-[#229ED9]/15 flex items-center justify-center shrink-0 border border-[#229ED9]/25">
+                <Image src="/integrations/telegram.svg" width={24} height={24} alt="Telegram" />
               </div>
               <div>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">Telegram-бот</h2>
@@ -523,36 +537,142 @@ export default function IntegrationsPage() {
             </Button>
           </div>
 
-          <Select
-            label="Ответственный ИИ-сотрудник"
-            value={agentId}
-            onChange={(e) => setAgentId(e.target.value)}
-            required
-            options={[
-              { value: '', label: 'Выберите сотрудника' },
-              ...agents.map((agent) => ({ value: agent.id, label: agent.name })),
-            ]}
-          />
+          {/* Active Bot Status (if current agent has connected bot) */}
+          {isSelectedConnected && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="text-[var(--text-secondary)] truncate">
+                  Бот активен:{' '}
+                  <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                    @{selectedAgent?.telegramUsername || 'bot'}
+                  </strong>
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                className="text-xs text-[var(--danger-text)] hover:bg-red-50 dark:hover:bg-red-950/30 shrink-0 h-7 px-2"
+                onClick={async () => {
+                  if (await update('/api/agents', { id: agentId, tgBotToken: '' }, 'PATCH')) {
+                    setToken('');
+                  }
+                }}
+              >
+                Отключить
+              </Button>
+            </div>
+          )}
 
-          <Input
-            label="Токен бота из @BotFather"
-            type="password"
-            autoComplete="off"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-            required
-          />
+          {/* Form Fields */}
+          <div className="space-y-3.5">
+            <Select
+              label="Ответственный ИИ-сотрудник"
+              value={agentId}
+              onChange={(e) => setAgentId(e.target.value)}
+              required
+              options={[
+                { value: '', label: 'Выберите сотрудника' },
+                ...agents.map((agent) => ({
+                  value: agent.id,
+                  label: `${agent.name}${agent.telegramConnected ? ' (Бот подключён)' : ''}`,
+                })),
+              ]}
+            />
 
-          <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)]/70 text-xs text-[var(--text-secondary)] space-y-1 border border-[var(--border)]">
-            <span className="font-semibold block text-[var(--text-primary)]">Пошаговая инструкция:</span>
-            <ol className="list-decimal list-inside space-y-1 text-[var(--text-muted)]">
-              <li>Откройте бота @BotFather в Telegram</li>
-              <li>Отправьте команду /newbot и выберите имя</li>
-              <li>Скопируйте выданный HTTP API token и вставьте в поле выше</li>
-            </ol>
+            <div>
+              <Input
+                label={isSelectedConnected ? 'Новый токен бота (для замены)' : 'Токен бота из @BotFather'}
+                type="password"
+                autoComplete="off"
+                value={token}
+                onChange={(e) => setToken(e.target.value.trim())}
+                placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                required={!isSelectedConnected}
+                className="font-mono text-xs"
+              />
+              <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                Токен хранится в зашифрованном виде и нужен только для доставки сообщений.
+              </p>
+            </div>
           </div>
 
+          {/* Step-by-Step Instruction */}
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)]/60 p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[var(--text-primary)]">
+                Пошаговая инструкция:
+              </span>
+              <span className="text-[11px] text-[var(--text-muted)]">~1 минута</span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex items-start gap-2.5">
+                <span className="size-4.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] mt-0.5">
+                  1
+                </span>
+                <span className="leading-snug text-[var(--text-secondary)]">
+                  Откройте официального бота{' '}
+                  <a
+                    href="https://t.me/BotFather"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-0.5 font-semibold text-[#229ED9] hover:underline"
+                  >
+                    @BotFather
+                    <ExternalLink size={10} />
+                  </a>{' '}
+                  в Telegram.
+                </span>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="size-4.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] mt-0.5">
+                  2
+                </span>
+                <span className="leading-snug text-[var(--text-secondary)]">
+                  Отправьте команду{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard.writeText('/newbot');
+                      setCopiedCmd(true);
+                      setTimeout(() => setCopiedCmd(false), 2000);
+                    }}
+                    title="Нажмите, чтобы скопировать команду"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] font-mono text-[11px] text-[var(--accent-link)] font-semibold hover:border-[var(--border-strong)] cursor-pointer"
+                  >
+                    /newbot
+                    {copiedCmd ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
+                  </button>{' '}
+                  и укажите имя бота (например, <em className="text-[var(--text-primary)]">Отдел продаж</em>).
+                </span>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="size-4.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] mt-0.5">
+                  3
+                </span>
+                <span className="leading-snug text-[var(--text-secondary)]">
+                  Задайте username бота с окончанием <code className="font-mono text-[11px] text-[var(--text-primary)]">bot</code> (например:{' '}
+                  <span className="font-mono text-[11px] text-[var(--text-muted)]">myshop_sales_bot</span>).
+                </span>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <span className="size-4.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] mt-0.5">
+                  4
+                </span>
+                <span className="leading-snug text-[var(--text-secondary)]">
+                  Скопируйте выданный <strong className="text-[var(--text-primary)]">HTTP API токен</strong> и вставьте в поле выше.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
           <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)]">
             <Button
               type="button"
@@ -565,8 +685,13 @@ export default function IntegrationsPage() {
             >
               Отмена
             </Button>
-            <Button type="submit" variant="primary" isLoading={busy} disabled={!token || !agentId}>
-              Подключить бота
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={busy}
+              disabled={(!token && !isSelectedConnected) || !agentId}
+            >
+              {isSelectedConnected ? 'Обновить токен' : 'Подключить бота'}
             </Button>
           </div>
         </form>
@@ -577,19 +702,19 @@ export default function IntegrationsPage() {
         open={calendarOpen}
         onClose={() => setCalendarOpen(false)}
         label="Настройки календаря"
-        className="w-full max-w-lg p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
+        className="w-[calc(100vw-32px)] sm:w-[500px] max-w-[500px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
       >
-        <div className="p-6 space-y-5">
-          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600">
+        <div className="p-5 sm:p-6 space-y-4">
+          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3.5">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 border border-blue-100 dark:border-blue-900/40">
                 <CalendarIcon size={20} />
               </div>
               <div>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">Google Календарь</h2>
-                <Badge variant={calendar?.connected ? 'success' : 'neutral'}>
-                  {calendar?.connected ? 'Подключён' : 'Не подключён'}
-                </Badge>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  {calendar?.connected ? 'Синхронизация активна' : 'Автоматическая запись на встречи'}
+                </p>
               </div>
             </div>
             <Button
@@ -610,18 +735,41 @@ export default function IntegrationsPage() {
                 Синхронизируйте рабочий Google Календарь, чтобы ваши ИИ-агенты могли в реальном времени проверять
                 свободные окна и автоматически записывать клиентов на встречи и консультации.
               </p>
-              <div className="p-4 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-xs text-[var(--text-muted)] space-y-1.5">
-                <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
-                  <CheckCircle2 size={16} className="text-emerald-500" />
-                  <span>Проверка занятости в реальном времени</span>
-                </div>
-                <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
-                  <CheckCircle2 size={16} className="text-emerald-500" />
-                  <span>Создание событий с ссылкой Google Meet</span>
+
+              {/* Step-by-Step Instruction */}
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)]/60 p-3.5 space-y-2.5">
+                <span className="text-xs font-semibold text-[var(--text-primary)] block">
+                  Как работает синхронизация:
+                </span>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-start gap-2.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] mt-0.5">
+                      1
+                    </span>
+                    <span className="leading-snug text-[var(--text-secondary)]">
+                      Нажмите кнопку «Подключить через Google» и авторизуйте рабочий аккаунт.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] mt-0.5">
+                      2
+                    </span>
+                    <span className="leading-snug text-[var(--text-secondary)]">
+                      Разрешите чтение занятости и создание событий в основном календаре.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] mt-0.5">
+                      3
+                    </span>
+                    <span className="leading-snug text-[var(--text-secondary)]">
+                      ИИ будет проверять окна в реальном времени и предлагать клиентам слоты без накладок.
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2.5">
+              <div className="pt-2 flex justify-end gap-2.5 border-t border-[var(--border)]">
                 <Button type="button" variant="ghost" onClick={() => setCalendarOpen(false)}>
                   Отмена
                 </Button>
@@ -651,12 +799,15 @@ export default function IntegrationsPage() {
                 if (ok) setCalendarOpen(false);
               }}
             >
-              <div className="text-xs text-[var(--text-secondary)]">
-                Аккаунт: <strong className="text-[var(--text-primary)]">{calendar.email}</strong>
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                <span className="text-[var(--text-secondary)]">
+                  Подключённый аккаунт:{' '}
+                  <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{calendar.email}</strong>
+                </span>
               </div>
 
               <Input
-                label="Рабочие часы для записи"
+                label="Рабочие часы для записи клиентов"
                 value={hours}
                 onChange={(e) => setHours(e.target.value)}
                 placeholder="10:00-18:00"
@@ -664,7 +815,7 @@ export default function IntegrationsPage() {
               />
 
               <Select
-                label="Длительность слота"
+                label="Длительность слота встречи"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 options={[15, 30, 45, 60, 90, 120].map((n) => ({
@@ -674,7 +825,7 @@ export default function IntegrationsPage() {
               />
 
               <p className="text-[11px] text-[var(--text-muted)]">
-                Часовой пояс: Asia/Tashkent.
+                Часовой пояс календаря: Asia/Tashkent (автоматическая конвертация для зарубежных клиентов).
               </p>
 
               <div className="flex items-center justify-between pt-3 border-t border-[var(--border)]">
@@ -711,12 +862,12 @@ export default function IntegrationsPage() {
         open={instagramOpen}
         onClose={() => setInstagramOpen(false)}
         label="Настройки Instagram"
-        className="w-full max-w-lg p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
+        className="w-[calc(100vw-32px)] sm:w-[500px] max-w-[500px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
       >
-        <div className="p-6 space-y-5">
-          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded-xl bg-pink-50 dark:bg-pink-950/40 flex items-center justify-center text-pink-600">
+        <div className="p-5 sm:p-6 space-y-4">
+          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3.5">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-pink-50 dark:bg-pink-950/40 flex items-center justify-center text-pink-600 border border-pink-100 dark:border-pink-900/40">
                 <MessageCircle size={20} />
               </div>
               <div>
@@ -742,10 +893,44 @@ export default function IntegrationsPage() {
             <div className="space-y-4">
               <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
                 Подключите бизнес-аккаунт Instagram, чтобы ИИ-агенты моментально отвечали клиентам в Direct,
-                отправляли каталог и квалифицировали обращения.
+                отправляли каталог и квалифицировали обращения 24/7.
               </p>
 
-              <div className="pt-2 flex justify-end gap-2.5">
+              {/* Step-by-Step Instruction */}
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)]/60 p-3.5 space-y-2.5">
+                <span className="text-xs font-semibold text-[var(--text-primary)] block">
+                  Требования перед подключением:
+                </span>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-start gap-2.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] mt-0.5">
+                      1
+                    </span>
+                    <span className="leading-snug text-[var(--text-secondary)]">
+                      Переведите ваш Instagram в статус <strong className="text-[var(--text-primary)]">«Профессиональный (Бизнес)»</strong>.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] mt-0.5">
+                      2
+                    </span>
+                    <span className="leading-snug text-[var(--text-secondary)]">
+                      В приложении Instagram: Настройки → Сообщения → Доступ к сообщениям → Включите{' '}
+                      <strong className="text-[var(--text-primary)]">«Разрешить доступ»</strong>.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] border border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] mt-0.5">
+                      3
+                    </span>
+                    <span className="leading-snug text-[var(--text-secondary)]">
+                      Привяжите Instagram к странице Facebook и авторизуйтесь по кнопке ниже.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2.5 border-t border-[var(--border)]">
                 <Button type="button" variant="ghost" onClick={() => setInstagramOpen(false)}>
                   Отмена
                 </Button>
@@ -763,8 +948,11 @@ export default function IntegrationsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="text-xs text-[var(--text-secondary)]">
-                Аккаунт: <strong className="text-[var(--text-primary)]">@{instagram.username}</strong>
+              <div className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/20 text-xs">
+                <span className="text-[var(--text-secondary)]">
+                  Подключённый аккаунт:{' '}
+                  <strong className="text-pink-600 dark:text-pink-400 font-semibold">@{instagram.username}</strong>
+                </span>
               </div>
 
               <Select
@@ -827,12 +1015,12 @@ export default function IntegrationsPage() {
         open={whatsappOpen}
         onClose={() => setWhatsappOpen(false)}
         label="WhatsApp Business"
-        className="w-full max-w-md p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
+        className="w-[calc(100vw-32px)] sm:w-[460px] max-w-[460px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
       >
-        <div className="p-6 space-y-4">
-          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600">
+        <div className="p-5 sm:p-6 space-y-4">
+          <div className="flex justify-between items-center border-b border-[var(--border)] pb-3.5">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600 border border-emerald-100 dark:border-emerald-900/40">
                 <MessageCircle size={20} />
               </div>
               <h2 className="text-base font-semibold text-[var(--text-primary)]">WhatsApp Business</h2>

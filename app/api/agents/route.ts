@@ -1,4 +1,4 @@
-import { connectTelegram, telegramStatus } from '@/lib/server/telegram';
+import { connectTelegram, telegramStatus, telegramCall } from '@/lib/server/telegram';
 import { publicAgent } from '@/lib/server/public-data';
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { getAllAgents, createAgent, updateAgent } from '@/src/db';
@@ -94,7 +94,22 @@ export async function PATCH(req: NextRequest) {
     if (systemPrompt !== undefined) updates.systemPrompt = systemPrompt;
     if (knowledgeBase !== undefined) updates.knowledgeBase = knowledgeBase;
     if (qualificationQuestions !== undefined) updates.qualificationQuestions = qualificationQuestions;
-    if (tgBotToken) { await connectTelegram(id, tgBotToken); updates.tgBotToken = tgBotToken; }
+    if (tgBotToken !== undefined) {
+      if (tgBotToken) {
+        await connectTelegram(id, tgBotToken);
+        updates.tgBotToken = tgBotToken;
+      } else {
+        const current = (await getAllAgents(session.workspaceId)).find((item) => item.id === id);
+        if (current?.tgBotToken) {
+          try {
+            await telegramCall(current.tgBotToken, 'deleteWebhook');
+          } catch {
+            // Ignore error if webhook was already removed or token invalid
+          }
+        }
+        updates.tgBotToken = null;
+      }
+    }
     if (googleCalendarConnected !== undefined) updates.googleCalendarConnected = googleCalendarConnected;
 
     const updated = await updateAgent(id, updates);

@@ -245,7 +245,7 @@ export function WebsiteWidgetModal({
       open={open}
       onClose={onClose}
       label="Настройки виджета чата на сайте"
-      className="w-full max-w-4xl p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
+      className="w-[calc(100vw-32px)] lg:w-[720px] max-w-[720px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
     >
       <form onSubmit={save} className="flex flex-col max-h-[90dvh]" aria-labelledby="website-widget-title">
         {/* Modal Header */}
