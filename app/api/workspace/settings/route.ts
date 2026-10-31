@@ -1,5 +1,6 @@
 import { publicWorkspace } from '@/lib/server/public-data';
 import { NextRequest, NextResponse, connection } from 'next/server';
+import { cookies } from 'next/headers';
 import { updateWorkspace } from '@/src/db';
 import { getServerSessionContext } from '@/src/server/auth/session';
 
@@ -27,7 +28,7 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       authenticated: true,
       hasWorkspace: true,
@@ -37,6 +38,20 @@ export async function GET() {
       supportSessionReason: session.supportSessionReason,
       role: session.role,
     });
+
+    // Auto-restore / synchronize workspace cookie for authenticated user if absent or mismatched
+    const currentWorkspaceCookie = (await cookies()).get('ai_os_workspace_id')?.value;
+    if (session.workspace && currentWorkspaceCookie !== session.workspace.id && !session.isImpersonating) {
+      response.cookies.set('ai_os_workspace_id', session.workspace.id, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 86400 * 30,
+      });
+    }
+
+    return response;
   } catch (error) {
     return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : 'Ошибка запроса') }, { status: 500 });
   }
