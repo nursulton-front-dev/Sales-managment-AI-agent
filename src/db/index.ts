@@ -67,14 +67,14 @@ const INITIAL_SEED: DBData = {
 
 function readStore(): DBData {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(/*turbopackIgnore: true*/ DATA_DIR)) {
+      fs.mkdirSync(/*turbopackIgnore: true*/ DATA_DIR, { recursive: true });
     }
-    if (!fs.existsSync(DATA_FILE)) {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(INITIAL_SEED, null, 2), 'utf-8');
+    if (!fs.existsSync(/*turbopackIgnore: true*/ DATA_FILE)) {
+      fs.writeFileSync(/*turbopackIgnore: true*/ DATA_FILE, JSON.stringify(INITIAL_SEED, null, 2), 'utf-8');
       return INITIAL_SEED;
     }
-    const content = fs.readFileSync(DATA_FILE, 'utf-8');
+    const content = fs.readFileSync(/*turbopackIgnore: true*/ DATA_FILE, 'utf-8');
     const parsed = JSON.parse(content) as DBData;
     // Convert date strings back to Date objects
     if (parsed.workspaces) {
@@ -107,12 +107,12 @@ function readStore(): DBData {
 
 function writeStore(data: DBData): void {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(/*turbopackIgnore: true*/ DATA_DIR)) {
+      fs.mkdirSync(/*turbopackIgnore: true*/ DATA_DIR, { recursive: true });
     }
     const temporary = `${DATA_FILE}.${randomUUID()}.tmp`;
-    fs.writeFileSync(temporary, JSON.stringify(data, null, 2), { encoding: 'utf-8', mode: 0o600 });
-    fs.renameSync(temporary, DATA_FILE);
+    fs.writeFileSync(/*turbopackIgnore: true*/ temporary, JSON.stringify(data, null, 2), { encoding: 'utf-8', mode: 0o600 });
+    fs.renameSync(/*turbopackIgnore: true*/ temporary, DATA_FILE);
   } catch (err) {
     throw new Error('Не удалось сохранить данные', { cause: err });
   }
