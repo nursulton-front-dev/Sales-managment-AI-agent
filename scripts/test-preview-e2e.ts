@@ -4,7 +4,7 @@ import { neon } from '@neondatabase/serverless';
 import fs from 'fs';
 import { Resend } from 'resend';
 
-const PREVIEW_URL = process.env.PREVIEW_URL || 'https://ai-business-oelriupa2-nursultans-projects-c3c55b7b.vercel.app';
+const PREVIEW_URL = process.env.PREVIEW_URL || 'https://ai-business-7d3758gq1-nursultans-projects-c3c55b7b.vercel.app';
 const TEST_EMAIL = 'androhaker01@gmail.com';
 
 // Read database URL for chorla_test
@@ -518,6 +518,7 @@ async function runPreviewVerification() {
   );
 
   console.log('\n🎉 ALL LIVE PREVIEW VERIFICATION CHECKS (INCLUDING REAL RESEND DELIVERY & RECOVERY) PASSED WITH 100% SUCCESS!');
+  process.exit(0);
 }
 
 runPreviewVerification().catch((err) => {
