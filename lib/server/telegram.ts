@@ -32,3 +32,23 @@ export async function telegramStatus(agentId: string, token: string | null) {
     return { connected: hook.url === telegramWebhookUrl(agentId), username: account.username };
   } catch { throw new Error('Не удалось проверить подключение Telegram. Попробуйте ещё раз.'); }
 }
+
+/**
+ * Sends a chat action indicator (e.g. 'typing') to a Telegram chat.
+ * Fails silently so it never interrupts or blocks the message generation pipeline.
+ */
+export async function sendTelegramChatAction(
+  token: string,
+  chatId: string | number,
+  action: 'typing' | 'upload_photo' | 'record_video' = 'typing'
+): Promise<boolean> {
+  if (!/^\d+:[A-Za-z0-9_-]+$/.test(token)) return false;
+  try {
+    await telegramCall(token, 'sendChatAction', { chat_id: chatId, action });
+    return true;
+  } catch {
+    // Non-fatal: if chat is muted, bot blocked, or network fluctuates, ignore silently
+    return false;
+  }
+}
+

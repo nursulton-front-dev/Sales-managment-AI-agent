@@ -41,7 +41,7 @@ const env = { DATABASE_URL: 'postgresql://isolated.invalid/widget_acceptance', B
 let generated = 0, sent = 0;
 const load = loader(env, { '@neondatabase/serverless': { neon: () => Object.assign(query, { query }) } }, async (url) => {
   if (String(url).includes('api.openai.com')) { generated++; return Response.json({ choices: [{ message: { content: 'PG test reply' } }] }); }
-  if (String(url).includes('api.telegram.org')) { sent++; return Response.json({ ok: true, result: {} }); }
+  if (String(url).includes('api.telegram.org')) { if (!String(url).includes('sendChatAction')) sent++; return Response.json({ ok: true, result: {} }); }
   throw new Error('External network disabled');
 });
 const checks = [];

@@ -1,6 +1,6 @@
 import { createConversation, createMessage, getAllAgents, getConversationById, getMessagesByConversationId, getWorkspaceById, updateConversation, updateWorkspace } from '@/src/db';
 import { processAgentMessage, AgentReplyUnavailableError } from '@/lib/ai/gateway';
-import { telegramCall } from '@/lib/server/telegram';
+import { telegramCall, sendTelegramChatAction } from '@/lib/server/telegram';
 import { decryptToken } from '@/lib/instagram/config';
 import { sendInstagramDirectMessage } from '@/lib/instagram/client';
 import type { ChannelEvent } from '@/src/db/schema';
@@ -35,6 +35,12 @@ export async function processChannelEvent(id: string) {
       const messages = await getMessagesByConversationId(conversation.id);
       stage = 'generating';
       await patchEvent(id, { stage });
+
+      // Signal real-time "typing..." status in Telegram while AI generates the response
+      if (event.channel === 'Telegram' && agent.tgBotToken && payload.contact.startsWith('id:')) {
+        void sendTelegramChatAction(agent.tgBotToken, payload.contact.slice(3), 'typing');
+      }
+
       const result = await processAgentMessage({ message: payload.text, agentId: agent.id, workspaceId: event.workspaceId, clientName: conversation.clientName, clientPhone: conversation.clientPhone, channel: event.channel,
         history: messages.filter((message) => message.id !== `in_${event.id}`).slice(-12).map((message) => ({ role: message.sender === 'client' ? 'user' as const : 'assistant' as const, content: message.text })),
       });

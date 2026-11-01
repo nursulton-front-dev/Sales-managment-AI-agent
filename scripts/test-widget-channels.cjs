@@ -19,7 +19,7 @@ const load = loader(env, {
   '@/src/server/auth/session': { getServerSessionContext: async () => identity },
 }, async (url) => {
   if (String(url).includes('api.openai.com')) { modelCalls++; return Response.json(modelAvailable ? { choices: [{ message: { content: 'Ответ тестовой модели' } }] } : {}, { status: modelAvailable ? 200 : 503 }); }
-  if (String(url).includes('api.telegram.org')) { sendCalls++; if (transport === 'timeout') throw new Error('Unknown transport result'); return Response.json({ ok: transport !== 'reject', result: { message_id: 1 } }, { status: transport === 'reject' ? 429 : 200 }); }
+  if (String(url).includes('api.telegram.org')) { if (!String(url).includes('sendChatAction')) sendCalls++; if (transport === 'timeout') throw new Error('Unknown transport result'); return Response.json({ ok: transport !== 'reject', result: { message_id: 1 } }, { status: transport === 'reject' ? 429 : 200 }); }
   if (String(url).includes('graph.instagram.com')) { sendCalls++; return Response.json({ recipient_id: 'client', message_id: 'outbound' }); }
   throw new Error('Unexpected external request: ' + new URL(url).hostname);
 });
