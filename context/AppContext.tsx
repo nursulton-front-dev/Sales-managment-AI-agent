@@ -12,7 +12,7 @@ export interface Agent {
   tokensUsed: number; conversionRate: string; createdAt: string;
 }
 export interface Lead {
-  id: string; clientName: string; channel: 'Telegram' | 'Instagram';
+  id: string; clientName: string; channel: 'Telegram' | 'Instagram' | 'WebWidget' | string;
   status: 'Новый' | 'Квалифицирован' | 'Записан в календарь';
   appointmentDate: string | null; tokensSpent: number; contact: string; notes?: string; createdAt: string;
 }

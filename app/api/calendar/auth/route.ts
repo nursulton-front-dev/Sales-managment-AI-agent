@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isGoogleCalendarConfigured, getGoogleAuthUrl } from '@/lib/calendar/google';
 import { getServerSessionContext } from '@/src/server/auth/session';
+
 export async function GET(req: NextRequest) {
   const session = await getServerSessionContext();
   if (!session.workspaceId) return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });

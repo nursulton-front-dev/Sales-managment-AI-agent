@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     // Generate new fresh 6-digit OTP & invalidate previous one
     const newOtp = crypto.randomInt(100000, 1000000).toString();
-    const salt = process.env.BETTER_AUTH_SECRET || 'gapchi-login-secret-salt';
+    const salt = process.env.BETTER_AUTH_SECRET || 'gapcha-login-secret-salt';
     const newHash = crypto
       .createHash('sha256')
       .update(`${salt}:${cleanEmail}:${loginAttemptId}:${newOtp}`)

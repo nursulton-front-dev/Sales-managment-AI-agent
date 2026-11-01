@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanEmail = record.identifier.slice(prefix.length, record.identifier.length - suffix.length);
-    const salt = process.env.BETTER_AUTH_SECRET || 'gapchi-login-secret-salt';
+    const salt = process.env.BETTER_AUTH_SECRET || 'gapcha-login-secret-salt';
     const inputHash = crypto
       .createHash('sha256')
       .update(`${salt}:${cleanEmail}:${loginAttemptId}:${cleanCode}`)

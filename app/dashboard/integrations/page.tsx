@@ -415,7 +415,7 @@ export default function IntegrationsPage() {
                           <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-400 border border-white" />
                         </div>
                         <div>
-                          <p className="font-semibold text-xs leading-none">ИИ-консультант Gapchi</p>
+                          <p className="font-semibold text-xs leading-none">ИИ-консультант Gapcha</p>
                           <p className="text-[10px] text-white/80 mt-0.5 leading-none">В сети · отвечает сразу</p>
                         </div>
                       </div>

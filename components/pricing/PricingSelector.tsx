@@ -77,11 +77,11 @@ export function PricingSelector({
 
       {/* Free Trial Banner - Calm horizontal bar matching the mockup */}
       {showTrialBanner && (
-        <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-[var(--text-primary)]">
-            <Clock className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+        <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+            <Clock className="w-4 h-4 text-[#FF7277] shrink-0" />
             <span>
-              Сначала попробуйте: <span className="font-bold">3 дня и 100 токенов</span>
+              Сначала попробуйте: <span className="font-bold">3 дня и 100 ИИ-ответов бесплатно</span>
             </span>
           </div>
 
@@ -95,7 +95,7 @@ export function PricingSelector({
                 onContinue();
               }
             }}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#DC2626] hover:text-[#B91C1C] transition-colors cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF7277] hover:underline transition-colors cursor-pointer self-start sm:self-auto"
           >
             <span>{isTrialSelected ? 'Выбран бесплатный старт' : 'Начать бесплатно'}</span>
             <ArrowRight className="w-3.5 h-3.5" />

@@ -46,7 +46,7 @@ function assert(condition: boolean, name: string, category: string, details?: st
 }
 
 async function runLogin2FATestSuite() {
-  console.log('🚀 Starting Gapchi AI Login 2FA & Security Verification Suite...\n');
+  console.log('🚀 Starting Gapcha AI Login 2FA & Security Verification Suite...\n');
 
   // STEP 0: Spin up isolated in-memory PostgreSQL engine via PGlite
   console.log('--- Step 0: Initializing Isolated PGlite PostgreSQL Database ---');
@@ -207,13 +207,13 @@ async function runLogin2FATestSuite() {
   console.log('✅ Isolated PostgreSQL tables created in PGlite and Better Auth wired.\n');
 
   // Seed test user with verified email and workspace
-  const userAEmail = 'alex@gapchi.ai';
+  const userAEmail = 'alex@gapcha.ai';
   const userAPassword = 'StrongPassword123!';
   const userAHashed = await hashPassword(userAPassword);
 
   await testDb.insert(schema.users).values({
     id: 'u_alex',
-    name: 'Alex Gapchi',
+    name: 'Alex Gapcha',
     email: userAEmail,
     emailVerified: true,
     createdAt: new Date(),
@@ -232,9 +232,9 @@ async function runLogin2FATestSuite() {
 
   await testDb.insert(schema.workspaces).values({
     id: 'ws_alex',
-    companyName: 'Gapchi Tech',
+    companyName: 'Gapcha Tech',
     niche: 'education',
-    ownerName: 'Alex Gapchi',
+    ownerName: 'Alex Gapcha',
     ownerEmail: userAEmail,
     ownerPhone: '+998901234567',
     passwordHash: 'managed-by-auth',
@@ -247,7 +247,7 @@ async function runLogin2FATestSuite() {
   });
 
   // Seed legacy workspace owner (hash_xxx) without Better Auth credential account
-  const legacyEmail = 'legacy@gapchi.ai';
+  const legacyEmail = 'legacy@gapcha.ai';
   await testDb.insert(schema.workspaces).values({
     id: 'ws_legacy',
     companyName: 'Legacy Shop',
@@ -299,7 +299,7 @@ async function runLogin2FATestSuite() {
   const loginAttempt1Data = await loginAttempt1Res.json();
   assert(loginAttempt1Data.requires2FA === true, 'Response specifies requires2FA = true', '2FA Gate');
   assert(typeof loginAttempt1Data.loginAttemptId === 'string' && loginAttempt1Data.loginAttemptId.startsWith('att_'), 'Returns valid loginAttemptId', '2FA Gate');
-  assert(loginAttempt1Data.maskedEmail === 'a***x@gapchi.ai', 'Returns properly masked email: a***x@gapchi.ai', '2FA Gate');
+  assert(loginAttempt1Data.maskedEmail === 'a***x@gapcha.ai', 'Returns properly masked email: a***x@gapcha.ai', '2FA Gate');
   assert(loginAttempt1Data.resendCooldown === 60, 'Returns 60s resend cooldown', '2FA Gate');
 
   // Verify that NO session cookies exist in this step
@@ -602,7 +602,7 @@ async function runLogin2FATestSuite() {
   console.log('\n--- Section 7: Google OAuth Flow Intact ---');
 
   // Create Google OAuth account for a user
-  const googleUserEmail = 'google.user@gapchi.ai';
+  const googleUserEmail = 'google.user@gapcha.ai';
   await testDb.insert(schema.users).values({
     id: 'u_google',
     name: 'Google User',

@@ -1,6 +1,6 @@
 {
-  "name": "Gapchi AI",
-  "short_name": "Gapchi AI",
+  "name": "Gapcha AI",
+  "short_name": "Gapcha AI",
   "description": "Платформа автономных ИИ-агентов продаж",
   "start_url": "/",
   "display": "standalone",
