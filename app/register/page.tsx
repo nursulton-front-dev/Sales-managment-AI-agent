@@ -433,7 +433,7 @@ function RegisterWizard() {
       // Clear draft
       sessionStorage.removeItem('ai_os_reg_draft_v2');
 
-      showToast('Рабочее пространство создано', 'Добро пожаловать в Chorla AI', 'success');
+      showToast('Рабочее пространство создано', 'Добро пожаловать в Gapchi AI', 'success');
 
       if (skipAgent) {
         router.push('/dashboard');
@@ -457,7 +457,7 @@ function RegisterWizard() {
       <div className="w-full max-w-[640px] bg-white dark:bg-[#111827] border border-[#E2E8F0] dark:border-slate-800 rounded-[8px] p-6 sm:p-10 shadow-sm transition-all duration-200">
         {/* Top Header inside Card: Compact BrandLogo + Theme Switcher */}
         <div className="flex items-center justify-between pb-5 border-b border-slate-100 dark:border-slate-800/80">
-          <BrandLogo variant="full" width={145} href="/" ariaLabel="Chorla AI" />
+          <BrandLogo variant="full" width={145} href="/" ariaLabel="Gapchi AI" />
           <ThemeSwitcher />
         </div>
 

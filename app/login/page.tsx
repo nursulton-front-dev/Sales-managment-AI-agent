@@ -27,9 +27,21 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // 2FA login verification state
+  const [is2FAStep, setIs2FAStep] = useState(false);
+  const [loginAttemptId, setLoginAttemptId] = useState('');
+  const [maskedEmail, setMaskedEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isOtpSubmitting, setIsOtpSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const otpInputRef = useRef<HTMLInputElement>(null);
 
   // Recovery modal state
   const [isRecoverOpen, setIsRecoverOpen] = useState(false);
@@ -94,6 +106,25 @@ export default function LoginPage() {
     };
   }, []);
 
+  // 60s cooldown timer for 2FA resend
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
+
+  // Focus OTP input when 2FA step activates
+  useEffect(() => {
+    if (is2FAStep) {
+      const timer = setTimeout(() => {
+        otpInputRef.current?.focus();
+      }, 80);
+      return () => clearTimeout(timer);
+    }
+  }, [is2FAStep]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
@@ -105,7 +136,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       const data = await res.json();
@@ -117,6 +148,19 @@ export default function LoginPage() {
           setRecoverStage('email');
         }
         throw new Error(data.error || 'Неверный адрес электронной почты или пароль');
+      }
+
+      // Step 2FA required: Open OTP verification screen
+      if (data.requires2FA) {
+        setIs2FAStep(true);
+        setLoginAttemptId(data.loginAttemptId);
+        setMaskedEmail(data.maskedEmail);
+        setResendCooldown(data.resendCooldown || 60);
+        setOtpCode('');
+        setOtpError(null);
+        setIsLoading(false);
+        showToast('Код отправлен', `Проверьте почту ${data.maskedEmail}`, 'info');
+        return;
       }
 
       if (data.hasWorkspace === false) {
@@ -134,6 +178,92 @@ export default function LoginPage() {
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Ошибка подключения к серверу авторизации');
       setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (overrideCode?: string) => {
+    const code = (overrideCode ?? otpCode).trim();
+    if (!code || code.length !== 6) {
+      setOtpError('Введите 6-значный проверочный код');
+      return;
+    }
+
+    setIsOtpSubmitting(true);
+    setOtpError(null);
+
+    try {
+      const res = await fetch('/api/auth/login/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loginAttemptId, code }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        if (data.restartRequired) {
+          showToast('Ошибка подтверждения', data.error || 'Попробуйте войти заново', 'error');
+          setIs2FAStep(false);
+          setOtpCode('');
+          setPassword('');
+          setErrorMsg(data.error);
+          return;
+        }
+        throw new Error(data.error || 'Неверный код подтверждения');
+      }
+
+      if (data.hasWorkspace === false) {
+        showToast('Вход выполнен', 'Завершите создание компании', 'info');
+        router.push(data.redirectTo || '/register?step=2');
+        return;
+      }
+
+      if (data.workspace) {
+        setWorkspace(data.workspace);
+      }
+
+      showToast('Вход выполнен', 'Добро пожаловать в рабочее пространство', 'success');
+      router.push(data.redirectTo || '/dashboard');
+    } catch (err: unknown) {
+      setOtpError(err instanceof Error ? err.message : 'Ошибка проверки кода');
+    } finally {
+      setIsOtpSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || isResending) return;
+
+    setIsResending(true);
+    setOtpError(null);
+
+    try {
+      const res = await fetch('/api/auth/login/resend-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loginAttemptId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        if (data.restartRequired) {
+          setIs2FAStep(false);
+          setOtpCode('');
+          setPassword('');
+          setErrorMsg(data.error);
+          return;
+        }
+        throw new Error(data.error || 'Не удалось отправить код повторно');
+      }
+
+      showToast('Код отправлен', 'Новый проверочный код отправлен на почту', 'success');
+      setResendCooldown(data.resendCooldown || 60);
+      setOtpCode('');
+    } catch (err: unknown) {
+      setOtpError(err instanceof Error ? err.message : 'Ошибка повторной отправки');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -250,12 +380,12 @@ export default function LoginPage() {
       {/* 1. LEFT PRESENTATION PANEL (~53% on desktop, hidden < 1024px)  */}
       {/* ------------------------------------------------------------- */}
       <section
-        aria-label="Демонстрация Chorla AI"
+        aria-label="Демонстрация Gapchi AI"
         className="hidden lg:flex lg:w-[53%] bg-[#15191F] text-slate-100 flex-col justify-between p-8 xl:p-14 relative overflow-y-auto"
       >
         <div className="w-full max-w-[560px] mx-auto flex-1 flex flex-col justify-between my-auto py-6">
-          {/* Logo header: Chorla AI brand logo for dark presentation background */}
-          <BrandLogo variant="full" width={180} theme="dark" href="/" ariaLabel="Chorla AI" />
+          {/* Logo header: Gapchi AI brand logo for dark presentation background */}
+          <BrandLogo variant="full" width={180} theme="dark" href="/" ariaLabel="Gapchi AI" />
 
           {/* Central content block */}
           <div className="my-auto py-7 space-y-6">
@@ -543,7 +673,7 @@ export default function LoginPage() {
         {/* Top bar with Mobile Brand & Theme Switcher */}
         <div className="w-full max-w-[420px] mx-auto flex items-center justify-between mb-6 lg:mb-0">
           <div className="lg:hidden">
-            <BrandLogo variant="full" width={140} href="/" ariaLabel="Chorla AI" />
+            <BrandLogo variant="full" width={140} href="/" ariaLabel="Gapchi AI" />
           </div>
           <div className="ml-auto">
             <ThemeSwitcher />
@@ -555,148 +685,300 @@ export default function LoginPage() {
           className="w-full max-w-[420px] mx-auto my-auto py-4 space-y-6 animate-fade-in"
           style={{ animationDuration: '240ms' }}
         >
-          {/* Header */}
-          <div className="space-y-1.5">
-            <h2 className="text-[30px] sm:text-[32px] font-semibold text-slate-900 dark:text-white tracking-tight leading-tight">
-              С возвращением
-            </h2>
-            <p className="text-[15px] sm:text-[16px] text-slate-500 dark:text-slate-400">
-              Войдите в своё рабочее пространство
-            </p>
-          </div>
+          {!is2FAStep ? (
+            <>
+              {/* Header */}
+              <div className="space-y-1.5">
+                <h2 className="text-[30px] sm:text-[32px] font-semibold text-slate-900 dark:text-white tracking-tight leading-tight">
+                  С возвращением
+                </h2>
+                <p className="text-[15px] sm:text-[16px] text-slate-500 dark:text-slate-400">
+                  Войдите в своё рабочее пространство
+                </p>
+              </div>
 
-          {/* Server / Auth Error Banner */}
-          {errorMsg && (
-            <div
-              role="alert"
-              className="p-3 bg-red-50 dark:bg-rose-950/40 border border-red-200 dark:border-rose-900/50 rounded-[6px] flex items-start gap-2.5 text-xs text-red-700 dark:text-rose-300"
-            >
-              <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626] mt-0.5" />
-              <span className="leading-relaxed">{errorMsg}</span>
-            </div>
-          )}
-
-          {/* Google Continue Button (Height 48px, thin neutral border, authentic multi-color logo) */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={isGoogleLoading}
-            className="w-full h-[48px] flex items-center justify-center gap-3 px-4 rounded-[6px] border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:bg-slate-50 dark:hover:bg-slate-700/60 text-[15px] font-medium text-slate-800 dark:text-slate-200 transition-colors duration-150 cursor-pointer shadow-2xs disabled:opacity-50"
-          >
-            <div className="w-[18px] h-[18px] relative shrink-0">
-              <Image
-                src="/images/brands/google-g.svg"
-                alt="Google"
-                width={18}
-                height={18}
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <span>{isGoogleLoading ? 'Переход в Google…' : 'Продолжить с Google'}</span>
-          </button>
-
-          {/* Divider "или по электронной почте" */}
-          <div className="flex items-center gap-3 py-1">
-            <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
-            <span className="text-[13px] text-slate-400 dark:text-slate-500 font-normal">
-              или по электронной почте
-            </span>
-            <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-4" noValidate={false}>
-            {/* Email Field */}
-            <div>
-              <label
-                htmlFor="login-email"
-                className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5"
-              >
-                Электронная почта
-              </label>
-              <input
-                id="login-email"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
-                className="w-full h-[50px] px-3.5 bg-white dark:bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
-              />
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label
-                  htmlFor="login-password"
-                  className="block text-[14px] font-medium text-slate-800 dark:text-slate-200"
+              {/* Server / Auth Error Banner */}
+              {errorMsg && (
+                <div
+                  role="alert"
+                  className="p-3 bg-red-50 dark:bg-rose-950/40 border border-red-200 dark:border-rose-900/50 rounded-[6px] flex items-start gap-2.5 text-xs text-red-700 dark:text-rose-300"
                 >
-                  Пароль
-                </label>
+                  <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626] mt-0.5" />
+                  <span className="leading-relaxed">{errorMsg}</span>
+                </div>
+              )}
+
+              {/* Google Continue Button (Height 48px, thin neutral border, authentic multi-color logo) */}
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isGoogleLoading}
+                className="w-full h-[48px] flex items-center justify-center gap-3 px-4 rounded-[6px] border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:bg-slate-50 dark:hover:bg-slate-700/60 text-[15px] font-medium text-slate-800 dark:text-slate-200 transition-colors duration-150 cursor-pointer shadow-2xs disabled:opacity-50"
+              >
+                <div className="w-[18px] h-[18px] relative shrink-0">
+                  <Image
+                    src="/images/brands/google-g.svg"
+                    alt="Google"
+                    width={18}
+                    height={18}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <span>{isGoogleLoading ? 'Переход в Google…' : 'Продолжить с Google'}</span>
+              </button>
+
+              {/* Divider "или по электронной почте" */}
+              <div className="flex items-center gap-3 py-1">
+                <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
+                <span className="text-[13px] text-slate-400 dark:text-slate-500 font-normal">
+                  или по электронной почте
+                </span>
+                <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleLogin} className="space-y-4" noValidate={false}>
+                {/* Email Field */}
+                <div>
+                  <label
+                    htmlFor="login-email"
+                    className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-1.5"
+                  >
+                    Электронная почта
+                  </label>
+                  <input
+                    id="login-email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    className="w-full h-[50px] px-3.5 bg-white dark:bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
+                  />
+                </div>
+
+                {/* Password Field */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      htmlFor="login-password"
+                      className="block text-[14px] font-medium text-slate-800 dark:text-slate-200"
+                    >
+                      Пароль
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRecoverEmail(email);
+                        setIsRecoverOpen(true);
+                        setRecoverStage('email');
+                        setRecoverError(null);
+                      }}
+                      className="text-[13px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors duration-150 cursor-pointer"
+                    >
+                      Забыли пароль?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="login-password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder=""
+                      className="w-full h-[50px] pl-3.5 pr-11 bg-white dark:bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors duration-150 cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Remember Me Checkbox */}
+                <div className="flex items-center justify-between py-1">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-[#DC2626] focus:ring-[#DC2626] focus:ring-offset-0 cursor-pointer accent-[#DC2626]"
+                    />
+                    <span className="text-[13px] text-slate-600 dark:text-slate-300 font-normal">
+                      Запомнить меня на 30 дней
+                    </span>
+                  </label>
+                </div>
+
+                {/* Submit Button (Height 50px, radius 6px, #DC2626 hover #B91C1C, active:scale-[0.99]) */}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-[50px] mt-1 flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-transform duration-120 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <span>{isLoading ? 'Проверяем…' : 'Войти'}</span>
+                </button>
+              </form>
+
+              {/* Under form: Create account link */}
+              <div className="pt-2 text-center">
+                <p className="text-[14px] text-slate-500 dark:text-slate-400">
+                  Впервые здесь?{' '}
+                  <Link
+                    href="/register"
+                    className="font-medium text-[#DC2626] hover:underline transition-colors duration-150"
+                  >
+                    Создать аккаунт
+                  </Link>
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* 2FA Verification Form Step */}
+              <div className="space-y-2">
                 <button
                   type="button"
                   onClick={() => {
-                    setRecoverEmail(email);
-                    setIsRecoverOpen(true);
-                    setRecoverStage('email');
-                    setRecoverError(null);
+                    setIs2FAStep(false);
+                    setOtpError(null);
+                    setOtpCode('');
                   }}
-                  className="text-[13px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors duration-150 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
                 >
-                  Забыли пароль?
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Назад к вводу пароля</span>
                 </button>
+
+                <h2 className="text-[28px] sm:text-[30px] font-semibold text-slate-900 dark:text-white tracking-tight leading-tight">
+                  Подтверждение входа
+                </h2>
+                <p className="text-[14px] sm:text-[15px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Мы отправили 6-значный проверочный код на{' '}
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{maskedEmail}</span>.
+                  Введите его для входа в кабинет.
+                </p>
               </div>
-              <div className="relative">
-                <input
-                  id="login-password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder=""
-                  className="w-full h-[50px] pl-3.5 pr-11 bg-white dark:bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-[6px] text-[16px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors duration-150 cursor-pointer"
+
+              {/* 2FA Error Banner */}
+              {otpError && (
+                <div
+                  role="alert"
+                  className="p-3 bg-red-50 dark:bg-rose-950/40 border border-red-200 dark:border-rose-900/50 rounded-[6px] flex items-start gap-2.5 text-xs text-red-700 dark:text-rose-300"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
+                  <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626] mt-0.5" />
+                  <span className="leading-relaxed">{otpError}</span>
+                </div>
+              )}
 
-            {/* Submit Button (Height 50px, radius 6px, #DC2626 hover #B91C1C, active:scale-[0.99]) */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-[50px] mt-2 flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-transform duration-120 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <span>{isLoading ? 'Входим…' : 'Войти'}</span>
-            </button>
-          </form>
-
-          {/* Under form: Create account link */}
-          <div className="pt-2 text-center">
-            <p className="text-[14px] text-slate-500 dark:text-slate-400">
-              Впервые здесь?{' '}
-              <Link
-                href="/register"
-                className="font-medium text-[#DC2626] hover:underline transition-colors duration-150"
+              {/* OTP Form */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleVerifyOtp();
+                }}
+                className="space-y-5"
               >
-                Создать аккаунт
-              </Link>
-            </p>
-          </div>
+                <div>
+                  <label
+                    htmlFor="otp-code-input"
+                    className="block text-[14px] font-medium text-slate-800 dark:text-slate-200 mb-2"
+                  >
+                    Одноразовый код подтверждения
+                  </label>
+                  <input
+                    ref={otpInputRef}
+                    id="otp-code-input"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setOtpCode(clean);
+                      if (otpError) setOtpError(null);
+                      if (clean.length === 6) {
+                        handleVerifyOtp(clean);
+                      }
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                      if (pasted) {
+                        setOtpCode(pasted);
+                        if (pasted.length === 6) {
+                          handleVerifyOtp(pasted);
+                        }
+                      }
+                    }}
+                    placeholder="••••••"
+                    className="w-full h-[54px] px-3.5 text-center font-mono font-bold text-[24px] tracking-[0.45em] bg-white dark:bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-[6px] text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors duration-150"
+                  />
+                  <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-1.5 text-center">
+                    Срок действия кода — 10 минут (до 3 попыток ввода)
+                  </p>
+                </div>
+
+                {/* Submit 2FA Button */}
+                <button
+                  type="submit"
+                  disabled={isOtpSubmitting || otpCode.length !== 6}
+                  className="w-full h-[50px] flex items-center justify-center gap-2 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-medium text-[15px] rounded-[6px] transition-transform duration-120 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <span>{isOtpSubmitting ? 'Проверяем код…' : 'Подтвердить код'}</span>
+                </button>
+              </form>
+
+              {/* Resend and Return options */}
+              <div className="pt-2 space-y-3 text-center">
+                {resendCooldown > 0 ? (
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                    Отправить код повторно можно через{' '}
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                      {resendCooldown} сек
+                    </span>
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={isResending}
+                    className="text-[14px] font-medium text-[#DC2626] hover:underline cursor-pointer disabled:opacity-60"
+                  >
+                    {isResending ? 'Отправляем…' : 'Отправить код повторно'}
+                  </button>
+                )}
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIs2FAStep(false);
+                      setOtpError(null);
+                      setOtpCode('');
+                    }}
+                    className="text-[13px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    Ввести другой email или пароль
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer: Quiet copyright info */}
         <div className="w-full max-w-[420px] mx-auto pt-6 text-center text-xs text-slate-400 dark:text-slate-500">
-          © 2026 Chorla AI
+          © 2026 Gapchi AI
         </div>
       </main>
 

@@ -17,14 +17,16 @@ const configuredBaseUrl =
         : 'http://localhost:3000');
 
 import { getCurrentAuthEndpointContext } from '@better-auth/core/context';
-import { APIError } from 'better-auth/api';
+import { APIError, createAuthEndpoint } from 'better-auth/api';
+import { setSessionCookie } from 'better-auth/cookies';
+import { z } from 'zod';
 import { validatePasswordPolicy } from '@/lib/password';
 
 // Pluggable email OTP dispatcher (e.g. for isolated test transports)
 export type EmailOTPDispatcher = (params: {
   email: string;
   otp: string;
-  type: 'forget-password' | 'email-verification' | 'legacy-migration';
+  type: 'forget-password' | 'email-verification' | 'legacy-migration' | 'login-verification';
 }) => Promise<{ success: boolean; mocked?: boolean }>;
 
 let customEmailDispatcher: EmailOTPDispatcher | null = null;
@@ -40,20 +42,37 @@ export async function sendAuthEmailOTP({
 }: {
   email: string;
   otp: string;
-  type: 'forget-password' | 'email-verification' | 'legacy-migration';
+  type: 'forget-password' | 'email-verification' | 'legacy-migration' | 'login-verification';
 }) {
   if (customEmailDispatcher) {
     return await customEmailDispatcher({ email, otp, type });
   }
 
   const isRecovery = type === 'forget-password' || type === 'legacy-migration';
-  const subject = isRecovery
-    ? `${otp} — код восстановления пароля в Chorla AI`
-    : `${otp} — код подтверждения в Chorla AI`;
-  const title = isRecovery ? 'Восстановление доступа к аккаунту' : 'Подтверждение Email адреса';
-  const desc = isRecovery
+  const isLogin = type === 'login-verification';
+
+  const subject = isLogin
+    ? `${otp} — код подтверждения входа в Gapchi AI`
+    : isRecovery
+    ? `${otp} — код восстановления пароля в Gapchi AI`
+    : `${otp} — код подтверждения в Gapchi AI`;
+
+  const title = isLogin
+    ? 'Подтверждение входа'
+    : isRecovery
+    ? 'Восстановление доступа к аккаунту'
+    : 'Подтверждение Email адреса';
+
+  const desc = isLogin
+    ? 'Используйте этот 6-значный одноразовый код для подтверждения входа в личный кабинет Gapchi AI:'
+    : isRecovery
     ? 'Используйте этот 6-значный код для установки нового пароля в вашей организации:'
-    : 'Добро пожаловать в Chorla AI! Введите этот 6-значный код для подтверждения почты и начисления <strong>100 бонусных токенов</strong>:';
+    : 'Добро пожаловать в Gapchi AI! Введите этот 6-значный код для подтверждения почты и начисления <strong>100 бонусных токенов</strong>:';
+
+  const expiryMinutes = isLogin ? 10 : 15;
+  const expiryNotice = isLogin
+    ? 'Код действителен 10 минут. Если вы не запрашивали вход, рекомендуем срочно сменить пароль.'
+    : `Код действителен ${expiryMinutes} минут. Если вы не запрашивали этот код, просто проигнорируйте письмо.`;
 
   if (!process.env.RESEND_API_KEY) {
     if (process.env.NODE_ENV !== 'production' || process.env.TEST_MODE === 'true') {
@@ -64,14 +83,16 @@ export async function sendAuthEmailOTP({
   }
 
   const { error } = await new Resend(process.env.RESEND_API_KEY).emails.send({
-    from: process.env.EMAIL_FROM || 'Chorla AI <onboarding@resend.dev>',
+    from: process.env.EMAIL_FROM || 'Gapchi AI <onboarding@resend.dev>',
     to: email,
     subject,
-    text: `Ваш проверочный код Chorla AI: ${otp}. Срок действия — 15 минут.`,
+    text: `Ваш проверочный код Gapchi AI: ${otp}. Срок действия — ${expiryMinutes} минут.`,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #E2E8F0; border-radius: 16px; background: #FFFFFF;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="https://chorla-ai.vercel.app/brand/chorla-ai-logo-light.png" alt="Chorla AI" width="160" style="display: inline-block; max-width: 160px; height: auto;" />
+          <span style="font-size: 26px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            Gapchi <span style="color: #DC2626;">AI</span>
+          </span>
         </div>
         <h2 style="font-size: 20px; font-weight: 700; color: #0F172A; margin: 0 0 8px 0; text-align: center;">${title}</h2>
         <p style="font-size: 14px; color: #475569; line-height: 1.5; margin: 0 0 20px 0; text-align: center;">
@@ -81,7 +102,7 @@ export async function sendAuthEmailOTP({
           <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #DC2626; font-family: monospace;">${otp}</span>
         </div>
         <p style="font-size: 12px; color: #94A3B8; margin: 0; text-align: center;">
-          Код действителен 15 минут. Если вы не запрашивали этот код, просто проигнорируйте письмо.
+          ${expiryNotice}
         </p>
       </div>
     `,
@@ -126,6 +147,34 @@ const passwordPolicyPlugin = () => ({
   },
 });
 
+// Custom plugin to complete 2FA login verification with unified Better Auth session cookies
+const login2FAPlugin = () => ({
+  id: 'login-2fa',
+  endpoints: {
+    complete2FALogin: createAuthEndpoint(
+      '/login/complete-2fa',
+      {
+        method: 'POST',
+        body: z.object({
+          userId: z.string(),
+          rememberMe: z.boolean().optional(),
+        }),
+      },
+      async (ctx) => {
+        const { userId, rememberMe } = ctx.body;
+        const dontRememberMe = !rememberMe;
+        const session = await ctx.context.internalAdapter.createSession(userId, dontRememberMe);
+        const user = await ctx.context.internalAdapter.findUserById(userId);
+        if (!user) {
+          throw new APIError('NOT_FOUND', { message: 'Пользователь не найден' });
+        }
+        await setSessionCookie(ctx, { session, user }, dontRememberMe);
+        return ctx.json({ success: true, sessionToken: session.token });
+      }
+    ),
+  },
+});
+
 export let auth = betterAuth({
   database: db
     ? drizzleAdapter(db, {
@@ -138,6 +187,10 @@ export let auth = betterAuth({
         },
       })
     : undefined,
+  session: {
+    expiresIn: 30 * 86400, // 30 days when rememberMe is true
+    updateAge: 86400,
+  },
   plugins: [
     emailOTP({
       expiresIn: 900,
@@ -149,6 +202,7 @@ export let auth = betterAuth({
       },
     }),
     passwordPolicyPlugin(),
+    login2FAPlugin(),
   ],
   emailAndPassword: {
     enabled: true,

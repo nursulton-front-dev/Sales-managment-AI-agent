@@ -9,12 +9,15 @@ import { setTestDb } from '../src/db';
 import { setTestAuth, setTestEmailDispatcher } from '../lib/auth';
 import { evaluatePassword, validatePasswordPolicy } from '../lib/password';
 import { POST as loginHandler } from '../app/api/auth/login/route';
+import { POST as verifyCodeHandler } from '../app/api/auth/login/verify-code/route';
 import { POST as registerHandler } from '../app/api/auth/register/route';
 import { POST as sendCodeHandler } from '../app/api/auth/recover/send-code/route';
 import { POST as resetPasswordHandler } from '../app/api/auth/recover/reset-password/route';
 import { eq } from 'drizzle-orm';
 import { getCurrentAuthEndpointContext } from '@better-auth/core/context';
-import { APIError } from 'better-auth/api';
+import { APIError, createAuthEndpoint } from 'better-auth/api';
+import { setSessionCookie } from 'better-auth/cookies';
+import { z } from 'zod';
 
 // Intercepted dispatched emails during test execution
 interface DispatchedEmail {
@@ -201,6 +204,33 @@ async function runRealHandlerTestSuite() {
     },
   });
 
+  const login2FAPlugin = () => ({
+    id: 'login-2fa',
+    endpoints: {
+      complete2FALogin: createAuthEndpoint(
+        '/login/complete-2fa',
+        {
+          method: 'POST',
+          body: z.object({
+            userId: z.string(),
+            rememberMe: z.boolean().optional(),
+          }),
+        },
+        async (ctx) => {
+          const { userId, rememberMe } = ctx.body;
+          const dontRememberMe = !rememberMe;
+          const session = await ctx.context.internalAdapter.createSession(userId, dontRememberMe);
+          const user = await ctx.context.internalAdapter.findUserById(userId);
+          if (!user) {
+            throw new APIError('NOT_FOUND', { message: 'Пользователь не найден' });
+          }
+          await setSessionCookie(ctx, { session, user }, dontRememberMe);
+          return ctx.json({ success: true, sessionToken: session.token });
+        }
+      ),
+    },
+  });
+
   // Create isolated Better Auth instance wired to testDb
   const testAuth = betterAuth({
     database: drizzleAdapter(testDb, {
@@ -212,6 +242,10 @@ async function runRealHandlerTestSuite() {
         verification: schema.verifications,
       },
     }),
+    session: {
+      expiresIn: 30 * 86400,
+      updateAge: 86400,
+    },
     secret: 'test-secret-at-least-32-characters-long-12345',
     baseURL: 'http://localhost:3000',
     plugins: [
@@ -225,6 +259,7 @@ async function runRealHandlerTestSuite() {
         },
       }),
       passwordPolicyPlugin(),
+      login2FAPlugin(),
     ],
     emailAndPassword: {
       enabled: true,
@@ -342,19 +377,29 @@ async function runRealHandlerTestSuite() {
   const wsRows = await testDb.select().from(schema.workspaces).where(eq(schema.workspaces.ownerEmail, unverifiedEmail));
   assert(wsRows.length === 0, 'No workspace was created in database for unverified email', 'Ownership Security');
 
-  // 3.3 Attempt login with unverified email via real loginHandler
+  // 3.3 Attempt login with unverified email via real loginHandler + 2FA gate
   const loginReq = makeRequest('/api/auth/login', 'POST', {
     email: unverifiedEmail,
     password: unverifiedPassword,
   });
   const loginRes = await loginHandler(loginReq);
   const loginData = await loginRes.json();
+  assert(loginData.requires2FA === true, 'Login handler requires 2FA code before session is granted', 'Ownership Security');
+  assert(!loginRes.cookies.get('better-auth.session_token'), 'Login does NOT issue session cookie before 2FA', 'Ownership Security');
+
+  // Verify code for unverified user
+  const unverifiedOtp = testDispatchedEmails[testDispatchedEmails.length - 1]?.otp;
+  const verifyRes = await verifyCodeHandler(makeRequest('/api/auth/login/verify-code', 'POST', {
+    loginAttemptId: loginData.loginAttemptId,
+    code: unverifiedOtp,
+  }));
+  const verifyData = await verifyRes.json();
   assert(
-    loginData.emailVerified === false && loginData.hasWorkspace === false && Boolean(loginData.redirectTo?.includes('verify=true')),
-    'Real login handler forbids workspace access for unverified email and demands verification',
+    verifyData.emailVerified === false && verifyData.hasWorkspace === false && Boolean(verifyData.redirectTo?.includes('verify=true')),
+    'Real login verification forbids workspace access for unverified email and demands verification',
     'Ownership Security'
   );
-  assert(!loginRes.cookies.get('ai_os_workspace_id'), 'Login does NOT issue ai_os_workspace_id cookie for unverified email', 'Ownership Security');
+  assert(!verifyRes.cookies.get('ai_os_workspace_id'), 'Login does NOT issue ai_os_workspace_id cookie for unverified email', 'Ownership Security');
 
   // ==========================================================================
   // SECTION 4: Cross-Instance Database-Backed Rate Limiting

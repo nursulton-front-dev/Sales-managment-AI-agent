@@ -1,4 +1,4 @@
-/* Chorla website chat. Install using the generated script in Integrations. */
+/* Gapchi website chat. Install using the generated script in Integrations. */
 (function () {
   'use strict';
   var script = document.currentScript;
@@ -33,7 +33,7 @@
   var form = element('form'), input = element('textarea', '', { rows: '1', maxlength: '4000', placeholder: 'Напишите сообщение…', 'aria-label': 'Ваше сообщение' });
   var send = element('button', 'Отправить', { type: 'submit', class: 'send' });
   form.append(input, send);
-  var footer = element('div', '', { class: 'footer' }), credit = element('span', 'Чат с ИИ · Chorla'), newChat = element('button', 'Новый диалог', { type: 'button', class: 'new-chat' });
+  var footer = element('div', '', { class: 'footer' }), credit = element('span', 'Чат с ИИ · Gapchi'), newChat = element('button', 'Новый диалог', { type: 'button', class: 'new-chat' });
   footer.append(credit, newChat);
   panel.append(header, messages, notice, retry, form, footer);
   var launcher = element('button', 'Написать нам', { type: 'button', class: 'launcher', 'aria-expanded': 'false', 'aria-label': 'Открыть чат' });
@@ -148,5 +148,5 @@
     document.body.appendChild(host);
     var timer = setInterval(function () { if (opened || unread || lastMessages.length) void poll(); }, 4000);
     window.addEventListener('pagehide', function () { clearInterval(timer); }, { once: true });
-  }).catch(function () { console.warn('Chorla: чат недоступен. Проверьте включение виджета и разрешённый адрес сайта в интеграциях.'); });
+  }).catch(function () { console.warn('Gapchi: чат недоступен. Проверьте включение виджета и разрешённый адрес сайта в интеграциях.'); });
 })();

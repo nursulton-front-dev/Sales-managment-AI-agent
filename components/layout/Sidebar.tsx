@@ -25,7 +25,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose = () => {} }: { mobi
   };
   const content = <div className="flex flex-col w-full h-full min-h-0 bg-[var(--surface)]">
     <div className="h-16 flex items-center justify-between px-5 border-b shrink-0">
-      <BrandLogo variant="full" width={160} href="/dashboard" ariaLabel="Chorla AI" />
+      <BrandLogo variant="full" width={160} href="/dashboard" ariaLabel="Gapchi AI" />
       <button type="button" onClick={onMobileClose} aria-label="Закрыть меню" className="lg:hidden p-2"><X size={20} /></button>
     </div>
     <nav aria-label="Основная навигация" className="flex-1 min-h-0 overflow-y-auto px-3 py-5 space-y-5">

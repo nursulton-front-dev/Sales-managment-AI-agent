@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
     }
 
     const eventTitle = summary || `Пробный урок / Встреча — ${clientName}`;
-    const eventDesc = `Клиент: ${clientName}\nТелефон: ${clientPhone}\nЗаписано ИИ-агентом Chorla AI`;
+    const eventDesc = `Клиент: ${clientName}\nТелефон: ${clientPhone}\nЗаписано ИИ-агентом Gapchi AI`;
 
     let googleEventId: string | undefined = undefined;
     let googleEventLink: string | undefined = undefined;

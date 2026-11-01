@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     const testResult = await provider.complete({
       messages: [
         { role: 'system', content: 'Ответь кратко одним словом "OK", если ты на связи.' },
-        { role: 'user', content: 'Тест связи Chorla AI' },
+        { role: 'user', content: 'Тест связи Gapchi AI' },
       ],
       maxTokens: 20,
       temperature: 0.1,

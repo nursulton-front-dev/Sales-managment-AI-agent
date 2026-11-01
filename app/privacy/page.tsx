@@ -4,8 +4,8 @@ import { BrandLogo } from '@/components/ui/BrandLogo';
 import { ShieldCheck, ArrowLeft, Mail } from 'lucide-react';
 
 export const metadata = {
-  title: 'Политика конфиденциальности — Chorla AI',
-  description: 'Политика конфиденциальности и обработки персональных данных платформы Chorla AI',
+  title: 'Политика конфиденциальности — Gapchi AI',
+  description: 'Политика конфиденциальности и обработки персональных данных платформы Gapchi AI',
 };
 
 export default function PrivacyPage() {
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
             <span>GDPR & Meta Platform Compliant</span>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight">
-            Политика конфиденциальности Chorla AI
+            Политика конфиденциальности Gapchi AI
           </h1>
           <p className="text-xs text-[var(--text-secondary)]">
             Редакция действует с 25 октября 2026 года
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
         <section className="space-y-4 text-sm text-[var(--text-secondary)] leading-relaxed">
           <h2 className="text-lg font-bold text-[var(--text-primary)]">1. Общие положения</h2>
           <p>
-            Настоящая Политика определяет порядок обработки и защиты персональных данных, получаемых Chorla AI при использовании сервиса, интеграций с Meta (Instagram Graph API), Telegram и Google Calendar.
+            Настоящая Политика определяет порядок обработки и защиты персональных данных, получаемых Gapchi AI при использовании сервиса, интеграций с Meta (Instagram Graph API), Telegram и Google Calendar.
           </p>
         </section>
 
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
         <section className="space-y-4 text-sm text-[var(--text-secondary)] leading-relaxed">
           <h2 className="text-lg font-bold text-[var(--text-primary)]">3. Изоляция данных между организациями</h2>
           <p>
-            Chorla AI использует строгую мультитенантную архитектуру. Сообщения, базы знаний и токены каждой компании изолированы. Доступ к переписке имеет исключительно уполномоченный персонал соответствующей организации.
+            Gapchi AI использует строгую мультитенантную архитектуру. Сообщения, базы знаний и токены каждой компании изолированы. Доступ к переписке имеет исключительно уполномоченный персонал соответствующей организации.
           </p>
         </section>
 
@@ -77,8 +77,8 @@ export default function PrivacyPage() {
         </section>
 
         <div className="pt-6 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-secondary)]">
-          <span>Служба безопасности Chorla AI: privacy@chorla.ai</span>
-          <span>© 2026 Chorla AI</span>
+          <span>Служба безопасности Gapchi AI: privacy@gapchi.ai</span>
+          <span>© 2026 Gapchi AI</span>
         </div>
       </main>
     </div>

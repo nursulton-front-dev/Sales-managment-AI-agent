@@ -6,37 +6,35 @@ import { BRAND_ASSETS } from './brandAssets';
 
 export interface BrandLogoProps {
   /**
-   * 'full' renders the full mark + 'Chorla AI' wordmark (aspect ratio ~6.46:1).
-   * 'mark' renders the standalone 2-shape directional icon (aspect ratio ~1.19:1).
+   * 'full' renders the mark + 'Gapchi AI' wordmark.
+   * 'mark' renders the standalone 2-shape directional icon.
    */
   variant?: 'full' | 'mark';
   /**
    * 'auto': adapts automatically based on CSS dark-mode (uses dark asset when .dark class is active)
-   * 'light': optimized for light backgrounds (Red mark, Graphite Chorla, Red AI)
-   * 'dark': optimized for dark backgrounds (White mark, White Chorla, Red AI)
-   * 'white': monochromatic white version of the mark
+   * 'light': optimized for light backgrounds (Red mark, Graphite Gapchi, Red AI)
+   * 'dark': optimized for dark backgrounds (White/Red mark, White Gapchi, Red AI)
+   * 'white': monochromatic white version of the logo
    */
   theme?: 'auto' | 'light' | 'dark' | 'white';
   /**
    * Width in pixels or CSS string (e.g. 180, '180px').
-   * Height is automatically calculated to strictly prevent distortion.
    */
   width?: number | string;
   /**
    * Height in pixels or CSS string.
-   * If provided without width, width is automatically calculated.
    */
   height?: number | string;
   /** Optional link destination. If provided, renders an accessible <Link> with visible focus ring. */
   href?: string;
   /** Additional CSS class names */
   className?: string;
-  /** Accessible label (defaults to 'Chorla AI') */
+  /** Accessible label (defaults to 'Gapchi AI') */
   ariaLabel?: string;
 }
 
 /**
- * BrandLogo — Universal Chorla AI Logo Component
+ * BrandLogo — Universal Gapchi AI Logo Component
  * Guaranteed zero-latency, zero-404 layout shift proof rendering.
  */
 export function BrandLogo({
@@ -46,77 +44,28 @@ export function BrandLogo({
   height,
   href,
   className = '',
-  ariaLabel = 'Chorla AI',
+  ariaLabel = 'Gapchi AI',
 }: BrandLogoProps) {
-  // Full logo aspect ratio: 1156 x 179 (~6.458:1)
-  // Mark icon aspect ratio: 210 x 177 (~1.186:1)
-  const aspectRatio = variant === 'full' ? 1156 / 179 : 210 / 177;
+  const numericWidth = typeof width === 'number' ? width : width ? parseInt(String(width), 10) : undefined;
+  const baseScale = numericWidth ? numericWidth / 160 : 1;
+  const markHeight = Math.round(24 * baseScale);
+  const markWidth = Math.round(markHeight * (210 / 177));
+  const fontSize = Math.max(15, Math.round(21 * baseScale));
 
-  let styleWidth: string | undefined = undefined;
-  let styleHeight: string | undefined = undefined;
-
-  if (width !== undefined) {
-    styleWidth = typeof width === 'number' ? `${width}px` : width;
-    styleHeight = 'auto';
-  } else if (height !== undefined) {
-    styleHeight = typeof height === 'number' ? `${height}px` : height;
-    styleWidth = 'auto';
-  } else {
-    styleWidth = variant === 'full' ? '160px' : '32px';
-    styleHeight = 'auto';
-  }
-
-  const imageElement = (
+  const markElement = (
     <span
-      className={`inline-flex items-center justify-center shrink-0 ${className}`}
+      className="inline-flex items-center justify-center shrink-0"
       style={{
-        width: styleWidth,
-        height: styleHeight,
-        aspectRatio: `${aspectRatio}`,
+        width: `${markWidth}px`,
+        height: `${markHeight}px`,
+        aspectRatio: `${210 / 177}`,
       }}
-      aria-label={ariaLabel}
-      role="img"
     >
-      {variant === 'full' ? (
-        theme === 'light' ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={BRAND_ASSETS.LOGO_LIGHT}
-            alt={ariaLabel}
-            className="w-full h-full object-contain pointer-events-none select-none"
-            loading="eager"
-          />
-        ) : theme === 'dark' ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={BRAND_ASSETS.LOGO_DARK}
-            alt={ariaLabel}
-            className="w-full h-full object-contain pointer-events-none select-none"
-            loading="eager"
-          />
-        ) : (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={BRAND_ASSETS.LOGO_LIGHT}
-              alt={ariaLabel}
-              className="w-full h-full object-contain pointer-events-none select-none dark:hidden"
-              loading="eager"
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={BRAND_ASSETS.LOGO_DARK}
-              alt={ariaLabel}
-              className="w-full h-full object-contain pointer-events-none select-none hidden dark:block"
-              loading="eager"
-            />
-          </>
-        )
-      ) : theme === 'white' ? (
+      {theme === 'white' ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={BRAND_ASSETS.MARK_WHITE}
-          alt={ariaLabel}
+          alt=""
           className="w-full h-full object-contain pointer-events-none select-none"
           loading="eager"
         />
@@ -124,7 +73,7 @@ export function BrandLogo({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={BRAND_ASSETS.MARK_RED}
-          alt={ariaLabel}
+          alt=""
           className="w-full h-full object-contain pointer-events-none select-none"
           loading="eager"
         />
@@ -132,7 +81,7 @@ export function BrandLogo({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={BRAND_ASSETS.MARK_WHITE}
-          alt={ariaLabel}
+          alt=""
           className="w-full h-full object-contain pointer-events-none select-none"
           loading="eager"
         />
@@ -141,19 +90,59 @@ export function BrandLogo({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={BRAND_ASSETS.MARK_RED}
-            alt={ariaLabel}
+            alt=""
             className="w-full h-full object-contain pointer-events-none select-none dark:hidden"
             loading="eager"
           />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={BRAND_ASSETS.MARK_WHITE}
-            alt={ariaLabel}
+            alt=""
             className="w-full h-full object-contain pointer-events-none select-none hidden dark:block"
             loading="eager"
           />
         </>
       )}
+    </span>
+  );
+
+  let content: React.ReactNode;
+
+  if (variant === 'mark') {
+    content = markElement;
+  } else {
+    // Full variant: Mark + Wordmark 'Gapchi AI'
+    const wordmarkThemeClass =
+      theme === 'white'
+        ? 'text-white'
+        : theme === 'light'
+        ? 'text-[#0F172A]'
+        : theme === 'dark'
+        ? 'text-white'
+        : 'text-slate-900 dark:text-white';
+
+    const aiThemeClass = theme === 'white' ? 'text-white' : 'text-[#DC2626]';
+
+    content = (
+      <span className="inline-flex items-center gap-2 select-none">
+        {markElement}
+        <span
+          className={`font-bold tracking-tight leading-none ${wordmarkThemeClass}`}
+          style={{ fontSize: `${fontSize}px`, fontFamily: 'inherit' }}
+        >
+          Gapchi <span className={aiThemeClass}>AI</span>
+        </span>
+      </span>
+    );
+  }
+
+  const container = (
+    <span
+      className={`inline-flex items-center shrink-0 ${className}`}
+      aria-label={ariaLabel}
+      role="img"
+    >
+      {content}
     </span>
   );
 
@@ -164,10 +153,10 @@ export function BrandLogo({
         className="inline-flex items-center shrink-0 rounded-[6px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2 transition-opacity hover:opacity-90 cursor-pointer"
         aria-label={ariaLabel}
       >
-        {imageElement}
+        {container}
       </Link>
     );
   }
 
-  return imageElement;
+  return container;
 }
