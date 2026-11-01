@@ -1,8 +1,9 @@
 import { connectTelegram, telegramStatus, telegramCall } from '@/lib/server/telegram';
 import { publicAgent } from '@/lib/server/public-data';
 import { NextRequest, NextResponse, connection } from 'next/server';
-import { getAllAgents, createAgent, updateAgent } from '@/src/db';
+import { getAllAgents, createAgent, updateAgent, getWorkspaceById } from '@/src/db';
 import { getServerSessionContext } from '@/src/server/auth/session';
+import { getMaxAgentsForPlan } from '@/lib/pricing';
 
 function invalidFields(body: Record<string, unknown>) {
   for (const [field, limit, required] of [['name', 200, true], ['systemPrompt', 30000, true], ['knowledgeBase', 50000, false], ['nicheTemplate', 100, false]] as const) {
@@ -50,6 +51,23 @@ export async function POST(req: NextRequest) {
 
     if (!body.name || !body.systemPrompt || invalidFields(body)) {
       return NextResponse.json({ success: false, error: 'Обязательные поля: name, systemPrompt' }, { status: 400 });
+    }
+
+    const existingAgents = await getAllAgents(workspaceId);
+    const workspace = await getWorkspaceById(workspaceId);
+    const currentPlan = workspace?.plan || 'trial';
+    const maxAgents = getMaxAgentsForPlan(currentPlan);
+
+    if (existingAgents.length >= maxAgents) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Достигнут лимит сотрудников для тарифа ${currentPlan.toUpperCase()} (максимум ${maxAgents} ${maxAgents === 1 ? 'сотрудник' : 'сотрудника'}). Для добавления сотрудников перейдите на тариф BUSINESS или PRO.`,
+          code: 'AGENT_LIMIT_REACHED',
+          maxAgents,
+        },
+        { status: 403 }
+      );
     }
 
     const agent = await createAgent({
