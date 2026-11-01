@@ -187,7 +187,7 @@ export default function DashboardOverviewPage() {
               {/* Decorative Image */}
               <div className="shrink-0 w-44 sm:w-56 h-36 relative flex items-center justify-center">
                 <Image
-                  src="/illustrations/gapchi-ai/onboarding-conversations.png"
+                  src="/illustrations/gapcha-ai/onboarding-conversations.png"
                   alt=""
                   width={220}
                   height={150}
@@ -371,7 +371,7 @@ export default function DashboardOverviewPage() {
                 <div className="py-8 px-4 text-center">
                   <div className="w-24 h-20 mx-auto relative mb-3 flex items-center justify-center">
                     <Image
-                      src="/illustrations/gapchi-ai/empty-inbox.png"
+                      src="/illustrations/gapcha-ai/empty-inbox.png"
                       alt=""
                       width={96}
                       height={76}

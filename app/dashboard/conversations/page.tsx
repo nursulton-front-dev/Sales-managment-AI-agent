@@ -314,7 +314,7 @@ export default function ConversationsPage() {
                 <div className="p-8 text-center text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/70 space-y-3">
                   <div className="w-16 h-14 mx-auto flex items-center justify-center">
                     <Image
-                      src="/illustrations/gapchi-ai/empty-inbox.png"
+                      src="/illustrations/gapcha-ai/empty-inbox.png"
                       alt=""
                       width={64}
                       height={50}
@@ -479,7 +479,7 @@ export default function ConversationsPage() {
                                 ? activeConversation.clientName
                                 : isHuman
                                 ? 'Оператор'
-                                : 'ИИ-агент Gapchi'}
+                                : 'ИИ-агент Gapcha'}
                             </span>
                             <span>·</span>
                             <span>
@@ -549,7 +549,7 @@ export default function ConversationsPage() {
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-xs">
                 <div className="w-48 h-36 mx-auto mb-4 flex items-center justify-center">
                   <Image
-                    src="/illustrations/gapchi-ai/empty-conversations.png"
+                    src="/illustrations/gapcha-ai/empty-conversations.png"
                     alt=""
                     width={220}
                     height={150}
