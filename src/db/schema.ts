@@ -358,6 +358,7 @@ export type ChannelPayload = {
   text: string;
   reply?: string;
   tokensCost?: number;
+  businessConnectionId?: string;
 };
 export const channelEvents = pgTable('channel_events', {
   id: text('id').primaryKey(),

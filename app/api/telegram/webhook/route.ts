@@ -20,15 +20,23 @@ export async function POST(req: NextRequest) {
     const raw = await readLimitedText(req, 100_000);
     let update;
     try { update = JSON.parse(raw); } catch { return NextResponse.json({ ok: false }, { status: 400 }); }
-    const { message, update_id: updateId } = update;
+    const { update_id: updateId } = update;
+    const message = update.message || update.business_message;
     if (!message?.text || !message.chat?.id) return NextResponse.json({ ok: true });
     if (!Number.isSafeInteger(updateId) || typeof message.text !== 'string' || message.text.length > 8000) return NextResponse.json({ ok: false }, { status: 400 });
+    const businessConnectionId = update.business_message?.business_connection_id as string | undefined;
     const contact = `id:${message.chat.id}`;
     const conversation = (await getAllConversations(agent.workspaceId)).find((item) => item.channel === 'Telegram' && item.agentId === agent.id && item.clientPhone === contact);
     const event = await enqueueEvent({
       id: channelId('Telegram', agent.id, String(updateId)), workspaceId: agent.workspaceId, channel: 'Telegram',
       conversationId: conversation?.id || channelId('conversation', agent.workspaceId, 'Telegram', agent.id, contact),
-      payload: { agentId: agent.id, contact, clientName: [message.from?.first_name, message.from?.last_name].filter((value) => typeof value === 'string').join(' ').slice(0, 200) || 'Клиент Telegram', text: message.text },
+      payload: {
+        agentId: agent.id,
+        contact,
+        clientName: [message.from?.first_name, message.from?.last_name].filter((value: unknown) => typeof value === 'string').join(' ').slice(0, 200) || 'Клиент Telegram',
+        text: message.text,
+        businessConnectionId,
+      },
     });
     after(() => processChannelEvent(event.id));
     return NextResponse.json({ ok: true });

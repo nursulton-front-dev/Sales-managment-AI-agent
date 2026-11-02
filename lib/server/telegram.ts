@@ -22,7 +22,11 @@ export async function telegramCall<T>(token: string, method: string, body?: Reco
 }
 export async function connectTelegram(agentId: string, token: string) {
   const account = await telegramCall<{ username: string }>(token, 'getMe');
-  await telegramCall(token, 'setWebhook', { url: telegramWebhookUrl(agentId), secret_token: telegramWebhookSecret(agentId), allowed_updates: ['message'] });
+  await telegramCall(token, 'setWebhook', {
+    url: telegramWebhookUrl(agentId),
+    secret_token: telegramWebhookSecret(agentId),
+    allowed_updates: ['message', 'business_message', 'business_connection'],
+  });
   return account;
 }
 export async function telegramStatus(agentId: string, token: string | null) {
@@ -40,11 +44,16 @@ export async function telegramStatus(agentId: string, token: string | null) {
 export async function sendTelegramChatAction(
   token: string,
   chatId: string | number,
-  action: 'typing' | 'upload_photo' | 'record_video' = 'typing'
+  action: 'typing' | 'upload_photo' | 'record_video' = 'typing',
+  businessConnectionId?: string
 ): Promise<boolean> {
   if (!/^\d+:[A-Za-z0-9_-]+$/.test(token)) return false;
   try {
-    await telegramCall(token, 'sendChatAction', { chat_id: chatId, action });
+    const body: Record<string, unknown> = { chat_id: chatId, action };
+    if (businessConnectionId) {
+      body.business_connection_id = businessConnectionId;
+    }
+    await telegramCall(token, 'sendChatAction', body);
     return true;
   } catch {
     // Non-fatal: if chat is muted, bot blocked, or network fluctuates, ignore silently

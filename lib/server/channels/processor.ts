@@ -38,7 +38,7 @@ export async function processChannelEvent(id: string) {
 
       // Signal real-time "typing..." status in Telegram while AI generates the response
       if (event.channel === 'Telegram' && agent.tgBotToken && payload.contact.startsWith('id:')) {
-        void sendTelegramChatAction(agent.tgBotToken, payload.contact.slice(3), 'typing');
+        void sendTelegramChatAction(agent.tgBotToken, payload.contact.slice(3), 'typing', payload.businessConnectionId);
       }
 
       const result = await processAgentMessage({ message: payload.text, agentId: agent.id, workspaceId: event.workspaceId, clientName: conversation.clientName, clientPhone: conversation.clientPhone, channel: event.channel,
@@ -62,7 +62,11 @@ export async function processChannelEvent(id: string) {
       stage = 'sending';
       await patchEvent(id, { stage });
       if (event.channel === 'Telegram') {
-        await telegramCall(agent.tgBotToken!, 'sendMessage', { chat_id: payload.contact.slice(3), text: payload.reply });
+        const sendBody: Record<string, unknown> = { chat_id: payload.contact.slice(3), text: payload.reply };
+        if (payload.businessConnectionId) {
+          sendBody.business_connection_id = payload.businessConnectionId;
+        }
+        await telegramCall(agent.tgBotToken!, 'sendMessage', sendBody);
       } else if (event.channel === 'Instagram') {
         const token = workspace.instagramAccessToken && decryptToken(workspace.instagramAccessToken);
         if (!token) throw new DeliveryRejectedError(false, 'needs_reconnect');
