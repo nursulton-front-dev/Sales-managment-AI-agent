@@ -306,7 +306,7 @@ export default function LeadsCalendarPage() {
                     <td colSpan={6} className="py-14 px-4 text-center">
                       <div className="w-44 h-32 mx-auto mb-3 flex items-center justify-center">
                         <Image
-                          src="/illustrations/gapcha-ai/empty-leads.png"
+                          src="/illustrations/gapchi-ai/empty-leads.png"
                           alt=""
                           width={180}
                           height={130}

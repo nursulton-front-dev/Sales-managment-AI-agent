@@ -69,7 +69,7 @@ export async function POST(
         ticketId: id,
         senderRole: 'support',
         senderEmail: session.userEmail || 'support@aibusiness.os',
-        senderName: session.userName || 'Команда заботы Gapcha AI',
+        senderName: session.userName || 'Команда заботы Gapchi AI',
         text,
         isInternalNote: Boolean(isInternalNote),
         attachments: validAttachments,

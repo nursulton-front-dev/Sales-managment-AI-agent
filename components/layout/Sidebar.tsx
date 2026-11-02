@@ -69,7 +69,7 @@ export function Sidebar({
   const content = (
     <div className="flex flex-col w-full h-full min-h-0 bg-[var(--surface)] dark:bg-[#101B2E]">
       <div className="h-16 flex items-center justify-between px-5 border-b border-[var(--border)] dark:border-[#29374C] shrink-0">
-        <BrandLogo variant="full" width={150} href="/dashboard" ariaLabel="Gapcha AI" />
+        <BrandLogo variant="full" width={150} href="/dashboard" ariaLabel="Gapchi AI" />
         <button
           type="button"
           onClick={onMobileClose}

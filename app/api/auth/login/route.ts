@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     // 4. Generate unique loginAttemptId & cryptographically secure 6-digit OTP
     const loginAttemptId = 'att_' + crypto.randomUUID().replace(/-/g, '');
     const otp = crypto.randomInt(100000, 1000000).toString();
-    const salt = process.env.BETTER_AUTH_SECRET || 'gapcha-login-secret-salt';
+    const salt = process.env.BETTER_AUTH_SECRET || 'gapchi-login-secret-salt';
     const hashedCode = crypto
       .createHash('sha256')
       .update(`${salt}:${cleanEmail}:${loginAttemptId}:${otp}`)

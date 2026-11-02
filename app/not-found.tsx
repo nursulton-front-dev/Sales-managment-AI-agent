@@ -115,7 +115,7 @@ export default function NotFound() {
           variant="full"
           width={150}
           href="/"
-          ariaLabel="Gapcha AI"
+          ariaLabel="Gapchi AI"
         />
 
         <div className="flex items-center">

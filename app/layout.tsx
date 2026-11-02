@@ -4,7 +4,7 @@ import { AppContextProvider } from '@/context/AppContext';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: 'Gapcha AI — Ядро SaaS-платформы ИИ-агентов продаж',
+  title: 'Gapchi AI — Ядро SaaS-платформы ИИ-агентов продаж',
   description: 'Автоматическая квалификация лидов, интеграция с Telegram и бронирование слотов в Google Календарь',
   icons: {
     icon: [
@@ -14,16 +14,16 @@ export const metadata: Metadata = {
     apple: [{ url: '/brand/apple-touch-icon.png', sizes: '180x180' }],
   },
   openGraph: {
-    title: 'Gapcha AI — Платформа автономных ИИ-агентов продаж',
+    title: 'Gapchi AI — Платформа автономных ИИ-агентов продаж',
     description: 'Интеллектуальные продажи, автоворонка и синхронизация с календарём',
     url: 'https://chorla-ai.vercel.app',
-    siteName: 'Gapcha AI',
+    siteName: 'Gapchi AI',
     images: [
       {
         url: 'https://chorla-ai.vercel.app/brand/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Gapcha AI Platform',
+        alt: 'Gapchi AI Platform',
       },
     ],
     locale: 'ru_RU',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Gapcha AI — Платформа ИИ-агентов продаж',
+    title: 'Gapchi AI — Платформа ИИ-агентов продаж',
     description: 'Автономные ИИ-сотрудники для вашего бизнеса',
     images: ['https://chorla-ai.vercel.app/brand/og-image.png'],
   },

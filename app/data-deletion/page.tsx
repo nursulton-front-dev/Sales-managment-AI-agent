@@ -4,8 +4,8 @@ import { BrandLogo } from '@/components/ui/BrandLogo';
 import { Trash2, ArrowLeft, ShieldAlert } from 'lucide-react';
 
 export const metadata = {
-  title: 'Удаление данных пользователей — Gapcha AI',
-  description: 'Инструкции и URL обратного вызова для удаления данных пользователей Meta/Instagram в Gapcha AI',
+  title: 'Удаление данных пользователей — Gapchi AI',
+  description: 'Инструкции и URL обратного вызова для удаления данных пользователей Meta/Instagram в Gapchi AI',
 };
 
 export default function DataDeletionPage() {
@@ -44,7 +44,7 @@ export default function DataDeletionPage() {
             Если вы хотите удалить подключение Instagram и все связанные токены доступа:
           </p>
           <ol className="list-decimal pl-6 space-y-1.5">
-            <li>Войдите в личный кабинет Gapcha AI: <code className="text-[#DC2626]">https://chorla-ai.vercel.app/dashboard</code></li>
+            <li>Войдите в личный кабинет Gapchi AI: <code className="text-[#DC2626]">https://chorla-ai.vercel.app/dashboard</code></li>
             <li>Перейдите в раздел <strong className="text-[var(--text-primary)]">«Интеграции»</strong>.</li>
             <li>В блоке <strong className="text-[var(--text-primary)]">«Instagram Direct»</strong> нажмите кнопку <strong className="text-red-600">«Отключить интеграцию»</strong>.</li>
           </ol>
@@ -61,7 +61,7 @@ export default function DataDeletionPage() {
           <ol className="list-decimal pl-6 space-y-1.5">
             <li>Перейдите в <strong>Настройки и конфиденциальность</strong> вашего Facebook/Instagram аккаунта.</li>
             <li>Откройте <strong>Приложения и сайты</strong> (Apps and Websites).</li>
-            <li>Найдите <strong>Gapcha AI</strong> и нажмите <strong>Удалить (Remove)</strong>.</li>
+            <li>Найдите <strong>Gapchi AI</strong> и нажмите <strong>Удалить (Remove)</strong>.</li>
           </ol>
         </section>
 
@@ -71,15 +71,15 @@ export default function DataDeletionPage() {
             Для полного стирания истории переписки и лидов, полученных через Instagram Direct:
           </p>
           <div className="p-4 rounded-[6px] bg-[var(--surface-secondary)] border border-[var(--border)] text-xs space-y-2">
-            <p><strong>Контакт:</strong> privacy@gapcha.ai или support@gapcha.ai</p>
+            <p><strong>Контакт:</strong> privacy@gapchi.ai или support@gapchi.ai</p>
             <p><strong>Срок обработки:</strong> до 48 рабочих часов с направлением отчёта о подтверждении стирания.</p>
             <p><strong>Callback endpoint для Meta:</strong> <code className="text-[#DC2626]">https://chorla-ai.vercel.app/api/meta/data-deletion</code></p>
           </div>
         </section>
 
         <div className="pt-6 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-secondary)]">
-          <span>Gapcha AI Security Team</span>
-          <span>© 2026 Gapcha AI</span>
+          <span>Gapchi AI Security Team</span>
+          <span>© 2026 Gapchi AI</span>
         </div>
       </main>
     </div>
