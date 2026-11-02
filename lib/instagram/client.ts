@@ -4,11 +4,14 @@ import {
 } from './config';
 import { DeliveryRejectedError } from '@/lib/server/channels/errors';
 
+export type InstagramTokenSource = 'meta_unified' | 'legacy_instagram';
+
 export interface InstagramTokenResponse {
   access_token: string;
   user_id: string;
   permissions?: string[];
   expires_in?: number;
+  token_source: InstagramTokenSource;
 }
 
 export interface InstagramLongLivedTokenResponse {
@@ -62,6 +65,7 @@ export async function exchangeCodeForInstagramToken(
         user_id: metaData.user_id ? String(metaData.user_id) : '',
         permissions: metaData.permissions || [],
         expires_in: metaData.expires_in,
+        token_source: 'meta_unified',
       };
     }
   } catch (metaErr) {
@@ -96,6 +100,39 @@ export async function exchangeCodeForInstagramToken(
     access_token: data.access_token,
     user_id: String(data.user_id),
     permissions: data.permissions || [],
+    token_source: 'legacy_instagram',
+  };
+}
+
+/**
+ * Exchange short-lived Meta (Facebook Login for Business) token for long-lived access token (60 days)
+ * Endpoint: https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token...
+ */
+export async function getLongLivedMetaToken(
+  shortLivedToken: string
+): Promise<{ access_token: string; expires_in?: number }> {
+  const appId = process.env.INSTAGRAM_APP_ID;
+  const appSecret = process.env.INSTAGRAM_APP_SECRET;
+  if (!appId || !appSecret) {
+    throw new Error('INSTAGRAM_APP_ID or INSTAGRAM_APP_SECRET is not configured');
+  }
+
+  const url = new URL(`${META_GRAPH_BASE_URL}/oauth/access_token`);
+  url.searchParams.set('grant_type', 'fb_exchange_token');
+  url.searchParams.set('client_id', appId);
+  url.searchParams.set('client_secret', appSecret);
+  url.searchParams.set('fb_exchange_token', shortLivedToken);
+
+  const res = await fetch(url.toString(), { method: 'GET' });
+  const data = await res.json();
+
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || 'Failed to exchange long-lived Meta token');
+  }
+
+  return {
+    access_token: data.access_token,
+    expires_in: data.expires_in,
   };
 }
 
@@ -161,7 +198,11 @@ export async function getInstagramUserProfile(
     const assignedRes = await fetch(assignedUrl.toString(), { method: 'GET' });
     const assignedData = await assignedRes.json();
     if (assignedRes.ok && Array.isArray(assignedData.data) && assignedData.data.length > 0) {
-      const ig = assignedData.data[0];
+      // Support multi-account portfolios: match target userId if specified, otherwise choose first
+      const matched = userId && userId !== 'me'
+        ? assignedData.data.find((item: any) => String(item.id) === String(userId))
+        : null;
+      const ig = matched || assignedData.data[0];
       return {
         id: String(ig.id),
         username: ig.username || `ig_${ig.id}`,
@@ -182,17 +223,26 @@ export async function getInstagramUserProfile(
     const pagesRes = await fetch(pagesUrl.toString(), { method: 'GET' });
     const pagesData = await pagesRes.json();
     if (pagesRes.ok && Array.isArray(pagesData.data)) {
+      let selectedIg: any = null;
       for (const page of pagesData.data) {
         if (page.instagram_business_account?.id) {
-          const ig = page.instagram_business_account;
-          return {
-            id: String(ig.id),
-            username: ig.username || `ig_${ig.id}`,
-            name: ig.name || ig.username,
-            account_type: 'BUSINESS',
-            profile_picture_url: ig.profile_picture_url,
-          };
+          if (userId && userId !== 'me' && String(page.instagram_business_account.id) === String(userId)) {
+            selectedIg = page.instagram_business_account;
+            break;
+          }
+          if (!selectedIg) {
+            selectedIg = page.instagram_business_account;
+          }
         }
+      }
+      if (selectedIg) {
+        return {
+          id: String(selectedIg.id),
+          username: selectedIg.username || `ig_${selectedIg.id}`,
+          name: selectedIg.name || selectedIg.username,
+          account_type: 'BUSINESS',
+          profile_picture_url: selectedIg.profile_picture_url,
+        };
       }
     }
   } catch (err) {

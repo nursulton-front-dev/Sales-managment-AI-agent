@@ -8,10 +8,19 @@ import { readLimitedText, RequestBodyError } from '@/lib/server/request-body';
 export const maxDuration = 60;
 export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get('hub.mode');
-  const token = req.nextUrl.searchParams.get('hub.verify_token');
-  const expectedToken = process.env.INSTAGRAM_VERIFY_TOKEN || process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN;
-  if (mode !== 'subscribe' || !token || !expectedToken || token !== expectedToken) return new Response('Verification failed', { status: 403 });
-  return new Response(req.nextUrl.searchParams.get('hub.challenge') || '', { headers: { 'Content-Type': 'text/plain' } });
+  const token = req.nextUrl.searchParams.get('hub.verify_token')?.trim();
+  const rawExpected = process.env.INSTAGRAM_VERIFY_TOKEN || process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN;
+  const expectedToken = rawExpected?.trim().replace(/^["']|["']$/g, '');
+
+  if (mode !== 'subscribe' || !token || !expectedToken || token !== expectedToken) {
+    return new Response('Verification failed', { status: 403 });
+  }
+
+  const challenge = req.nextUrl.searchParams.get('hub.challenge') || '';
+  return new Response(challenge, {
+    status: 200,
+    headers: { 'Content-Type': 'text/plain' },
+  });
 }
 
 type MetaMessage = { sender?: { id?: string }; recipient?: { id?: string }; message?: { mid?: string; text?: string; is_echo?: boolean } };

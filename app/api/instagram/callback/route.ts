@@ -5,6 +5,7 @@ import {
 } from '@/lib/instagram/config';
 import {
   exchangeCodeForInstagramToken,
+  getLongLivedMetaToken,
   getLongLivedInstagramToken,
   getInstagramUserProfile,
   subscribeInstagramWebhook,
@@ -76,23 +77,52 @@ export async function GET(req: NextRequest) {
       req.nextUrl.origin;
     const redirectUri = `${origin}/api/instagram/callback`;
 
-    // 4. Exchange code for short-lived token
+    // 4. Exchange code for access token
     const tokenData = await exchangeCodeForInstagramToken(code, redirectUri);
 
-    // 5. Upgrade to long-lived 60-day token
+    // 5. Upgrade token / determine expiration based on token source (Unified Login vs Legacy)
     let longLivedToken = tokenData.access_token;
-    let expiresAt = new Date(Date.now() + 3600 * 1000); // Short-lived token if upgrade fails.
+    let expiresAt: Date;
 
-    try {
-      const longLived = await getLongLivedInstagramToken(tokenData.access_token);
-      if (longLived.access_token) {
-        longLivedToken = longLived.access_token;
-        if (longLived.expires_in) {
-          expiresAt = new Date(Date.now() + longLived.expires_in * 1000);
+    if (tokenData.token_source === 'meta_unified') {
+      // In Meta Unified Login (Facebook Login for Business):
+      if (tokenData.expires_in && tokenData.expires_in > 86400) {
+        // Token is already long-lived (e.g. 60 days)
+        expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+      } else if (tokenData.expires_in && tokenData.expires_in <= 86400) {
+        // Short-lived user token: exchange via fb_exchange_token on graph.facebook.com
+        try {
+          const longLived = await getLongLivedMetaToken(tokenData.access_token);
+          if (longLived.access_token) {
+            longLivedToken = longLived.access_token;
+            expiresAt = new Date(Date.now() + (longLived.expires_in || 5184000) * 1000);
+          } else {
+            expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+          }
+        } catch (llErr) {
+          console.warn('Long-lived Meta token exchange warning, retaining token:', llErr);
+          expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
         }
+      } else {
+        // System User Access Token (SUAT) in Unified Login:
+        // System User tokens do not expire unless manually revoked in Business Manager.
+        // Maintain 60-day operational review horizon rather than falling back to 1 hour.
+        expiresAt = new Date(Date.now() + 60 * 86400 * 1000);
       }
-    } catch (llErr) {
-      console.warn('Long-lived token exchange warning, falling back to short-lived:', llErr);
+    } else {
+      // Legacy standalone Instagram Login: exchange via ig_exchange_token on graph.instagram.com
+      expiresAt = new Date(Date.now() + 3600 * 1000);
+      try {
+        const longLived = await getLongLivedInstagramToken(tokenData.access_token);
+        if (longLived.access_token) {
+          longLivedToken = longLived.access_token;
+          if (longLived.expires_in) {
+            expiresAt = new Date(Date.now() + longLived.expires_in * 1000);
+          }
+        }
+      } catch (llErr) {
+        console.warn('Long-lived legacy Instagram token exchange warning, falling back to 1h:', llErr);
+      }
     }
 
     // 6. Fetch user profile (username, account ID, account type)
@@ -106,6 +136,11 @@ export async function GET(req: NextRequest) {
     // 8. Encrypt access token at rest using AES-256-GCM
     const encryptedToken = encryptToken(longLivedToken);
 
+    // Default scopes depending on token source
+    const fallbackScopes = tokenData.token_source === 'meta_unified'
+      ? ['instagram_basic', 'instagram_manage_messages']
+      : ['instagram_business_basic', 'instagram_business_manage_messages'];
+
     // 9. Atomically save connection in Neon Postgres
     await updateWorkspace(verifiedWorkspaceId, {
       instagramConnected: true,
@@ -113,7 +148,9 @@ export async function GET(req: NextRequest) {
       instagramUsername: profile.username || `ig_${profile.id}`,
       instagramAccessToken: encryptedToken,
       instagramTokenExpiresAt: expiresAt,
-      instagramScopes: tokenData.permissions || ['instagram_business_basic', 'instagram_business_manage_messages'],
+      instagramScopes: (tokenData.permissions && tokenData.permissions.length > 0)
+        ? tokenData.permissions
+        : fallbackScopes,
       instagramStatus: 'connected',
       instagramLastError: null,
       // Default auto-reply off until user explicitly selects agent & activates
