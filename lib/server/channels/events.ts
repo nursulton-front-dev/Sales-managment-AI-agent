@@ -115,3 +115,63 @@ export async function conversationEvents(workspaceId: string, conversationId: st
   if (db) return db.select().from(channelEvents).where(and(eq(channelEvents.workspaceId, workspaceId), eq(channelEvents.conversationId, conversationId), inArray(channelEvents.status, unfinished))).orderBy(channelEvents.sequence).limit(20);
   return localIntegrations((store) => store.events.filter((event) => event.workspaceId === workspaceId && event.conversationId === conversationId && unfinished.includes(event.status)).slice(0, 20));
 }
+
+export async function cancelConversationEvents(conversationId: string, code = 'human_takeover') {
+  const now = new Date();
+  if (db) {
+    await db.update(channelEvents)
+      .set({ status: 'ignored', errorCode: code, lockedUntil: null, updatedAt: now })
+      .where(and(eq(channelEvents.conversationId, conversationId), inArray(channelEvents.status, ['pending', 'retry'])));
+  } else {
+    localIntegrations((store) => {
+      for (const event of store.events) {
+        if (event.conversationId === conversationId && ['pending', 'retry'].includes(event.status)) {
+          Object.assign(event, { status: 'ignored', errorCode: code, lockedUntil: null, updatedAt: now });
+        }
+      }
+    }, true);
+  }
+}
+
+export async function advanceConversationRetries(conversationId: string) {
+  const now = new Date();
+  if (db) {
+    await db.update(channelEvents)
+      .set({ availableAt: now, updatedAt: now })
+      .where(and(
+        eq(channelEvents.conversationId, conversationId),
+        eq(channelEvents.status, 'retry'),
+        sql`${channelEvents.availableAt} > ${now}`
+      ));
+  } else {
+    localIntegrations((store) => {
+      for (const event of store.events) {
+        if (event.conversationId === conversationId && event.status === 'retry' && new Date(event.availableAt) > now) {
+          event.availableAt = now;
+          event.updatedAt = now;
+        }
+      }
+    }, true);
+  }
+}
+
+export async function oldestEligibleConversationEvent(conversationId: string): Promise<string | null> {
+  const now = new Date();
+  if (db) {
+    const [oldest] = await db.select({ id: channelEvents.id }).from(channelEvents)
+      .where(and(
+        eq(channelEvents.conversationId, conversationId),
+        inArray(channelEvents.status, ['pending', 'retry']),
+        lte(channelEvents.availableAt, now)
+      ))
+      .orderBy(channelEvents.sequence)
+      .limit(1);
+    return oldest?.id || null;
+  }
+  return localIntegrations((store) => {
+    const match = store.events
+      .filter((e) => e.conversationId === conversationId && ['pending', 'retry'].includes(e.status) && new Date(e.availableAt) <= now)
+      .sort((a, b) => a.sequence - b.sequence)[0];
+    return match?.id || null;
+  });
+}

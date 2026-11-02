@@ -1,6 +1,5 @@
 import {
   INSTAGRAM_GRAPH_BASE_URL,
-  META_GRAPH_BASE_URL,
 } from './config';
 import { DeliveryRejectedError } from '@/lib/server/channels/errors';
 
@@ -156,10 +155,15 @@ export async function subscribeInstagramWebhook(
   accessToken: string
 ): Promise<boolean> {
   try {
-    const url = `${META_GRAPH_BASE_URL}/${pageOrAccountId}/subscribed_apps`;
+    // For Instagram API with Instagram Login, use graph.instagram.com rather than graph.facebook.com
+    const target = pageOrAccountId && pageOrAccountId !== 'me' ? pageOrAccountId : 'me';
+    const url = `${INSTAGRAM_GRAPH_BASE_URL}/${target}/subscribed_apps`;
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
       body: JSON.stringify({
         subscribed_fields: ['messages', 'messaging_postbacks'],
         access_token: accessToken,

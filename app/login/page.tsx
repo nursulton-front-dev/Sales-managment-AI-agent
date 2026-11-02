@@ -380,12 +380,12 @@ export default function LoginPage() {
       {/* 1. LEFT PRESENTATION PANEL (~53% on desktop, hidden < 1024px)  */}
       {/* ------------------------------------------------------------- */}
       <section
-        aria-label="Демонстрация Gapchi AI"
+        aria-label="Демонстрация gapcha AI"
         className="hidden lg:flex lg:w-[53%] bg-[#15191F] text-slate-100 flex-col justify-between p-8 xl:p-14 relative overflow-y-auto"
       >
         <div className="w-full max-w-[560px] mx-auto flex-1 flex flex-col justify-between my-auto py-6">
-          {/* Logo header: Gapchi AI brand logo for dark presentation background */}
-          <BrandLogo variant="full" width={180} theme="dark" href="/" ariaLabel="Gapchi AI" />
+          {/* Logo header: gapcha AI brand logo for dark presentation background */}
+          <BrandLogo variant="full" width={180} theme="dark" href="/" ariaLabel="gapcha AI" />
 
           {/* Central content block */}
           <div className="my-auto py-7 space-y-6">
@@ -673,7 +673,7 @@ export default function LoginPage() {
         {/* Top bar with Mobile Brand & Theme Switcher */}
         <div className="w-full max-w-[420px] mx-auto flex items-center justify-between mb-6 lg:mb-0">
           <div className="lg:hidden">
-            <BrandLogo variant="full" width={140} href="/" ariaLabel="Gapchi AI" />
+            <BrandLogo variant="full" width={140} href="/" ariaLabel="gapcha AI" />
           </div>
           <div className="ml-auto">
             <ThemeSwitcher />
@@ -978,7 +978,7 @@ export default function LoginPage() {
 
         {/* Footer: Quiet copyright info */}
         <div className="w-full max-w-[420px] mx-auto pt-6 text-center text-xs text-slate-400 dark:text-slate-500">
-          © 2026 Gapchi AI
+          © 2026 gapcha AI
         </div>
       </main>
 

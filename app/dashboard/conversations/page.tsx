@@ -479,7 +479,7 @@ export default function ConversationsPage() {
                                 ? activeConversation.clientName
                                 : isHuman
                                 ? 'Оператор'
-                                : 'ИИ-агент Gapchi'}
+                                : 'ИИ-агент gapcha'}
                             </span>
                             <span>·</span>
                             <span>

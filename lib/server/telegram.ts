@@ -11,6 +11,38 @@ export function telegramWebhookUrl(agentId: string) {
   if (!origin || !origin.startsWith('https://')) throw new Error('Для подключения Telegram нужен публичный HTTPS-адрес приложения');
   const url = new URL('/api/telegram/webhook', origin); url.searchParams.set('agentId', agentId); return url.toString();
 }
+
+export function getServiceBotToken(): string | null {
+  return process.env.TELEGRAM_SERVICE_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || null;
+}
+
+export function getServiceBotUsername(): string {
+  return process.env.TELEGRAM_SERVICE_BOT_USERNAME || 'gapcha_assistant_bot';
+}
+
+export function serviceBotWebhookSecret(): string {
+  const secret = process.env.BETTER_AUTH_SECRET;
+  if (!secret) throw new Error('Подключение Telegram пока недоступно');
+  return createHmac('sha256', secret).update('telegram:service-bot').digest('hex');
+}
+
+export function serviceBotWebhookUrl(): string {
+  const origin = process.env.APP_URL || process.env.BETTER_AUTH_URL;
+  if (!origin || !origin.startsWith('https://')) throw new Error('Для подключения Telegram нужен публичный HTTPS-адрес приложения');
+  const url = new URL('/api/telegram/webhook', origin);
+  url.searchParams.set('serviceBot', '1');
+  return url.toString();
+}
+
+export async function connectServiceBot(token: string) {
+  const account = await telegramCall<{ username: string }>(token, 'getMe');
+  await telegramCall(token, 'setWebhook', {
+    url: serviceBotWebhookUrl(),
+    secret_token: serviceBotWebhookSecret(),
+    allowed_updates: ['message', 'business_message', 'business_connection'],
+  });
+  return account;
+}
 export async function telegramCall<T>(token: string, method: string, body?: Record<string, unknown>): Promise<T> {
   if (!/^\d+:[A-Za-z0-9_-]+$/.test(token)) throw new Error('Проверьте токен Telegram-бота');
   let res: Response;

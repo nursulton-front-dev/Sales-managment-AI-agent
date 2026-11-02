@@ -15,7 +15,14 @@ export interface ChatCompletionOptions {
   isSandbox?: boolean;
 }
 
-export class AgentReplyUnavailableError extends Error {}
+export class AgentReplyUnavailableError extends Error {
+  code: string;
+  constructor(message: string, code = 'model_unavailable') {
+    super(message);
+    this.name = 'AgentReplyUnavailableError';
+    this.code = code;
+  }
+}
 
 export interface ChatCompletionResult {
   reply: string;
@@ -124,7 +131,8 @@ export async function processAgentMessage({
   // Check balance before proceeding
   if (ws && ws.tokenBalance < tokensCost) {
     throw new AgentReplyUnavailableError(
-      `Недостаточно токенов на балансе компании (баланс: ${ws.tokenBalance}, требуется: ${tokensCost}). Пополните баланс в разделе "Тарифы и Баланс".`
+      `Недостаточно токенов на балансе компании (баланс: ${ws.tokenBalance}, требуется: ${tokensCost}). Пополните баланс в разделе "Тарифы и Баланс".`,
+      'insufficient_balance'
     );
   }
 
@@ -142,7 +150,6 @@ export async function processAgentMessage({
   if (useDeepSeek && process.env.DEEPSEEK_API_KEY) {
     try {
       const { DeepSeekProvider } = await import('@/lib/server/ai/providers/deepseek');
-      const { BUSINESS_AGENT_TOOLS } = await import('@/lib/server/ai/tools');
       const ds = new DeepSeekProvider();
       const dsRes = await ds.complete({
         messages: [
@@ -150,15 +157,22 @@ export async function processAgentMessage({
           ...history.slice(-6).map((h) => ({ role: h.role, content: h.content })),
           { role: 'user', content: query },
         ],
-        tools: BUSINESS_AGENT_TOOLS,
+        // Do NOT pass unexecutable tools into this text conversation flow!
+        // Passing unexecutable tools caused DeepSeek to emit toolCalls without text content,
+        // resulting in empty replies and false 'model_unavailable' crashes.
       });
       if (dsRes.content) {
         reply = dsRes.content;
         provider = 'deepseek';
         modelName = ds.defaultModel;
+      } else if (dsRes.toolCalls && dsRes.toolCalls.length > 0) {
+        // DeepSeek returned toolCalls without textual content: handle gracefully
+        reply = 'Благодарю за обращение! Я зафиксировал ваши пожелания. Наш сотрудник свяжется с вами в ближайшее время для подтверждения.';
+        provider = 'deepseek';
+        modelName = ds.defaultModel;
       }
-    } catch {
-      console.warn('DeepSeek request failed; trying configured fallback');
+    } catch (err: unknown) {
+      console.warn('DeepSeek request failed; trying configured fallback', err instanceof Error ? err.message : '');
     }
   }
 

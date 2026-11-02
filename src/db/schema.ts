@@ -36,6 +36,15 @@ export const workspaces = pgTable('workspaces', {
   instagramLastError: text('instagram_last_error'),
   instagramAgentId: text('instagram_agent_id'),
   instagramAutoReply: boolean('instagram_auto_reply').notNull().default(false),
+  // Telegram Business (Secretary Mode via shared platform service bot)
+  telegramBusinessConnected: boolean('telegram_business_connected').notNull().default(false),
+  telegramBusinessConnectionId: text('telegram_business_connection_id'),
+  telegramBusinessUserId: text('telegram_business_user_id'),
+  telegramBusinessUsername: text('telegram_business_username'),
+  telegramBusinessCanReply: boolean('telegram_business_can_reply').notNull().default(false),
+  telegramBusinessEnabled: boolean('telegram_business_enabled').notNull().default(false),
+  telegramBusinessAgentId: text('telegram_business_agent_id'),
+  telegramBusinessConnectedAt: timestamp('telegram_business_connected_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -387,6 +396,22 @@ export const integrationRateLimits = pgTable('integration_rate_limits', {
   count: integer('count').notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 });
+
+export const telegramBusinessBindings = pgTable('telegram_business_bindings', {
+  id: text('id').primaryKey(), // cryptographic nonce
+  workspaceId: text('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  agentId: text('agent_id').notNull(),
+  verifiedTelegramUserId: text('verified_telegram_user_id'),
+  verifiedTelegramUsername: text('verified_telegram_username'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  redeemedAt: timestamp('redeemed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type TelegramBusinessBinding = typeof telegramBusinessBindings.$inferSelect;
+export type NewTelegramBusinessBinding = typeof telegramBusinessBindings.$inferInsert;
 
 export type WebsiteWidget = typeof websiteWidgets.$inferSelect;
 export type WidgetSession = typeof widgetSessions.$inferSelect;

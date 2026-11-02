@@ -1,6 +1,6 @@
 import { neon, NeonQueryFunction } from '@neondatabase/serverless';
 import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, eq, sql, and } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import * as schema from './schema';
 import fs from 'fs';
@@ -45,6 +45,7 @@ interface DBData {
   trialGrants: schema.TrialGrant[];
   instagramEvents: schema.InstagramEvent[];
   adminAuditLogs: schema.AdminAuditLog[];
+  telegramBusinessBindings: schema.TelegramBusinessBinding[];
 }
 
 const DATA_DIR = process.env.CHORLA_DATA_DIR || path.join(process.cwd(), '.data');
@@ -63,6 +64,7 @@ const INITIAL_SEED: DBData = {
   trialGrants: [],
   instagramEvents: [],
   adminAuditLogs: [],
+  telegramBusinessBindings: [],
 };
 
 function readStore(): DBData {
@@ -99,6 +101,12 @@ function readStore(): DBData {
         if (t.createdAt) t.createdAt = new Date(t.createdAt);
       });
     }
+    parsed.telegramBusinessBindings = parsed.telegramBusinessBindings || [];
+    parsed.telegramBusinessBindings.forEach((b) => {
+      if (b.createdAt) b.createdAt = new Date(b.createdAt);
+      if (b.expiresAt) b.expiresAt = new Date(b.expiresAt);
+      if (b.redeemedAt) b.redeemedAt = new Date(b.redeemedAt);
+    });
     return parsed;
   } catch (err) {
     throw new Error('Не удалось прочитать локальное хранилище', { cause: err });
@@ -196,6 +204,14 @@ export async function createWorkspace(data: schema.NewWorkspace): Promise<schema
     instagramLastError: data.instagramLastError || null,
     instagramAgentId: data.instagramAgentId || null,
     instagramAutoReply: data.instagramAutoReply !== undefined ? data.instagramAutoReply : false,
+    telegramBusinessConnected: data.telegramBusinessConnected !== undefined ? data.telegramBusinessConnected : false,
+    telegramBusinessConnectionId: data.telegramBusinessConnectionId || null,
+    telegramBusinessUserId: data.telegramBusinessUserId || null,
+    telegramBusinessUsername: data.telegramBusinessUsername || null,
+    telegramBusinessCanReply: data.telegramBusinessCanReply !== undefined ? data.telegramBusinessCanReply : false,
+    telegramBusinessEnabled: data.telegramBusinessEnabled !== undefined ? data.telegramBusinessEnabled : false,
+    telegramBusinessAgentId: data.telegramBusinessAgentId || null,
+    telegramBusinessConnectedAt: data.telegramBusinessConnectedAt || null,
     createdAt: new Date(),
   };
 
@@ -276,6 +292,105 @@ export async function deleteWorkspace(id: string): Promise<boolean> {
   store.tokenLogs = store.tokenLogs.filter((t) => t.workspaceId !== id);
   writeStore(store);
   return true;
+}
+
+export async function getWorkspaceByTelegramBusinessConnectionId(connectionId: string): Promise<schema.Workspace | null> {
+  if (db) {
+    try {
+      const rows = await db.select().from(schema.workspaces).where(eq(schema.workspaces.telegramBusinessConnectionId, connectionId));
+      return rows[0] || null;
+    } catch (err) {
+      console.warn('Neon select workspace by telegramBusinessConnectionId error:', err);
+      throw err;
+    }
+  }
+  const store = readStore();
+  return store.workspaces.find((w) => w.telegramBusinessConnectionId === connectionId) || null;
+}
+
+export async function getWorkspaceByTelegramBusinessUserId(userId: string): Promise<schema.Workspace | null> {
+  if (db) {
+    try {
+      const rows = await db.select().from(schema.workspaces).where(eq(schema.workspaces.telegramBusinessUserId, userId));
+      return rows[0] || null;
+    } catch (err) {
+      console.warn('Neon select workspace by telegramBusinessUserId error:', err);
+      throw err;
+    }
+  }
+  const store = readStore();
+  return store.workspaces.find((w) => w.telegramBusinessUserId === userId) || null;
+}
+
+export async function createTelegramBusinessBinding(data: schema.NewTelegramBusinessBinding): Promise<schema.TelegramBusinessBinding> {
+  const binding: schema.TelegramBusinessBinding = {
+    id: data.id,
+    workspaceId: data.workspaceId,
+    agentId: data.agentId,
+    verifiedTelegramUserId: data.verifiedTelegramUserId || null,
+    verifiedTelegramUsername: data.verifiedTelegramUsername || null,
+    expiresAt: data.expiresAt,
+    redeemedAt: data.redeemedAt || null,
+    createdAt: new Date(),
+  };
+  if (db) {
+    await db.insert(schema.telegramBusinessBindings).values(binding);
+    return binding;
+  }
+  const store = readStore();
+  store.telegramBusinessBindings.push(binding);
+  writeStore(store);
+  return binding;
+}
+
+export async function getTelegramBusinessBinding(nonce: string): Promise<schema.TelegramBusinessBinding | null> {
+  if (db) {
+    const rows = await db.select().from(schema.telegramBusinessBindings).where(eq(schema.telegramBusinessBindings.id, nonce));
+    return rows[0] || null;
+  }
+  const store = readStore();
+  return store.telegramBusinessBindings.find((b) => b.id === nonce) || null;
+}
+
+export async function verifyTelegramBusinessBindingUser(nonce: string, userId: string, username?: string): Promise<boolean> {
+  const now = new Date();
+  if (db) {
+    const res = await db.update(schema.telegramBusinessBindings)
+      .set({ verifiedTelegramUserId: userId, verifiedTelegramUsername: username || null })
+      .where(and(eq(schema.telegramBusinessBindings.id, nonce), sql`${schema.telegramBusinessBindings.expiresAt} > ${now}`, sql`${schema.telegramBusinessBindings.redeemedAt} IS NULL`))
+      .returning();
+    return res.length > 0;
+  }
+  const store = readStore();
+  const binding = store.telegramBusinessBindings.find((b) => b.id === nonce && new Date(b.expiresAt) > now && !b.redeemedAt);
+  if (!binding) return false;
+  binding.verifiedTelegramUserId = userId;
+  binding.verifiedTelegramUsername = username || null;
+  writeStore(store);
+  return true;
+}
+
+export async function redeemTelegramBusinessBindingForUser(userId: string): Promise<schema.TelegramBusinessBinding | null> {
+  const now = new Date();
+  if (db) {
+    const rows = await db.update(schema.telegramBusinessBindings)
+      .set({ redeemedAt: now })
+      .where(and(
+        eq(schema.telegramBusinessBindings.verifiedTelegramUserId, userId),
+        sql`${schema.telegramBusinessBindings.expiresAt} > ${now}`,
+        sql`${schema.telegramBusinessBindings.redeemedAt} IS NULL`
+      ))
+      .returning();
+    return rows[0] || null;
+  }
+  const store = readStore();
+  const binding = store.telegramBusinessBindings.find(
+    (b) => b.verifiedTelegramUserId === userId && new Date(b.expiresAt) > now && !b.redeemedAt
+  );
+  if (!binding) return null;
+  binding.redeemedAt = now;
+  writeStore(store);
+  return binding;
 }
 
 export async function clearAllTestData(): Promise<void> {

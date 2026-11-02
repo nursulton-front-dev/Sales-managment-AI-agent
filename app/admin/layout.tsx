@@ -174,13 +174,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           onClick={() => setMobileMenuOpen(false)}
           className="flex items-center gap-3 focus:outline-none"
         >
-          <BrandLogo variant="mark" width={28} theme="white" ariaLabel="Gapchi AI" />
+          <BrandLogo variant="mark" width={28} theme="white" ariaLabel="gapcha AI" />
           <div>
             <span className="font-bold text-white text-sm tracking-tight block leading-tight">
               Панель платформы
             </span>
             <span className="text-[10px] text-slate-400 font-mono">
-              Gapchi AI Admin
+              gapcha AI Admin
             </span>
           </div>
         </Link>
@@ -308,7 +308,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </span>
               <span className="text-[var(--text-muted)]">/</span>
               <span className="text-xs font-bold text-[var(--text-primary)]">
-                Gapchi AI Platform
+                gapcha AI Platform
               </span>
             </div>
           </div>

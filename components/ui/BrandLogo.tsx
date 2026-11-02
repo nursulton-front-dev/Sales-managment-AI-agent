@@ -6,14 +6,14 @@ import { BRAND_ASSETS } from './brandAssets';
 
 export interface BrandLogoProps {
   /**
-   * 'full' renders the mark + 'Gapchi AI' wordmark.
+   * 'full' renders the mark + 'gapcha AI' wordmark.
    * 'mark' renders the standalone 2-shape directional icon.
    */
   variant?: 'full' | 'mark';
   /**
    * 'auto': adapts automatically based on CSS dark-mode (uses dark asset when .dark class is active)
-   * 'light': optimized for light backgrounds (Red mark, Graphite Gapchi, Red AI)
-   * 'dark': optimized for dark backgrounds (White/Red mark, White Gapchi, Red AI)
+   * 'light': optimized for light backgrounds (Red mark, Graphite gapcha, Red AI)
+   * 'dark': optimized for dark backgrounds (White/Red mark, White gapcha, Red AI)
    * 'white': monochromatic white version of the logo
    */
   theme?: 'auto' | 'light' | 'dark' | 'white';
@@ -29,12 +29,12 @@ export interface BrandLogoProps {
   href?: string;
   /** Additional CSS class names */
   className?: string;
-  /** Accessible label (defaults to 'Gapchi AI') */
+  /** Accessible label (defaults to 'gapcha AI') */
   ariaLabel?: string;
 }
 
 /**
- * BrandLogo — Universal Gapchi AI Logo Component
+ * BrandLogo — Universal gapcha AI Logo Component
  * Guaranteed zero-latency, zero-404 layout shift proof rendering.
  */
 export function BrandLogo({
@@ -44,7 +44,7 @@ export function BrandLogo({
   height,
   href,
   className = '',
-  ariaLabel = 'Gapchi AI',
+  ariaLabel = 'gapcha AI',
 }: BrandLogoProps) {
   const numericWidth = typeof width === 'number' ? width : width ? parseInt(String(width), 10) : undefined;
   const baseScale = numericWidth ? numericWidth / 160 : 1;
@@ -111,7 +111,7 @@ export function BrandLogo({
   if (variant === 'mark') {
     content = markElement;
   } else {
-    // Full variant: Mark + Wordmark 'Gapchi AI'
+    // Full variant: Mark + Wordmark 'gapcha AI'
     const wordmarkThemeClass =
       theme === 'white'
         ? 'text-white'
@@ -130,7 +130,7 @@ export function BrandLogo({
           className={`font-bold tracking-tight leading-none ${wordmarkThemeClass}`}
           style={{ fontSize: `${fontSize}px`, fontFamily: 'inherit' }}
         >
-          Gapchi <span className={aiThemeClass}>AI</span>
+          gapcha <span className={aiThemeClass}>AI</span>
         </span>
       </span>
     );

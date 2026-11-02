@@ -83,6 +83,27 @@ export default function IntegrationsPage() {
   const [duration, setDuration] = useState('45');
   const [copiedCmd, setCopiedCmd] = useState(false);
 
+  // Telegram Business / Account Secretary Mode State
+  const [tgTab, setTgTab] = useState<'account' | 'custom_bot'>('account');
+  const [tgBusinessStatus, setTgBusinessStatus] = useState<{
+    connected: boolean;
+    userId: string | null;
+    username: string | null;
+    canReply: boolean;
+    enabled: boolean;
+    agentId: string | null;
+    agentName: string | null;
+    botUsername: string;
+  } | null>(null);
+  const [bindLoading, setBindLoading] = useState(false);
+  const [bindData, setBindData] = useState<{
+    nonce: string;
+    bindUrl: string;
+    botUsername: string;
+    expiresAt: string;
+  } | null>(null);
+  const [copiedBindUrl, setCopiedBindUrl] = useState(false);
+
   const dirty = Boolean(
     calendar && (hours !== calendar.workingHours || duration !== String(calendar.slotDuration))
   );
@@ -100,14 +121,18 @@ export default function IntegrationsPage() {
       const responses = await Promise.all([
         fetch('/api/calendar/status'),
         fetch('/api/instagram/status'),
+        fetch('/api/integrations/telegram-business/status'),
       ]);
-      const [cal, ig] = await Promise.all(responses.map((res) => res.json()));
-      if (responses.some((res) => !res.ok) || !cal.success || !ig.success) {
+      const [cal, ig, tg] = await Promise.all(responses.map((res) => res.json()));
+      if (responses.slice(0, 2).some((res) => !res.ok) || !cal.success || !ig.success) {
         throw new Error('Не удалось проверить подключения. Повторите запрос.');
       }
       setError(null);
       setCalendar(cal);
       setInstagram(ig);
+      if (tg?.success) {
+        setTgBusinessStatus(tg);
+      }
       setHours(cal.workingHours);
       setDuration(String(cal.slotDuration));
     } catch (failure) {
@@ -150,12 +175,48 @@ export default function IntegrationsPage() {
     }
   };
 
+  const handleGenerateBindLink = async () => {
+    if (!agentId) {
+      showToast('Выберите сотрудника', 'Укажите ответственного ИИ-сотрудника для привязки к аккаунту', 'error');
+      return;
+    }
+    setBindLoading(true);
+    try {
+      const res = await fetch('/api/integrations/telegram-business/bind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Не удалось создать ссылку');
+      setBindData(data);
+      showToast('Ссылка создана', 'Перейдите в Telegram для подтверждения', 'success');
+    } catch (err) {
+      showToast('Ошибка', err instanceof Error ? err.message : 'Не удалось создать ссылку', 'error');
+    } finally {
+      setBindLoading(false);
+    }
+  };
+
+  const handleDisconnectTgAccount = async () => {
+    if (await update('/api/integrations/telegram-business/disconnect')) {
+      setBindData(null);
+      showToast('Telegram-аккаунт отключён');
+    }
+  };
+
+  const handleToggleTgAccount = async () => {
+    if (await update('/api/integrations/telegram-business/toggle')) {
+      showToast('Статус автоответов обновлён');
+    }
+  };
+
   const connectedAgents = agents.filter((agent) => agent.telegramConnected);
   const selectedAgent = agents.find((agent) => agent.id === agentId);
   const isSelectedConnected = Boolean(selectedAgent?.telegramConnected);
 
   const activeCount =
-    (connectedAgents.length > 0 ? 1 : 0) +
+    (connectedAgents.length > 0 || tgBusinessStatus?.connected ? 1 : 0) +
     (calendar?.connected ? 1 : 0) +
     (instagram?.connected ? 1 : 0);
 
@@ -415,7 +476,7 @@ export default function IntegrationsPage() {
                           <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-400 border border-white" />
                         </div>
                         <div>
-                          <p className="font-semibold text-xs leading-none">ИИ-консультант Gapchi</p>
+                          <p className="font-semibold text-xs leading-none">ИИ-консультант gapcha</p>
                           <p className="text-[10px] text-white/80 mt-0.5 leading-none">В сети · отвечает сразу</p>
                         </div>
                       </div>
@@ -495,7 +556,7 @@ export default function IntegrationsPage() {
 
           {/* 4.2 COMPACT CHANNELS (2x2 GRID) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {/* CARD 1: Telegram Bot */}
+            {/* CARD 1: Telegram */}
             {['all', 'messages'].includes(tab) && (
               <div
                 className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
@@ -509,11 +570,13 @@ export default function IntegrationsPage() {
                     <div className="size-12 rounded-2xl bg-[#229ED9]/10 flex items-center justify-center shrink-0 border border-[#229ED9]/20 group-hover:scale-105 transition-transform">
                       <Image src="/integrations/telegram.svg" width={30} height={30} alt="Telegram" />
                     </div>
-                    <Badge variant={connectedAgents.length > 0 ? 'success' : 'neutral'}>
+                    <Badge variant={tgBusinessStatus?.connected || connectedAgents.length > 0 ? 'success' : 'neutral'}>
                       {agentsError
                         ? 'Статус недоступен'
+                        : tgBusinessStatus?.connected
+                        ? '● Аккаунт подключён'
                         : connectedAgents.length
-                        ? '● Подключён'
+                        ? '● Бот подключён'
                         : '○ Не подключён'}
                     </Badge>
                   </div>
@@ -521,18 +584,20 @@ export default function IntegrationsPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
                       <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                        Telegram-бот
+                        Telegram
                       </h3>
                       <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                        Мессенджер
+                        Личный аккаунт / Бот
                       </span>
                     </div>
                     <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
-                      {connectedAgents.length
-                        ? `Активен: ${connectedAgents
+                      {tgBusinessStatus?.connected
+                        ? `Личный аккаунт: @${tgBusinessStatus.username || tgBusinessStatus.userId || 'подключён'} · Сотрудник: ${tgBusinessStatus.agentName || 'ИИ'}`
+                        : connectedAgents.length
+                        ? `Активен бот: ${connectedAgents
                             .map((agent) => `${agent.telegramUsername ? '@' + agent.telegramUsername : agent.name}`)
                             .join(', ')}`
-                        : 'Принимайте обращения клиентов в Telegram через вашего бота. ИИ отвечает на вопросы и фиксирует контакты.'}
+                        : 'Отвечайте в Telegram от имени личного аккаунта (Secretary Mode) или подключите своего бота.'}
                     </p>
                   </div>
                 </div>
@@ -549,7 +614,7 @@ export default function IntegrationsPage() {
                       setTelegramOpen(true);
                     }}
                   >
-                    {connectedAgents.length ? 'Настроить бота' : 'Подключить'}
+                    {tgBusinessStatus?.connected || connectedAgents.length ? 'Настроить подключение' : 'Подключить'}
                   </Button>
                 </div>
               </div>
@@ -842,24 +907,15 @@ export default function IntegrationsPage() {
       <Dialog
         open={telegramOpen}
         onClose={() => {
-          if (!busy) {
+          if (!busy && !bindLoading) {
             setTelegramOpen(false);
             setToken('');
           }
         }}
-        label="Подключить Telegram"
-        className="w-[calc(100vw-32px)] sm:w-[500px] max-w-[500px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+        label="Подключение Telegram"
+        className="w-[calc(100vw-32px)] sm:w-[540px] max-w-[540px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
       >
-        <form
-          className="p-5 sm:p-6 space-y-4"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (await update('/api/agents', { id: agentId, tgBotToken: token.trim() }, 'PATCH')) {
-              setTelegramOpen(false);
-              setToken('');
-            }
-          }}
-        >
+        <div className="p-5 sm:p-6 space-y-4">
           {/* Header */}
           <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3.5">
             <div className="flex items-center gap-3">
@@ -867,15 +923,17 @@ export default function IntegrationsPage() {
                 <Image src="/integrations/telegram.svg" width={26} height={26} alt="Telegram" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">Telegram-бот</h2>
-                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">Подключение бота через @BotFather</p>
+                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">Подключение Telegram</h2>
+                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                  Личный аккаунт (Secretary Mode) или собственный бот
+                </p>
               </div>
             </div>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              disabled={busy}
+              disabled={busy || bindLoading}
               onClick={() => {
                 setTelegramOpen(false);
                 setToken('');
@@ -886,164 +944,441 @@ export default function IntegrationsPage() {
             </Button>
           </div>
 
-          {/* Active Bot Status (if current agent has connected bot) */}
-          {isSelectedConnected && (
-            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] truncate">
-                  Бот активен:{' '}
-                  <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                    @{selectedAgent?.telegramUsername || 'bot'}
-                  </strong>
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={busy}
-                className="text-xs text-[var(--danger-text)] hover:bg-red-50 dark:hover:bg-red-950/30 shrink-0 h-7 px-2"
-                onClick={async () => {
-                  if (await update('/api/agents', { id: agentId, tgBotToken: '' }, 'PATCH')) {
-                    setToken('');
-                  }
-                }}
-              >
-                Отключить
-              </Button>
+          {/* Mode Switcher Tabs */}
+          <div className="grid grid-cols-2 p-1 rounded-xl bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => setTgTab('account')}
+              className={`py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                tgTab === 'account'
+                  ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
+                  : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+              }`}
+            >
+              <span>Telegram-аккаунт</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
+                Рекомендуем
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTgTab('custom_bot')}
+              className={`py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                tgTab === 'custom_bot'
+                  ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
+                  : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+              }`}
+            >
+              <span>Свой Telegram-бот</span>
+            </button>
+          </div>
+
+          {/* TAB 1: Telegram Business / Secretary Mode */}
+          {tgTab === 'account' && (
+            <div className="space-y-4">
+              {tgBusinessStatus?.connected ? (
+                /* Connected State */
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          Аккаунт подключён (Secretary Mode)
+                        </span>
+                      </div>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                        {tgBusinessStatus.enabled ? 'Автоответы активны' : 'На паузе'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-2.5 rounded-lg bg-[var(--surface)]/70 dark:bg-[#142137]/70 border border-[var(--border)] dark:border-[#29374C]">
+                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
+                          Telegram-аккаунт:
+                        </span>
+                        <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block">
+                          @{tgBusinessStatus.username || tgBusinessStatus.userId}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-[var(--surface)]/70 dark:bg-[#142137]/70 border border-[var(--border)] dark:border-[#29374C]">
+                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
+                          Ответственный ИИ:
+                        </span>
+                        <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block">
+                          {tgBusinessStatus.agentName || 'ИИ-сотрудник'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {!tgBusinessStatus.canReply && (
+                      <div className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 p-2 rounded-lg">
+                        ⚠️ В Telegram Business отключено право бота отвечать на сообщения. Включите «Разрешить отвечать» в настройках бота в приложении Telegram.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] space-y-1">
+                    <p className="font-medium text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      Ручной перехват (Human Takeover):
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      Когда вы лично отправляете сообщение клиенту в Telegram, ИИ сразу передаёт управление вам и останавливает автоответы в этом диалоге.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      className="text-xs text-[var(--danger-text)] hover:bg-red-50 dark:hover:bg-red-950/30"
+                      onClick={handleDisconnectTgAccount}
+                    >
+                      Отключить аккаунт
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={handleToggleTgAccount}
+                      >
+                        {tgBusinessStatus.enabled ? 'Поставить на паузу' : 'Возобновить'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setTelegramOpen(false)}
+                      >
+                        Готово
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Unconnected State */
+                <div className="space-y-4">
+                  <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                    Подключите служебного бота платформы к вашему Telegram Business. ИИ будет отвечать клиентам от вашего имени прямо в личных диалогах.
+                  </p>
+
+                  <Select
+                    label="Ответственный ИИ-сотрудник"
+                    value={agentId}
+                    onChange={(e) => setAgentId(e.target.value)}
+                    required
+                    options={[
+                      { value: '', label: 'Выберите сотрудника' },
+                      ...agents.map((agent) => ({
+                        value: agent.id,
+                        label: agent.name,
+                      })),
+                    ]}
+                  />
+
+                  {!bindData ? (
+                    <div className="space-y-3 pt-1">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        className="w-full"
+                        disabled={!agentId || bindLoading}
+                        isLoading={bindLoading}
+                        onClick={handleGenerateBindLink}
+                      >
+                        Сгенерировать ссылку для привязки
+                      </Button>
+                      <p className="text-[11px] text-center text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                        Создаётся безопасная одноразовая ссылка с ограничением по времени (15 минут).
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3.5 pt-1">
+                      <div className="p-3.5 rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                            Одноразовая ссылка подтверждения:
+                          </span>
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                            Действует 15 минут
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={bindData.bindUrl}
+                            className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-mono text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] select-all outline-hidden"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2.5 shrink-0"
+                            onClick={() => {
+                              void navigator.clipboard.writeText(bindData.bindUrl);
+                              setCopiedBindUrl(true);
+                              setTimeout(() => setCopiedBindUrl(false), 2000);
+                            }}
+                          >
+                            {copiedBindUrl ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                          </Button>
+                        </div>
+
+                        <div className="pt-1 flex gap-2">
+                          <a
+                            href={bindData.bindUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#229ED9] hover:bg-[#1c8ec4] text-white text-xs font-semibold transition-all shadow-xs"
+                          >
+                            <span>Открыть в Telegram</span>
+                            <ExternalLink size={13} />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Step-by-Step Instructions */}
+                      <div className="rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] p-3.5 space-y-2.5">
+                        <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                          Пошаговые действия:
+                        </span>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex items-start gap-2.5">
+                            <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                              1
+                            </span>
+                            <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                              Нажмите «Открыть в Telegram» выше и отправьте команду <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[#F4F7FB]">/start</code> боту <strong>@{bindData.botUsername}</strong>.
+                            </span>
+                          </div>
+
+                          <div className="flex items-start gap-2.5">
+                            <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                              2
+                            </span>
+                            <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                              В приложении Telegram перейдите: <strong>Настройки → Telegram Business → Чат-боты</strong> (или <em>Автоматизация чатов</em>).
+                            </span>
+                          </div>
+
+                          <div className="flex items-start gap-2.5">
+                            <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                              3
+                            </span>
+                            <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                              Добавьте бота <strong>@{bindData.botUsername}</strong> и включите пункт <strong>«Отвечать на сообщения»</strong>.
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setBindData(null)}
+                        >
+                          Сбросить
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          isLoading={loading}
+                          onClick={async () => {
+                            await load();
+                            showToast('Статус обновлён');
+                          }}
+                        >
+                          Проверить подключение
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Form Fields */}
-          <div className="space-y-3.5">
-            <Select
-              label="Ответственный ИИ-сотрудник"
-              value={agentId}
-              onChange={(e) => setAgentId(e.target.value)}
-              required
-              options={[
-                { value: '', label: 'Выберите сотрудника' },
-                ...agents.map((agent) => ({
-                  value: agent.id,
-                  label: `${agent.name}${agent.telegramConnected ? ' (Бот подключён)' : ''}`,
-                })),
-              ]}
-            />
-
-            <div>
-              <Input
-                label={isSelectedConnected ? 'Новый токен бота (для замены)' : 'Токен бота из @BotFather'}
-                type="password"
-                autoComplete="off"
-                value={token}
-                onChange={(e) => setToken(e.target.value.trim())}
-                placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-                required={!isSelectedConnected}
-                className="font-mono text-xs"
-              />
-              <p className="mt-1 text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                Токен хранится в зашифрованном виде и нужен только для доставки сообщений.
-              </p>
-            </div>
-          </div>
-
-          {/* Step-by-Step Instruction */}
-          <div className="rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] p-3.5 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                Пошаговая инструкция:
-              </span>
-              <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">~1 минута</span>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-start gap-2.5">
-                <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                  1
-                </span>
-                <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                  Откройте официального бота{' '}
-                  <a
-                    href="https://t.me/BotFather"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-0.5 font-semibold text-[#229ED9] hover:underline"
-                  >
-                    @BotFather
-                    <ExternalLink size={10} />
-                  </a>{' '}
-                  в Telegram.
-                </span>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                  2
-                </span>
-                <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                  Отправьте команду{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void navigator.clipboard.writeText('/newbot');
-                      setCopiedCmd(true);
-                      setTimeout(() => setCopiedCmd(false), 2000);
-                    }}
-                    title="Нажмите, чтобы скопировать команду"
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-mono text-[11px] text-[var(--accent-link)] font-semibold hover:border-[var(--border-strong)] cursor-pointer"
-                  >
-                    /newbot
-                    {copiedCmd ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
-                  </button>{' '}
-                  и укажите имя бота (например, <em className="text-[var(--text-primary)] dark:text-[#F4F7FB]">Отдел продаж</em>).
-                </span>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                  3
-                </span>
-                <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                  Задайте username бота с окончанием <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[#F4F7FB]">bot</code> (например:{' '}
-                  <span className="font-mono text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">myshop_sales_bot</span>).
-                </span>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                  4
-                </span>
-                <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                  Скопируйте выданный <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">HTTP API токен</strong> и вставьте в поле выше.
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[#29374C]">
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => {
-                setTelegramOpen(false);
-                setToken('');
+          {/* TAB 2: Custom Bot */}
+          {tgTab === 'custom_bot' && (
+            <form
+              className="space-y-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (await update('/api/agents', { id: agentId, tgBotToken: token.trim() }, 'PATCH')) {
+                  setTelegramOpen(false);
+                  setToken('');
+                }
               }}
             >
-              Отмена
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              isLoading={busy}
-              disabled={(!token && !isSelectedConnected) || !agentId}
-            >
-              {isSelectedConnected ? 'Обновить токен' : 'Подключить бота'}
-            </Button>
-          </div>
-        </form>
+              {/* Active Bot Status (if current agent has connected bot) */}
+              {isSelectedConnected && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] truncate">
+                      Бот активен:{' '}
+                      <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                        @{selectedAgent?.telegramUsername || 'bot'}
+                      </strong>
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy}
+                    className="text-xs text-[var(--danger-text)] hover:bg-red-50 dark:hover:bg-red-950/30 shrink-0 h-7 px-2"
+                    onClick={async () => {
+                      if (await update('/api/agents', { id: agentId, tgBotToken: '' }, 'PATCH')) {
+                        setToken('');
+                      }
+                    }}
+                  >
+                    Отключить
+                  </Button>
+                </div>
+              )}
+
+              {/* Form Fields */}
+              <div className="space-y-3.5">
+                <Select
+                  label="Ответственный ИИ-сотрудник"
+                  value={agentId}
+                  onChange={(e) => setAgentId(e.target.value)}
+                  required
+                  options={[
+                    { value: '', label: 'Выберите сотрудника' },
+                    ...agents.map((agent) => ({
+                      value: agent.id,
+                      label: `${agent.name}${agent.telegramConnected ? ' (Бот подключён)' : ''}`,
+                    })),
+                  ]}
+                />
+
+                <div>
+                  <Input
+                    label={isSelectedConnected ? 'Новый токен бота (для замены)' : 'Токен бота из @BotFather'}
+                    type="password"
+                    autoComplete="off"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value.trim())}
+                    placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                    required={!isSelectedConnected}
+                    className="font-mono text-xs"
+                  />
+                  <p className="mt-1 text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                    Токен хранится в зашифрованном виде и нужен только для доставки сообщений.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step-by-Step Instruction */}
+              <div className="rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    Пошаговая инструкция:
+                  </span>
+                  <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">~1 минута</span>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-start gap-2.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                      1
+                    </span>
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                      Откройте официального бота{' '}
+                      <a
+                        href="https://t.me/BotFather"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-0.5 font-semibold text-[#229ED9] hover:underline"
+                      >
+                        @BotFather
+                        <ExternalLink size={10} />
+                      </a>{' '}
+                      в Telegram.
+                    </span>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                      2
+                    </span>
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                      Отправьте команду{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void navigator.clipboard.writeText('/newbot');
+                          setCopiedCmd(true);
+                          setTimeout(() => setCopiedCmd(false), 2000);
+                        }}
+                        title="Нажмите, чтобы скопировать команду"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-mono text-[11px] text-[var(--accent-link)] font-semibold hover:border-[var(--border-strong)] cursor-pointer"
+                      >
+                        /newbot
+                        {copiedCmd ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
+                      </button>{' '}
+                      и укажите имя бота (например, <em className="text-[var(--text-primary)] dark:text-[#F4F7FB]">Отдел продаж</em>).
+                    </span>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                      3
+                    </span>
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                      Задайте username бота с окончанием <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[#F4F7FB]">bot</code> (например:{' '}
+                      <span className="font-mono text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">myshop_sales_bot</span>).
+                    </span>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                      4
+                    </span>
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                      Скопируйте выданный <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">HTTP API токен</strong> и вставьте в поле выше.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[#29374C]">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => {
+                    setTelegramOpen(false);
+                    setToken('');
+                  }}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={busy}
+                  disabled={(!token && !isSelectedConnected) || !agentId}
+                >
+                  {isSelectedConnected ? 'Обновить токен' : 'Подключить бота'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </Dialog>
 
       {/* 6.4 Google Calendar Modal */}

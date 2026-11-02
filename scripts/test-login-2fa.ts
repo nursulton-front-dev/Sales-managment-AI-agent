@@ -46,7 +46,7 @@ function assert(condition: boolean, name: string, category: string, details?: st
 }
 
 async function runLogin2FATestSuite() {
-  console.log('🚀 Starting Gapchi AI Login 2FA & Security Verification Suite...\n');
+  console.log('🚀 Starting gapcha AI Login 2FA & Security Verification Suite...\n');
 
   // STEP 0: Spin up isolated in-memory PostgreSQL engine via PGlite
   console.log('--- Step 0: Initializing Isolated PGlite PostgreSQL Database ---');
@@ -133,6 +133,28 @@ async function runLogin2FATestSuite() {
       instagram_last_error TEXT,
       instagram_agent_id TEXT,
       instagram_auto_reply BOOLEAN NOT NULL DEFAULT FALSE,
+      telegram_business_connected BOOLEAN NOT NULL DEFAULT FALSE,
+      telegram_business_connection_id TEXT,
+      telegram_business_user_id TEXT,
+      telegram_business_username TEXT,
+      telegram_business_can_reply BOOLEAN NOT NULL DEFAULT FALSE,
+      telegram_business_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      telegram_business_agent_id TEXT,
+      telegram_business_connected_at TIMESTAMP WITH TIME ZONE,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE telegram_business_bindings (
+      id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+      agent_id TEXT NOT NULL,
+      nonce TEXT NOT NULL UNIQUE,
+      bot_username TEXT NOT NULL,
+      telegram_user_id TEXT,
+      telegram_username TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      redeemed_at TIMESTAMP WITH TIME ZONE,
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
     );
   `);
@@ -213,7 +235,7 @@ async function runLogin2FATestSuite() {
 
   await testDb.insert(schema.users).values({
     id: 'u_alex',
-    name: 'Alex Gapchi',
+    name: 'Alex gapcha',
     email: userAEmail,
     emailVerified: true,
     createdAt: new Date(),
@@ -232,9 +254,9 @@ async function runLogin2FATestSuite() {
 
   await testDb.insert(schema.workspaces).values({
     id: 'ws_alex',
-    companyName: 'Gapchi Tech',
+    companyName: 'gapcha Tech',
     niche: 'education',
-    ownerName: 'Alex Gapchi',
+    ownerName: 'Alex gapcha',
     ownerEmail: userAEmail,
     ownerPhone: '+998901234567',
     passwordHash: 'managed-by-auth',

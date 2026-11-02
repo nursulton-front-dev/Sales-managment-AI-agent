@@ -52,10 +52,10 @@ export async function sendAuthEmailOTP({
   const isLogin = type === 'login-verification';
 
   const subject = isLogin
-    ? `${otp} — код подтверждения входа в Gapchi AI`
+    ? `${otp} — код подтверждения входа в gapcha AI`
     : isRecovery
-    ? `${otp} — код восстановления пароля в Gapchi AI`
-    : `${otp} — код подтверждения в Gapchi AI`;
+    ? `${otp} — код восстановления пароля в gapcha AI`
+    : `${otp} — код подтверждения в gapcha AI`;
 
   const title = isLogin
     ? 'Подтверждение входа'
@@ -64,10 +64,10 @@ export async function sendAuthEmailOTP({
     : 'Подтверждение Email адреса';
 
   const desc = isLogin
-    ? 'Используйте этот 6-значный одноразовый код для подтверждения входа в личный кабинет Gapchi AI:'
+    ? 'Используйте этот 6-значный одноразовый код для подтверждения входа в личный кабинет gapcha AI:'
     : isRecovery
     ? 'Используйте этот 6-значный код для установки нового пароля в вашей организации:'
-    : 'Добро пожаловать в Gapchi AI! Введите этот 6-значный код для подтверждения почты и начисления <strong>100 бонусных токенов</strong>:';
+    : 'Добро пожаловать в gapcha AI! Введите этот 6-значный код для подтверждения почты и начисления <strong>100 бонусных токенов</strong>:';
 
   const expiryMinutes = isLogin ? 10 : 15;
   const expiryNotice = isLogin
@@ -83,15 +83,15 @@ export async function sendAuthEmailOTP({
   }
 
   const { error } = await new Resend(process.env.RESEND_API_KEY).emails.send({
-    from: process.env.EMAIL_FROM || 'Gapchi AI <onboarding@resend.dev>',
+    from: process.env.EMAIL_FROM || 'gapcha AI <onboarding@resend.dev>',
     to: email,
     subject,
-    text: `Ваш проверочный код Gapchi AI: ${otp}. Срок действия — ${expiryMinutes} минут.`,
+    text: `Ваш проверочный код gapcha AI: ${otp}. Срок действия — ${expiryMinutes} минут.`,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #E2E8F0; border-radius: 16px; background: #FFFFFF;">
         <div style="text-align: center; margin-bottom: 20px;">
           <span style="font-size: 26px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-            Gapchi <span style="color: #DC2626;">AI</span>
+            gapcha <span style="color: #DC2626;">AI</span>
           </span>
         </div>
         <h2 style="font-size: 20px; font-weight: 700; color: #0F172A; margin: 0 0 8px 0; text-align: center;">${title}</h2>

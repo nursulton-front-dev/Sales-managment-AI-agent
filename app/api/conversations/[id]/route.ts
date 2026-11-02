@@ -53,6 +53,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ success: false, error: 'Недопустимый статус' }, { status: 400 });
     }
 
+    if (status === 'active') {
+      const { cancelConversationEvents } = await import('@/lib/server/channels/events');
+      await cancelConversationEvents(id, 'handled_by_operator');
+    }
+
     const updated = await updateConversation(id, { status });
     return NextResponse.json({ success: true, conversation: updated });
   } catch (error) {
@@ -87,6 +92,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (typeof text !== 'string' || !text.trim() || text.length > 4000 || conv.status === 'closed') return NextResponse.json({ success: false, error: 'Проверьте текст и статус диалога' }, { status: 400 });
     await updateConversation(id, { status: 'human_takeover' });
+    const { cancelConversationEvents } = await import('@/lib/server/channels/events');
+    await cancelConversationEvents(id, 'human_takeover');
+
     if (conv.channel === 'Instagram' && conv.clientPhone?.startsWith('ig:')) {
       const { getWorkspaceById } = await import('@/src/db');
       const { decryptToken } = await import('@/lib/instagram/config');
@@ -96,11 +104,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       if (!accessToken) return NextResponse.json({ success: false, error: 'Переподключите Instagram' }, { status: 409 });
       await sendInstagramDirectMessage({ recipientId: conv.clientPhone.slice(3), text, accessToken });
     } else if (conv.channel === 'Telegram' && conv.clientPhone?.startsWith('id:')) {
-      const { getAllAgents } = await import('@/src/db');
-      const { telegramCall } = await import('@/lib/server/telegram');
-      const agent = (await getAllAgents(conv.workspaceId)).find((item) => item.id === conv.agentId);
-      if (!agent?.tgBotToken) return NextResponse.json({ success: false, error: 'Переподключите Telegram' }, { status: 409 });
-      await telegramCall(agent.tgBotToken, 'sendMessage', { chat_id: conv.clientPhone.slice(3), text });
+      const { getAllAgents, getWorkspaceById } = await import('@/src/db');
+      const { telegramCall, getServiceBotToken } = await import('@/lib/server/telegram');
+      const [agents, workspace] = await Promise.all([
+        getAllAgents(conv.workspaceId),
+        getWorkspaceById(conv.workspaceId),
+      ]);
+      const agent = agents.find((item) => item.id === conv.agentId);
+      const isBusinessChat = Boolean(workspace?.telegramBusinessConnectionId && workspace.telegramBusinessConnected);
+      const botToken = isBusinessChat
+        ? (getServiceBotToken() || agent?.tgBotToken)
+        : agent?.tgBotToken;
+      if (!botToken) return NextResponse.json({ success: false, error: 'Переподключите Telegram' }, { status: 409 });
+
+      const sendBody: Record<string, unknown> = { chat_id: conv.clientPhone.slice(3), text };
+      if (isBusinessChat && workspace?.telegramBusinessConnectionId) {
+        sendBody.business_connection_id = workspace.telegramBusinessConnectionId;
+      }
+      await telegramCall(botToken, 'sendMessage', sendBody);
     } else if (conv.channel === 'WebWidget') {
       // The authenticated visitor reads this persisted reply through their widget session.
     } else {

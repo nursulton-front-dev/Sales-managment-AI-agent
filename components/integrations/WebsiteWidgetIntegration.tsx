@@ -54,7 +54,7 @@ const defaults: Settings = {
 };
 
 const COLOR_PRESETS = [
-  { name: 'Gapchi Red', value: '#E52329' },
+  { name: 'gapcha Red', value: '#E52329' },
   { name: 'Electric Blue', value: '#2563EB' },
   { name: 'Emerald', value: '#059669' },
   { name: 'Deep Slate', value: '#0F172A' },
