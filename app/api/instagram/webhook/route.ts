@@ -9,7 +9,8 @@ export const maxDuration = 60;
 export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get('hub.mode');
   const token = req.nextUrl.searchParams.get('hub.verify_token');
-  if (mode !== 'subscribe' || !token || token !== process.env.INSTAGRAM_VERIFY_TOKEN) return new Response('Verification failed', { status: 403 });
+  const expectedToken = process.env.INSTAGRAM_VERIFY_TOKEN || process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN;
+  if (mode !== 'subscribe' || !token || !expectedToken || token !== expectedToken) return new Response('Verification failed', { status: 403 });
   return new Response(req.nextUrl.searchParams.get('hub.challenge') || '', { headers: { 'Content-Type': 'text/plain' } });
 }
 

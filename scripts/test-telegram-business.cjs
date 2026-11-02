@@ -20,7 +20,11 @@ const env = {
   BETTER_AUTH_SECRET: 'isolated-32-characters-secret-for-tests-only',
   TELEGRAM_SERVICE_BOT_TOKEN: '777888:mock_service_bot_token',
   TELEGRAM_SERVICE_BOT_USERNAME: 'gapcha_service_bot',
+  INSTAGRAM_APP_ID: 'mock_meta_app_id',
   INSTAGRAM_APP_SECRET: 'mock_meta_secret',
+  INSTAGRAM_VERIFY_TOKEN: 'isolated_verify_secret',
+  INSTAGRAM_CONFIG_ID: '1865927991509771',
+  NEXT_PUBLIC_APP_URL: 'https://chorla-ai.vercel.app',
 };
 
 let identity = { workspaceId: 'ws_test_biz', role: 'owner', userEmail: 'biz@gapcha.ai', userName: 'BizOwner' };
@@ -33,6 +37,17 @@ const load = loader(env, {
   capturedCalls.push({ url: String(url), options });
   if (String(url).includes('api.telegram.org')) {
     return Response.json({ ok: true, result: { message_id: 123 } });
+  }
+  if (String(url).includes('graph.facebook.com')) {
+    if (String(url).includes('/oauth/access_token')) {
+      return Response.json({ access_token: 'mock_suat_token_777', token_type: 'bearer', expires_in: 5184000 });
+    }
+    if (String(url).includes('/me/assigned_instagram_accounts')) {
+      return Response.json({
+        data: [{ id: 'ig_user_456', username: 'gapcha_official', name: 'gapcha AI Shop', profile_picture_url: 'https://cdn.example/pic.jpg' }]
+      });
+    }
+    return Response.json({ success: true, message_id: 'meta_msg_999' });
   }
   if (String(url).includes('graph.instagram.com')) {
     return Response.json({ success: true });
@@ -202,11 +217,54 @@ async function main() {
   const disconnWs = await db.getWorkspaceById(ws.id);
   check('Workspace disconnected cleanly', disconnWs.telegramBusinessConnected === false && disconnWs.telegramBusinessConnectionId === null);
 
-  // 9. Instagram API with Instagram Login: Webhook subscription endpoint check
+  // 9. Meta Unified Login (Facebook Login for Business with Configuration ID)
+  const igAuthApi = load('app/api/instagram/auth/route.ts');
+  const igWebhookApi = load('app/api/instagram/webhook/route.ts');
+
+  // 9.1 Unified Login Auth URL check
+  const authReq = new NextRequest('http://localhost:3000/api/instagram/auth', {
+    headers: { accept: 'application/json' },
+  });
+  const authJson = await (await igAuthApi.GET(authReq)).json();
+  check('Instagram auth returns Unified Login URL with config_id and Facebook OAuth dialog',
+    authJson.success &&
+    authJson.authUrl.includes('https://www.facebook.com/v21.0/dialog/oauth') &&
+    authJson.authUrl.includes('config_id=1865927991509771') &&
+    authJson.authUrl.includes('client_id=mock_meta_app_id') &&
+    authJson.authUrl.includes('redirect_uri=https%3A%2F%2Fchorla-ai.vercel.app%2Fapi%2Finstagram%2Fcallback'));
+
+  // 9.2 Token Exchange with Meta Graph API
   capturedCalls.length = 0;
-  await igClient.subscribeInstagramWebhook('ig_user_456', 'user_token_123');
-  check('Instagram webhook subscription calls graph.instagram.com, not graph.facebook.com',
-    capturedCalls.some((c) => c.url.startsWith('https://graph.instagram.com/v21.0/ig_user_456/subscribed_apps')));
+  const tokenData = await igClient.exchangeCodeForInstagramToken('auth_code_xyz', 'https://chorla-ai.vercel.app/api/instagram/callback');
+  check('Exchange code returns access token via graph.facebook.com',
+    tokenData.access_token === 'mock_suat_token_777' &&
+    capturedCalls.some((c) => c.url.startsWith('https://graph.facebook.com/v21.0/oauth/access_token')));
+
+  // 9.3 Discover Instagram Account via assigned_instagram_accounts
+  capturedCalls.length = 0;
+  const profile = await igClient.getInstagramUserProfile('mock_suat_token_777');
+  check('Profile lookup retrieves Instagram account from /me/assigned_instagram_accounts',
+    profile.id === 'ig_user_456' &&
+    profile.username === 'gapcha_official' &&
+    capturedCalls.some((c) => c.url.startsWith('https://graph.facebook.com/v21.0/me/assigned_instagram_accounts')));
+
+  // 9.4 Webhook Subscription
+  capturedCalls.length = 0;
+  const subscribed = await igClient.subscribeInstagramWebhook('ig_user_456', 'mock_suat_token_777');
+  check('Webhook subscription succeeds on graph.facebook.com subscribed_apps',
+    subscribed &&
+    capturedCalls.some((c) => c.url.startsWith('https://graph.facebook.com/v21.0/ig_user_456/subscribed_apps')));
+
+  // 9.5 Webhook GET Challenge Verification
+  const validWebhookReq = new NextRequest('https://chorla-ai.vercel.app/api/instagram/webhook?hub.mode=subscribe&hub.challenge=test_challenge_12345&hub.verify_token=isolated_verify_secret');
+  const validWebhookRes = await igWebhookApi.GET(validWebhookReq);
+  check('Webhook challenge succeeds with matching INSTAGRAM_VERIFY_TOKEN',
+    validWebhookRes.status === 200 && (await validWebhookRes.text()) === 'test_challenge_12345');
+
+  const invalidWebhookReq = new NextRequest('https://chorla-ai.vercel.app/api/instagram/webhook?hub.mode=subscribe&hub.challenge=test_challenge_12345&hub.verify_token=wrong_token');
+  const invalidWebhookRes = await igWebhookApi.GET(invalidWebhookReq);
+  check('Webhook challenge rejected with 403 on invalid verify token',
+    invalidWebhookRes.status === 403);
 
   console.log(`\n🎉 All ${checks.length} Telegram Business & Instagram assertions passed successfully!`);
 }

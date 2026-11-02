@@ -1,5 +1,6 @@
 import {
   INSTAGRAM_GRAPH_BASE_URL,
+  META_GRAPH_BASE_URL,
 } from './config';
 import { DeliveryRejectedError } from '@/lib/server/channels/errors';
 
@@ -30,7 +31,8 @@ export interface InstagramSendResult {
 }
 
 /**
- * Exchange OAuth authorization code for short-lived user access token
+ * Exchange OAuth authorization code for access token.
+ * Supports Meta Unified Login (Facebook Login for Business) and legacy Instagram standalone OAuth.
  */
 export async function exchangeCodeForInstagramToken(
   code: string,
@@ -43,6 +45,30 @@ export async function exchangeCodeForInstagramToken(
     throw new Error('INSTAGRAM_APP_ID or INSTAGRAM_APP_SECRET is not configured');
   }
 
+  // 1. Primary path: Meta Graph API OAuth endpoint (Unified Login / Facebook Login for Business)
+  try {
+    const metaUrl = new URL(`${META_GRAPH_BASE_URL}/oauth/access_token`);
+    metaUrl.searchParams.set('client_id', appId);
+    metaUrl.searchParams.set('client_secret', appSecret);
+    metaUrl.searchParams.set('redirect_uri', redirectUri);
+    metaUrl.searchParams.set('code', code);
+
+    const metaRes = await fetch(metaUrl.toString(), { method: 'GET' });
+    const metaData = await metaRes.json();
+
+    if (metaRes.ok && metaData.access_token) {
+      return {
+        access_token: metaData.access_token,
+        user_id: metaData.user_id ? String(metaData.user_id) : '',
+        permissions: metaData.permissions || [],
+        expires_in: metaData.expires_in,
+      };
+    }
+  } catch (metaErr) {
+    console.warn('Meta Graph OAuth code exchange attempt failed, trying fallback:', metaErr);
+  }
+
+  // 2. Fallback path: Standalone api.instagram.com OAuth endpoint
   const formData = new URLSearchParams();
   formData.append('client_id', appId);
   formData.append('client_secret', appSecret);
@@ -120,13 +146,79 @@ export async function refreshLongLivedInstagramToken(
 }
 
 /**
- * Fetch Instagram Business/Creator profile details (username, account type)
+ * Fetch Instagram Business/Creator profile details (username, account type).
+ * In Meta Unified Login, queries assigned Instagram accounts from the business portfolio.
  */
 export async function getInstagramUserProfile(
   accessToken: string,
   userId?: string
 ): Promise<InstagramUserProfile> {
-  const target = userId || 'me';
+  // 1. Unified Login path: query /me/assigned_instagram_accounts via Graph API
+  try {
+    const assignedUrl = new URL(`${META_GRAPH_BASE_URL}/me/assigned_instagram_accounts`);
+    assignedUrl.searchParams.set('fields', 'id,username,name,profile_picture_url');
+    assignedUrl.searchParams.set('access_token', accessToken);
+    const assignedRes = await fetch(assignedUrl.toString(), { method: 'GET' });
+    const assignedData = await assignedRes.json();
+    if (assignedRes.ok && Array.isArray(assignedData.data) && assignedData.data.length > 0) {
+      const ig = assignedData.data[0];
+      return {
+        id: String(ig.id),
+        username: ig.username || `ig_${ig.id}`,
+        name: ig.name || ig.username,
+        account_type: 'BUSINESS',
+        profile_picture_url: ig.profile_picture_url,
+      };
+    }
+  } catch (err) {
+    console.warn('Unified login assigned_instagram_accounts check warning:', err);
+  }
+
+  // 2. Facebook Pages with linked instagram_business_account fallback
+  try {
+    const pagesUrl = new URL(`${META_GRAPH_BASE_URL}/me/accounts`);
+    pagesUrl.searchParams.set('fields', 'id,name,instagram_business_account{id,username,name,profile_picture_url}');
+    pagesUrl.searchParams.set('access_token', accessToken);
+    const pagesRes = await fetch(pagesUrl.toString(), { method: 'GET' });
+    const pagesData = await pagesRes.json();
+    if (pagesRes.ok && Array.isArray(pagesData.data)) {
+      for (const page of pagesData.data) {
+        if (page.instagram_business_account?.id) {
+          const ig = page.instagram_business_account;
+          return {
+            id: String(ig.id),
+            username: ig.username || `ig_${ig.id}`,
+            name: ig.name || ig.username,
+            account_type: 'BUSINESS',
+            profile_picture_url: ig.profile_picture_url,
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Page accounts query check warning:', err);
+  }
+
+  // 3. Direct lookup on graph.facebook.com
+  const target = userId && userId !== 'me' ? userId : 'me';
+  try {
+    const fbUrl = new URL(`${META_GRAPH_BASE_URL}/${target}`);
+    fbUrl.searchParams.set('fields', 'id,username,name,account_type,profile_picture_url');
+    fbUrl.searchParams.set('access_token', accessToken);
+    const fbRes = await fetch(fbUrl.toString(), { method: 'GET' });
+    const fbData = await fbRes.json();
+    if (fbRes.ok && fbData.id) {
+      return {
+        id: String(fbData.id),
+        username: fbData.username || `ig_${fbData.id}`,
+        name: fbData.name,
+        account_type: fbData.account_type || 'BUSINESS',
+        profile_picture_url: fbData.profile_picture_url,
+      };
+    }
+  } catch {}
+
+  // 4. Fallback to graph.instagram.com
   const url = new URL(`${INSTAGRAM_GRAPH_BASE_URL}/${target}`);
   url.searchParams.set('fields', 'id,username,name,account_type,profile_picture_url');
   url.searchParams.set('access_token', accessToken);
@@ -148,15 +240,38 @@ export async function getInstagramUserProfile(
 }
 
 /**
- * Subscribe Meta Webhook to Page / Instagram Account
+ * Subscribe Meta Webhook to Page / Instagram Account.
+ * Supports both Meta Unified Login (graph.facebook.com) and Instagram Graph (graph.instagram.com).
  */
 export async function subscribeInstagramWebhook(
   pageOrAccountId: string,
   accessToken: string
 ): Promise<boolean> {
+  const target = pageOrAccountId && pageOrAccountId !== 'me' ? pageOrAccountId : 'me';
+
+  // 1. Try graph.facebook.com/{target}/subscribed_apps (Meta Unified Login / Business Integration)
   try {
-    // For Instagram API with Instagram Login, use graph.instagram.com rather than graph.facebook.com
-    const target = pageOrAccountId && pageOrAccountId !== 'me' ? pageOrAccountId : 'me';
+    const fbUrl = `${META_GRAPH_BASE_URL}/${target}/subscribed_apps`;
+    const fbRes = await fetch(fbUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        subscribed_fields: ['messages', 'messaging_postbacks'],
+        access_token: accessToken,
+      }),
+    });
+    const fbData = await fbRes.json();
+    if (fbRes.ok && fbData.success === true) {
+      return true;
+    }
+  } catch (err) {
+    console.warn('graph.facebook.com webhook subscription warning:', err);
+  }
+
+  // 2. Try graph.instagram.com/{target}/subscribed_apps
+  try {
     const url = `${INSTAGRAM_GRAPH_BASE_URL}/${target}/subscribed_apps`;
     const res = await fetch(url, {
       method: 'POST',
@@ -172,7 +287,7 @@ export async function subscribeInstagramWebhook(
     const data = await res.json();
     return res.ok && data.success === true;
   } catch (err) {
-    console.warn('Instagram webhook subscription warning:', err);
+    console.warn('graph.instagram.com webhook subscription warning:', err);
     return false;
   }
 }
@@ -190,7 +305,30 @@ export async function sendInstagramDirectMessage({
   text: string;
   accessToken: string;
 }): Promise<InstagramSendResult> {
-  // According to Meta API: POST /v21.0/me/messages
+  // 1. Unified Login path via graph.facebook.com/v21.0/me/messages
+  try {
+    const fbRes = await fetch(`${META_GRAPH_BASE_URL}/me/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text },
+        access_token: accessToken,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const fbData = await fbRes.json();
+    if (fbRes.ok && fbData.message_id) {
+      return {
+        recipient_id: String(fbData.recipient_id || recipientId),
+        message_id: String(fbData.message_id),
+      };
+    }
+  } catch {}
+
+  // 2. Direct Instagram Graph path via graph.instagram.com/v21.0/me/messages
   const url = `${INSTAGRAM_GRAPH_BASE_URL}/me/messages`;
 
   const res = await fetch(url, {

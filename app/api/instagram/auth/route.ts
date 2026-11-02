@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { getServerSessionContext } from '@/src/server/auth/session';
-import { createOAuthState, INSTAGRAM_SCOPES } from '@/lib/instagram/config';
+import {
+  createOAuthState,
+  INSTAGRAM_CONFIG_ID,
+  INSTAGRAM_GRAPH_API_VERSION,
+  INSTAGRAM_SCOPES,
+} from '@/lib/instagram/config';
 
 export async function GET(req: NextRequest) {
   await connection();
@@ -43,13 +48,26 @@ export async function GET(req: NextRequest) {
     // Secure cryptographic state signed with HMAC-SHA256, binds workspaceId and userId
     const state = createOAuthState(session.workspaceId, session.userEmail || undefined);
 
-    // Meta Instagram Login Authorization URL
-    const authUrl = new URL('https://api.instagram.com/oauth/authorize');
-    authUrl.searchParams.set('client_id', appId);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
-    authUrl.searchParams.set('scope', INSTAGRAM_SCOPES);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('state', state);
+    const configId = process.env.INSTAGRAM_CONFIG_ID || INSTAGRAM_CONFIG_ID;
+
+    // Meta Instagram Unified Login Authorization URL (Facebook Login for Business with Configuration ID)
+    let authUrl: URL;
+    if (configId) {
+      authUrl = new URL(`https://www.facebook.com/${INSTAGRAM_GRAPH_API_VERSION}/dialog/oauth`);
+      authUrl.searchParams.set('client_id', appId);
+      authUrl.searchParams.set('config_id', configId);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('state', state);
+    } else {
+      // Legacy standalone Instagram Login fallback
+      authUrl = new URL('https://api.instagram.com/oauth/authorize');
+      authUrl.searchParams.set('client_id', appId);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('scope', INSTAGRAM_SCOPES);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('state', state);
+    }
 
     // If request asks for JSON URL
     if (req.headers.get('accept')?.includes('application/json')) {

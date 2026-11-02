@@ -9,13 +9,19 @@ export const INSTAGRAM_GRAPH_BASE_URL = `https://graph.instagram.com/${INSTAGRAM
 export const META_GRAPH_BASE_URL = `https://graph.facebook.com/${INSTAGRAM_GRAPH_API_VERSION}`;
 
 /**
+ * Meta Unified Login Configuration ID for Instagram.
+ * Configured in Meta Developer Dashboard: Facebook Login for Business -> Configurations.
+ */
+export const INSTAGRAM_CONFIG_ID = process.env.INSTAGRAM_CONFIG_ID || '1865927991509771';
+
+/**
  * Required Instagram permissions according to specification:
- * - instagram_business_basic
- * - instagram_business_manage_messages
+ * - instagram_basic
+ * - instagram_manage_messages
  */
 export const INSTAGRAM_SCOPES = [
-  'instagram_business_basic',
-  'instagram_business_manage_messages',
+  'instagram_basic',
+  'instagram_manage_messages',
 ].join(',');
 
 // Encryption key for securing tokens at rest (AES-256-GCM)
