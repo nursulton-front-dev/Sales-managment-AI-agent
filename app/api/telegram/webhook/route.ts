@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'node:crypto';
 import {
   getAllAgents,
   getAllConversations,
+  getWorkspaceById,
   updateWorkspace,
   createConversation,
   createMessage,
@@ -446,7 +447,7 @@ export async function POST(req: NextRequest) {
       }
 
       const workspace = await getWorkspaceByTelegramBusinessConnectionId(connId);
-      if (!workspace || !workspace.telegramBusinessEnabled || !workspace.telegramBusinessConnected) {
+      if (!workspace || workspace.status !== 'active' || !workspace.telegramBusinessEnabled || !workspace.telegramBusinessConnected) {
         return NextResponse.json({ ok: true });
       }
 
@@ -531,6 +532,8 @@ export async function POST(req: NextRequest) {
     if (agentIdParam) {
       const agent = (await getAllAgents()).find((item) => item.id === agentIdParam);
       if (!agent?.tgBotToken) return NextResponse.json({ ok: false }, { status: 404 });
+      const workspace = await getWorkspaceById(agent.workspaceId);
+      if (!workspace || workspace.status !== 'active') return NextResponse.json({ ok: true });
 
       const message = update.message;
       if (!message?.text || !message.chat?.id) return NextResponse.json({ ok: true });

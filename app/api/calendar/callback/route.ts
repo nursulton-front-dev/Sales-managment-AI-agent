@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, connection } from 'next/server';
 import { exchangeCodeForTokens } from '@/lib/calendar/google';
 import { updateWorkspace } from '@/src/db';
 import { getServerSessionContext } from '@/src/server/auth/session';
 
 export async function handleCalendarCallback(req: NextRequest) {
+  await connection();
   const redirect = (status: string) => {
     const response = NextResponse.redirect(new URL(`/dashboard/integrations?calendar=${status}`, req.url));
     response.cookies.delete('chorla_calendar_state');
