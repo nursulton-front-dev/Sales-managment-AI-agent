@@ -17,7 +17,17 @@ import {
   serviceBotWebhookSecret,
   telegramCall,
   getServiceBotToken,
+  isTelegramAdmin,
+  getAdminMenuKeyboard,
+  answerTelegramCallbackQuery,
 } from '@/lib/server/telegram';
+import {
+  getChannelAdminStats,
+  formatTelegramStats,
+  formatTelegramDiag,
+  formatTelegramStuck,
+  retryStuckEvent,
+} from '@/lib/server/admin/channels-stats';
 import { enqueueEvent, channelId, cancelConversationEvents } from '@/lib/server/channels/events';
 import { wakeConversationQueue } from '@/lib/server/channels/processor';
 import { readLimitedText, RequestBodyError } from '@/lib/server/request-body';
@@ -66,6 +76,159 @@ export async function POST(req: NextRequest) {
     }
 
     const { update_id: updateId } = update;
+
+    const getActiveBotToken = async () => {
+      if (isServiceBot) {
+        return getServiceBotToken();
+      }
+      if (agentIdParam) {
+        const agent = (await getAllAgents()).find((item) => item.id === agentIdParam);
+        return agent?.tgBotToken || null;
+      }
+      return getServiceBotToken();
+    };
+
+    // 0. Handle Admin Callback Queries (Interactive buttons in Telegram)
+    if (update.callback_query) {
+      const cq = update.callback_query;
+      const fromId = cq.from?.id;
+      const data = cq.data as string;
+      const token = await getActiveBotToken();
+
+      if (!isTelegramAdmin(fromId)) {
+        if (token) {
+          await answerTelegramCallbackQuery(token, cq.id, '⛔ Доступ запрещен');
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      if (token) {
+        await answerTelegramCallbackQuery(token, cq.id);
+      }
+
+      const chatId = cq.message?.chat?.id || fromId;
+      if (!chatId || !token) return NextResponse.json({ ok: true });
+
+      if (data === 'admin_close') {
+        void telegramCall(token, 'editMessageText', {
+          chat_id: chatId,
+          message_id: cq.message?.message_id,
+          text: 'Панель администратора закрыта.',
+        }).catch(() => {});
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === 'admin_stats_today' || data === 'admin_stats_7d' || data === 'admin_stats_30d') {
+        const period = data === 'admin_stats_today' ? 'today' : data === 'admin_stats_7d' ? '7d' : '30d';
+        const stats = await getChannelAdminStats(period);
+        const text = formatTelegramStats(stats);
+        void telegramCall(token, 'editMessageText', {
+          chat_id: chatId,
+          message_id: cq.message?.message_id,
+          text,
+          parse_mode: 'HTML',
+          reply_markup: getAdminMenuKeyboard(),
+        }).catch(() => {});
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === 'admin_diag') {
+        const stats = await getChannelAdminStats('today');
+        const text = formatTelegramDiag(stats);
+        void telegramCall(token, 'editMessageText', {
+          chat_id: chatId,
+          message_id: cq.message?.message_id,
+          text,
+          parse_mode: 'HTML',
+          reply_markup: getAdminMenuKeyboard(),
+        }).catch(() => {});
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === 'admin_stuck') {
+        const stats = await getChannelAdminStats('today');
+        const text = formatTelegramStuck(stats);
+        void telegramCall(token, 'editMessageText', {
+          chat_id: chatId,
+          message_id: cq.message?.message_id,
+          text,
+          parse_mode: 'HTML',
+          reply_markup: getAdminMenuKeyboard(),
+        }).catch(() => {});
+        return NextResponse.json({ ok: true });
+      }
+
+      return NextResponse.json({ ok: true });
+    }
+
+    // 0.1 Handle Admin Commands (/admin, /stats, /diag, /retry)
+    if (
+      update.message?.text?.startsWith('/admin') ||
+      update.message?.text?.startsWith('/stats') ||
+      update.message?.text?.startsWith('/diag') ||
+      update.message?.text?.startsWith('/retry')
+    ) {
+      const text = update.message.text.trim();
+      const fromId = update.message.from?.id;
+      const chatId = update.message.chat?.id;
+      const token = await getActiveBotToken();
+
+      if (!isTelegramAdmin(fromId)) {
+        if (token && chatId) {
+          void telegramCall(token, 'sendMessage', {
+            chat_id: chatId,
+            text: '⛔ У вас нет прав доступа к административным командам платформы.',
+          }).catch(() => {});
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      if (!token || !chatId) return NextResponse.json({ ok: true });
+
+      if (text.startsWith('/admin') || text.startsWith('/stats')) {
+        const stats = await getChannelAdminStats('today');
+        void telegramCall(token, 'sendMessage', {
+          chat_id: chatId,
+          text: formatTelegramStats(stats),
+          parse_mode: 'HTML',
+          reply_markup: getAdminMenuKeyboard(),
+        }).catch(() => {});
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text.startsWith('/diag')) {
+        const stats = await getChannelAdminStats('today');
+        void telegramCall(token, 'sendMessage', {
+          chat_id: chatId,
+          text: formatTelegramDiag(stats),
+          parse_mode: 'HTML',
+          reply_markup: getAdminMenuKeyboard(),
+        }).catch(() => {});
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text.startsWith('/retry')) {
+        const eventId = text.replace('/retry', '').trim();
+        if (!eventId) {
+          const stats = await getChannelAdminStats('today');
+          void telegramCall(token, 'sendMessage', {
+            chat_id: chatId,
+            text: formatTelegramStuck(stats),
+            parse_mode: 'HTML',
+          }).catch(() => {});
+          return NextResponse.json({ ok: true });
+        }
+
+        const res = await retryStuckEvent(eventId);
+        void telegramCall(token, 'sendMessage', {
+          chat_id: chatId,
+          text: res.success ? `✅ ${res.message}` : `❌ ${res.message}`,
+        }).catch(() => {});
+        return NextResponse.json({ ok: true });
+      }
+
+      return NextResponse.json({ ok: true });
+    }
 
     // 1. Handle Telegram Business Connection update (Secretary mode setup / permission toggle)
     if (update.business_connection) {

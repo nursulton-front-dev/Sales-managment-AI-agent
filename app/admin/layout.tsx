@@ -23,6 +23,7 @@ import {
   Lock,
   Loader2,
   CheckCircle2,
+  Radio,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -126,6 +127,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       href: '/admin/organizations',
       icon: Building2,
       roles: ['super_admin', 'support', 'finance'],
+    },
+    {
+      title: 'Каналы и Telegram',
+      href: '/admin/channels',
+      icon: Radio,
+      roles: ['super_admin', 'support'],
     },
     {
       title: 'Платежи и токены',

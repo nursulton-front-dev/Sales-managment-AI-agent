@@ -23,6 +23,13 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Eye,
+  EyeOff,
+  Send,
+  Bot,
+  Sparkles,
+  ShieldCheck,
+  Radio,
 } from 'lucide-react';
 
 interface NicheTemplate {
@@ -160,7 +167,9 @@ export default function NewAgentWizardPage() {
   const [questions, setQuestions] = useState<string[]>([]);
 
   // Step 3 state
+  const [tgVariant, setTgVariant] = useState<'platform' | 'custom_bot'>('platform');
   const [botToken, setBotToken] = useState<string>('');
+  const [showBotToken, setShowBotToken] = useState<boolean>(false);
   const [googleCalendarEnabled, setGoogleCalendarEnabled] = useState<boolean>(true);
   const autoReminderEnabled = false;
 
@@ -184,7 +193,7 @@ export default function NewAgentWizardPage() {
             setQuestions(parsed.questions || matched.defaultQuestions);
             setAgentName(parsed.agentName || matched.defaultName);
             if (parsed.customBusinessName) setCustomBusinessName(parsed.customBusinessName);
-            if (parsed.botToken) setBotToken(parsed.botToken);
+            if (parsed.tgVariant) setTgVariant(parsed.tgVariant);
             return;
           }
         }
@@ -192,7 +201,7 @@ export default function NewAgentWizardPage() {
     } catch {}
   }, []);
 
-  // Save draft whenever key states change
+  // Save draft whenever key states change (NEVER store bot tokens or credentials in browser storage)
   useEffect(() => {
     if (selectedNiche) {
       try {
@@ -204,12 +213,12 @@ export default function NewAgentWizardPage() {
             questions,
             agentName,
             customBusinessName,
-            botToken,
+            tgVariant,
           })
         );
       } catch {}
     }
-  }, [selectedNiche, priceList, questions, agentName, customBusinessName, botToken]);
+  }, [selectedNiche, priceList, questions, agentName, customBusinessName, tgVariant]);
 
   const handleSelectNiche = (niche: NicheTemplate) => {
     setSelectedNiche(niche);
@@ -614,51 +623,178 @@ ${
 
         {/* ================= STEP 3: Подключения ================= */}
         {currentStep === 3 && (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 sm:p-6 space-y-5 animate-fade-in">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-5 sm:p-6 space-y-6 animate-fade-in">
             <div>
               <h2 className="text-base font-semibold text-[var(--text-primary)]">
                 Подключение каналов и Календаря
               </h2>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Привяжите Telegram бота и включите синхронизацию со слотами
+                Выберите способ связи сотрудника с клиентами в Telegram и настройте запись на консультации
               </p>
             </div>
 
-            {/* Telegram Bot Token */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-[var(--text-secondary)] flex items-center gap-1.5">
-                  <Image
-                    src="/images/brands/telegram.svg"
-                    alt="Telegram"
-                    width={14}
-                    height={14}
-                    className="object-contain"
-                  />
-                  <span>Telegram Bot Token (от @BotFather):</span>
-                </label>
-                <a
-                  href="https://t.me/BotFather"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-[#DC2626] hover:underline flex items-center gap-0.5"
-                >
-                  <span>Открыть @BotFather</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+            {/* Telegram Integration Methods: Variant A vs Variant B */}
+            <div className="space-y-3">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)]">
+                Способ подключения Telegram:
+              </label>
+
+              {/* Variant A: Platform Bot / Secretary Mode (Recommended) */}
+              <div
+                role="radio"
+                aria-checked={tgVariant === 'platform'}
+                tabIndex={0}
+                onClick={() => {
+                  setTgVariant('platform');
+                  setBotToken('');
+                }}
+                className={`rounded-[8px] p-4.5 border transition-all cursor-pointer ${
+                  tgVariant === 'platform'
+                    ? 'bg-[#FFF5F5] dark:bg-rose-950/25 border-2 border-[#DC2626] shadow-xs'
+                    : 'bg-[var(--surface-secondary)]/50 border-[var(--border)] hover:border-[var(--border-strong)]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="size-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 border-[#DC2626] bg-[#DC2626] text-white">
+                      {tgVariant === 'platform' ? <Check className="w-3 h-3 stroke-[2.5]" /> : <div className="size-2 rounded-full bg-transparent" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-[var(--text-primary)]">
+                          Вариант A — Личный или бизнес-аккаунт через общего бота gapcha AI
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          Рекомендуем 95% компаний
+                        </span>
+                      </div>
+                      <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">
+                        ИИ-сотрудник отвечает от вашего имени прямо в личных диалогах с клиентами (Telegram Business / Secretary Mode). Токен от BotFather <b>не требуется</b>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Variant A Details Panel */}
+                {tgVariant === 'platform' && (
+                  <div className="mt-4 pt-3.5 border-t border-[#DC2626]/20 space-y-3 text-xs text-[var(--text-secondary)]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      <div className="p-3 rounded-[6px] bg-[var(--surface)] border border-[var(--border)]">
+                        <span className="font-semibold text-[var(--text-primary)] block mb-1">
+                          📱 Поддерживаемые аккаунты:
+                        </span>
+                        <span>
+                          Любой аккаунт с активным <strong>Telegram Business</strong> (входит в стандартную подписку Telegram Premium).
+                        </span>
+                      </div>
+                      <div className="p-3 rounded-[6px] bg-[var(--surface)] border border-[var(--border)]">
+                        <span className="font-semibold text-[var(--text-primary)] block mb-1">
+                          🔐 Требуемые разрешения:
+                        </span>
+                        <span>
+                          Раздел «Чат-боты» в настройках Telegram с включённым флагом <strong>«Отвечать на сообщения»</strong>.
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-[6px] bg-[var(--surface)] border border-[var(--border)] space-y-1.5">
+                      <span className="font-semibold text-[var(--text-primary)] block">
+                        ⚡ Как подключить после создания сотрудника:
+                      </span>
+                      <ol className="list-decimal pl-4 space-y-1 leading-snug">
+                        <li>Завершите создание сотрудника и откройте вкладку <strong>«Интеграции»</strong>.</li>
+                        <li>Нажмите <strong>«Подключить»</strong> и перейдите по безопасной ссылке в Telegram для верификации.</li>
+                        <li>В Telegram откройте: <em>Настройки → Telegram Business → Чат-боты</em> и добавьте бота платформы.</li>
+                      </ol>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-emerald-600 dark:text-emerald-400">
+                      <ShieldCheck className="w-4 h-4 shrink-0" />
+                      <span>Полный контроль: если вы сами пишете клиенту, ИИ мгновенно передает вам управление (Human Takeover).</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <input
-                type="text"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                placeholder="123456789:ABCdefGHIjkl... (можно оставить пустым для теста в песочнице)"
-                className="w-full h-[48px] px-3.5 bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#DC2626] focus:border-[#DC2626]"
-              />
+              {/* Variant B: Custom Bot via BotFather */}
+              <div
+                role="radio"
+                aria-checked={tgVariant === 'custom_bot'}
+                tabIndex={0}
+                onClick={() => setTgVariant('custom_bot')}
+                className={`rounded-[8px] p-4.5 border transition-all cursor-pointer ${
+                  tgVariant === 'custom_bot'
+                    ? 'bg-[#FFF5F5] dark:bg-rose-950/25 border-2 border-[#DC2626] shadow-xs'
+                    : 'bg-[var(--surface-secondary)]/50 border-[var(--border)] hover:border-[var(--border-strong)]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="size-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 border-[#DC2626] bg-[#DC2626] text-white">
+                      {tgVariant === 'custom_bot' ? <Check className="w-3 h-3 stroke-[2.5]" /> : <div className="size-2 rounded-full bg-transparent" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-[var(--text-primary)]">
+                          Вариант B — Собственный отдельный Telegram-бот
+                        </span>
+                      </div>
+                      <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">
+                        Для компаний, которым обязательно нужен отдельный бот с индивидуальным юзернеймом (например, <code>@MyCompany_sales_bot</code>) и своей аватаркой.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-              <p className="text-[11px] text-[var(--text-muted)]">
-                Если токена пока нет, оставьте поле пустым — вы сможете протестировать сотрудника во встроенной песочнице.
-              </p>
+                {/* Variant B Form & Token Input */}
+                {tgVariant === 'custom_bot' && (
+                  <div className="mt-4 pt-3.5 border-t border-[#DC2626]/20 space-y-3.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <label className="font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                        <Bot className="w-4 h-4 text-[#DC2626]" />
+                        <span>Токен бота из @BotFather:</span>
+                      </label>
+                      <a
+                        href="https://t.me/BotFather"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-[#DC2626] hover:underline flex items-center gap-0.5"
+                      >
+                        <span>Открыть @BotFather</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showBotToken ? 'text' : 'password'}
+                        value={botToken}
+                        onChange={(e) => setBotToken(e.target.value)}
+                        placeholder="123456789:ABCdefGHIjkl... (можно оставить пустым для теста в песочнице)"
+                        className="w-full h-[48px] pl-3.5 pr-11 bg-[var(--surface)] border border-[var(--border)] rounded-[6px] text-base sm:text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#DC2626] focus:border-[#DC2626]"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowBotToken(!showBotToken);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                        title={showBotToken ? 'Скрыть токен' : 'Показать токен'}
+                      >
+                        {showBotToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+
+                    <div className="p-3 rounded-[6px] bg-[var(--surface)] border border-[var(--border)] space-y-1 text-[11px] text-[var(--text-muted)]">
+                      <p className="font-medium text-[var(--text-primary)]">🔒 Безопасность токена:</p>
+                      <p>
+                        Токен проверяется напрямую через защищённый сервер платформы и шифруется в базе данных. Он <strong>никогда не сохраняется</strong> в клиентском хранилище браузера (localStorage / sessionStorage) и не передается третьим сторонам.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Google Calendar Toggle */}
@@ -677,7 +813,7 @@ ${
                       Запись в Google Календарь
                     </div>
                     <div className="text-[11px] text-[var(--text-muted)]">
-                      Проверка слотов 10:00–18:00 и авто-бронирование
+                      Проверка слотов 10:00–18:00 и авто-бронирование встреч
                     </div>
                   </div>
                 </div>
@@ -771,6 +907,15 @@ ${
                 </div>
 
                 <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
+                  {tgVariant === 'platform' && (
+                    <button
+                      onClick={() => router.push('/dashboard/integrations')}
+                      className="px-5 py-2.5 text-xs font-semibold text-white bg-[#229ED9] hover:bg-[#1c8ec4] rounded-[6px] transition-colors cursor-pointer min-h-[44px] inline-flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Подключить Telegram в Интеграциях</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => openSandbox(savedAgentId || undefined)}
                     className="px-5 py-2.5 text-xs font-semibold text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-[6px] transition-colors cursor-pointer min-h-[44px]"

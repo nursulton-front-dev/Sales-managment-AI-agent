@@ -39,7 +39,7 @@ export async function connectServiceBot(token: string) {
   await telegramCall(token, 'setWebhook', {
     url: serviceBotWebhookUrl(),
     secret_token: serviceBotWebhookSecret(),
-    allowed_updates: ['message', 'business_message', 'business_connection'],
+    allowed_updates: ['message', 'business_message', 'business_connection', 'callback_query'],
   });
   return account;
 }
@@ -92,4 +92,51 @@ export async function sendTelegramChatAction(
     return false;
   }
 }
+
+/**
+ * Platform Owner Telegram ID for administrative commands & diagnostics.
+ * Server-only verification on every incoming action.
+ */
+export const TELEGRAM_OWNER_ID = process.env.TELEGRAM_ADMIN_USER_ID || '6804139305';
+
+export function isTelegramAdmin(userId: number | string | undefined | null): boolean {
+  if (!userId) return false;
+  return String(userId) === String(TELEGRAM_OWNER_ID);
+}
+
+export function getAdminMenuKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '📊 Сегодня', callback_data: 'admin_stats_today' },
+        { text: '📊 7 дней', callback_data: 'admin_stats_7d' },
+        { text: '📊 30 дней', callback_data: 'admin_stats_30d' },
+      ],
+      [
+        { text: '🩺 Диагностика системы', callback_data: 'admin_diag' },
+        { text: '🔄 Застрявшие события', callback_data: 'admin_stuck' },
+      ],
+      [
+        { text: '❌ Закрыть меню', callback_data: 'admin_close' },
+      ],
+    ],
+  };
+}
+
+export async function answerTelegramCallbackQuery(
+  token: string,
+  callbackQueryId: string,
+  text?: string
+): Promise<boolean> {
+  try {
+    await telegramCall(token, 'answerCallbackQuery', {
+      callback_query_id: callbackQueryId,
+      text: text || undefined,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 

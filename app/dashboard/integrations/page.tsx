@@ -31,6 +31,9 @@ import {
   Users,
   CircleHelp,
   ArrowUpRight,
+  Eye,
+  EyeOff,
+  ShieldCheck,
 } from 'lucide-react';
 import { WebsiteWidgetModal } from '@/components/integrations/WebsiteWidgetIntegration';
 import { ChannelEventLog } from '@/components/integrations/ChannelEventLog';
@@ -103,6 +106,7 @@ export default function IntegrationsPage() {
     expiresAt: string;
   } | null>(null);
   const [copiedBindUrl, setCopiedBindUrl] = useState(false);
+  const [showCustomBotToken, setShowCustomBotToken] = useState(false);
 
   const dirty = Boolean(
     calendar && (hours !== calendar.workingHours || duration !== String(calendar.slotDuration))
@@ -1062,9 +1066,24 @@ export default function IntegrationsPage() {
               ) : (
                 /* Unconnected State */
                 <div className="space-y-4">
-                  <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
-                    Подключите служебного бота платформы к вашему Telegram Business. ИИ будет отвечать клиентам от вашего имени прямо в личных диалогах.
-                  </p>
+                  <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] space-y-2 text-xs">
+                    <p className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      Автоматизация личного или бизнес-аккаунта (Secretary Mode)
+                    </p>
+                    <p className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                      ИИ-сотрудник будет отвечать клиентам от вашего имени прямо в личных диалогах Telegram. Токен от BotFather <strong>не требуется</strong>.
+                    </p>
+                    <div className="pt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                      <div className="p-2 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C]">
+                        <strong className="block text-[var(--text-primary)] dark:text-[#F4F7FB]">📱 Поддержка:</strong>
+                        Telegram Business (входит в подписку Premium).
+                      </div>
+                      <div className="p-2 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C]">
+                        <strong className="block text-[var(--text-primary)] dark:text-[#F4F7FB]">🔐 Разрешения:</strong>
+                        «Автоматизация чатов» с правом «Отвечать».
+                      </div>
+                    </div>
+                  </div>
 
                   <Select
                     label="Ответственный ИИ-сотрудник"
@@ -1093,7 +1112,7 @@ export default function IntegrationsPage() {
                         Сгенерировать ссылку для привязки
                       </Button>
                       <p className="text-[11px] text-center text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                        Создаётся безопасная одноразовая ссылка с ограничением по времени (15 минут).
+                        Создаётся защищённая одноразовая ссылка с ограничением по времени (15 минут).
                       </p>
                     </div>
                   ) : (
@@ -1175,6 +1194,18 @@ export default function IntegrationsPage() {
                               Добавьте бота <strong>@{bindData.botUsername}</strong> и включите пункт <strong>«Отвечать на сообщения»</strong>.
                             </span>
                           </div>
+                        </div>
+
+                        {/* Rejection / Troubleshooting helper */}
+                        <div className="pt-2 border-t border-[var(--border)] dark:border-[#29374C] text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/80 space-y-1">
+                          <p className="font-medium text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                            ⚠️ Если Telegram отклоняет подключение или бот не отвечает:
+                          </p>
+                          <ul className="list-disc pl-4 space-y-0.5 leading-snug">
+                            <li>Убедитесь, что в Telegram активна подписка Telegram Premium.</li>
+                            <li>Проверьте, что боту предоставлено право «Отвечать на сообщения».</li>
+                            <li>Если прошло больше 15 минут, нажмите «Сбросить» и создайте новую ссылку.</li>
+                          </ul>
                         </div>
                       </div>
 
@@ -1265,19 +1296,45 @@ export default function IntegrationsPage() {
                 />
 
                 <div>
-                  <Input
-                    label={isSelectedConnected ? 'Новый токен бота (для замены)' : 'Токен бота из @BotFather'}
-                    type="password"
-                    autoComplete="off"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value.trim())}
-                    placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-                    required={!isSelectedConnected}
-                    className="font-mono text-xs"
-                  />
-                  <p className="mt-1 text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                    Токен хранится в зашифрованном виде и нужен только для доставки сообщений.
-                  </p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                      {isSelectedConnected ? 'Новый токен бота (для замены):' : 'Токен бота из @BotFather:'}
+                    </label>
+                    <a
+                      href="https://t.me/BotFather"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-[#229ED9] hover:underline inline-flex items-center gap-0.5"
+                    >
+                      <span>@BotFather</span>
+                      <ExternalLink size={11} />
+                    </a>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showCustomBotToken ? 'text' : 'password'}
+                      autoComplete="off"
+                      value={token}
+                      onChange={(e) => setToken(e.target.value.trim())}
+                      placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                      required={!isSelectedConnected}
+                      className="w-full h-10 pl-3 pr-10 rounded-xl bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] font-mono text-xs focus:outline-hidden focus:border-[#229ED9]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomBotToken(!showCustomBotToken)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] p-1 transition-colors cursor-pointer"
+                      title={showCustomBotToken ? 'Скрыть токен' : 'Показать токен'}
+                    >
+                      {showCustomBotToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  <div className="mt-2 p-2.5 rounded-lg bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] flex items-start gap-2 text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/80">
+                    <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <span>
+                      Токен проверяется сервером и хранится в зашифрованном виде. Он никогда не сохраняется в локальной памяти браузера (localStorage/sessionStorage).
+                    </span>
+                  </div>
                 </div>
               </div>
 
