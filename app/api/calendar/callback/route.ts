@@ -19,7 +19,10 @@ export async function handleCalendarCallback(req: NextRequest) {
       return redirect('failed');
     }
 
-    const currentCallbackUri = `${req.nextUrl.origin}${req.nextUrl.pathname}`;
+    let currentCallbackUri = `${req.nextUrl.origin}${req.nextUrl.pathname}`;
+    if (currentCallbackUri.startsWith('http://') && !currentCallbackUri.includes('localhost') && !currentCallbackUri.includes('127.0.0.1')) {
+      currentCallbackUri = currentCallbackUri.replace('http://', 'https://');
+    }
     const tokens = await exchangeCodeForTokens(code, req.nextUrl.origin, currentCallbackUri);
     const refreshToken = tokens.refreshToken || session.workspace.googleRefreshToken;
     if (!refreshToken) return redirect('failed');

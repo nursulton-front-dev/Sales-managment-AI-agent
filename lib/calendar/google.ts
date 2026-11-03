@@ -51,22 +51,26 @@ export function isGoogleCalendarConfigured(): boolean {
  * while allowing custom URI or legacy fallback.
  */
 export function resolveCalendarRedirectUri(requestOrigin?: string, customRedirectUri?: string): string {
-  if (customRedirectUri) {
-    return customRedirectUri;
-  }
-  if (process.env.GOOGLE_REDIRECT_URI) {
-    return process.env.GOOGLE_REDIRECT_URI;
+  let uri = customRedirectUri || process.env.GOOGLE_REDIRECT_URI;
+  if (!uri) {
+    const origin =
+      requestOrigin ||
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3000');
+
+    uri = `${origin}/api/integrations/google-calendar/callback`;
   }
 
-  const origin =
-    requestOrigin ||
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000');
+  // Google OAuth forbids http:// on public domains (results in 400 redirect_uri_mismatch).
+  // Force https:// on any non-localhost URL.
+  if (uri.startsWith('http://') && !uri.includes('localhost') && !uri.includes('127.0.0.1')) {
+    uri = uri.replace('http://', 'https://');
+  }
 
-  return `${origin}/api/integrations/google-calendar/callback`;
+  return uri;
 }
 
 /**

@@ -1,21 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Globe,
   Copy,
   Check,
-  MessageCircle,
   CheckCircle2,
-  Code2,
-  Terminal,
   Sliders,
-  Sparkles,
-  ShieldCheck,
+  Code2,
   Send,
   HelpCircle,
   X,
+  Laptop,
+  Smartphone,
+  ArrowLeft,
+  RefreshCw,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Input } from '@/components/ui/Input';
@@ -25,66 +25,61 @@ import { Badge } from '@/components/ui/Badge';
 import { Dialog } from '@/components/ui/Dialog';
 import { DataState } from '@/components/ui/DataState';
 import { useUnsavedChanges } from '@/lib/useUnsavedChanges';
-import { widgetTextColor } from '@/lib/widget-presentation';
 
-type Settings = {
+export type WidgetSettings = {
   agentId: string;
   enabled: boolean;
   title: string;
   greeting: string;
   color: string;
-  position: string;
+  position: 'left' | 'right';
   allowedOrigins: string[];
 };
 
-type Widget = Settings & {
+export type Widget = WidgetSettings & {
   id: string;
   lastSeenAt: string | null;
   lastSeenOrigin: string | null;
 };
 
-const defaults: Settings = {
+export const COLOR_PRESETS = [
+  { id: 'red', name: 'gapcha Red', value: '#DC2626' },
+  { id: 'navy', name: 'Slate Navy', value: '#1E293B' },
+  { id: 'sky', name: 'Sky Blue', value: '#0284C7' },
+  { id: 'emerald', name: 'Emerald Green', value: '#16A34A' },
+] as const;
+
+export const DEFAULT_WIDGET_SETTINGS: WidgetSettings = {
   agentId: '',
-  enabled: false,
+  enabled: true,
   title: 'Поможем с вашим вопросом',
   greeting: 'Здравствуйте! Я ИИ-помощник компании. Чем могу помочь?',
-  color: '#E52329',
+  color: '#DC2626',
   position: 'right',
   allowedOrigins: [],
 };
 
-const COLOR_PRESETS = [
-  { name: 'gapcha Red', value: '#E52329' },
-  { name: 'Electric Blue', value: '#2563EB' },
-  { name: 'Emerald', value: '#059669' },
-  { name: 'Deep Slate', value: '#0F172A' },
-  { name: 'Royal Purple', value: '#7C3AED' },
-  { name: 'Amber', value: '#D97706' },
-];
-
-const textAreaClass =
-  'w-full min-h-20 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] transition-colors';
-
-const settingsOnly = (widget: Settings): Settings => ({
-  agentId: widget.agentId,
-  enabled: widget.enabled,
-  title: widget.title,
-  greeting: widget.greeting,
-  color: widget.color,
-  position: widget.position,
-  allowedOrigins: widget.allowedOrigins,
+const settingsOnly = (w: WidgetSettings): WidgetSettings => ({
+  agentId: w.agentId,
+  enabled: w.enabled,
+  title: w.title,
+  greeting: w.greeting,
+  color: w.color,
+  position: w.position,
+  allowedOrigins: w.allowedOrigins,
 });
 
-export function WebsiteWidgetModal({
-  open,
-  onClose,
+/**
+ * Full page view for Website Widget Settings matching gapcha-integrations-v2 design
+ */
+export function WebsiteWidgetSettingsView({
+  onBack,
 }: {
-  open: boolean;
-  onClose: () => void;
+  onBack?: () => void;
 }) {
   const { agents, showToast } = useApp();
   const [widget, setWidget] = useState<Widget | null>(null);
-  const [form, setForm] = useState<Settings>(defaults);
+  const [form, setForm] = useState<WidgetSettings>(DEFAULT_WIDGET_SETTINGS);
   const [origins, setOrigins] = useState('');
   const [embedOrigin, setEmbedOrigin] = useState('');
   const [loading, setLoading] = useState(true);
@@ -92,78 +87,109 @@ export function WebsiteWidgetModal({
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
   const [helping, setHelping] = useState(false);
-  const [ticket, setTicket] = useState<number | null>(null);
-
-  // Tabs inside modal: 'snippet' | 'api' | 'appearance'
-  const [modalTab, setModalTab] = useState<'snippet' | 'api' | 'appearance'>('snippet');
   const [copiedSnippet, setCopiedSnippet] = useState(false);
-  const [copiedApi, setCopiedApi] = useState(false);
 
-  const parsed: Settings = {
-    ...form,
-    allowedOrigins: origins
-      .split(/\n|,/)
-      .map((line) => line.trim())
-      .filter(Boolean),
-  };
+  // Tabs: 'appearance' | 'install' | 'check'
+  const [tab, setTab] = useState<'appearance' | 'install' | 'check'>('appearance');
 
-  const dirty = JSON.stringify(parsed) !== JSON.stringify(widget ? settingsOnly(widget) : defaults);
-  useUnsavedChanges(dirty);
+  // Preview device: 'desktop' | 'mobile'
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
+  // Load existing widget settings
   const load = useCallback(async () => {
     try {
-      const response = await fetch('/api/integrations/widget');
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Не удалось загрузить настройки чата');
+      setLoading(true);
+      const res = await fetch('/api/integrations/widget');
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось загрузить настройки виджета');
       }
-      setWidget(data.widget);
-      setForm(data.widget ? settingsOnly(data.widget) : defaults);
-      setOrigins(data.widget?.allowedOrigins.join('\n') || '');
-      setEmbedOrigin(new URL(data.embedOrigin || window.location.origin).origin);
+      if (data.widget) {
+        setWidget(data.widget);
+        setForm(settingsOnly(data.widget));
+        setOrigins(data.widget.allowedOrigins?.join('\n') || '');
+      } else {
+        // Pick first active agent by default
+        const firstAgent = agents.find((a) => a.isActive) || agents[0];
+        setForm((prev) => ({
+          ...prev,
+          agentId: firstAgent?.id || '',
+        }));
+      }
+      const origin = data.embedOrigin || (typeof window !== 'undefined' ? window.location.origin : 'https://chorla-ai.vercel.app');
+      setEmbedOrigin(origin);
       setError(null);
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Нет связи с сервером');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сети');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [agents]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- Asynchronous settings request.
   useEffect(() => {
     void load();
   }, [load]);
 
-  const update = <K extends keyof Settings>(key: K, value: Settings[K]) =>
-    setForm((previous) => ({ ...previous, [key]: value }));
+  // Track unsaved changes
+  const parsedOrigins = useMemo(() => {
+    return origins
+      .split(/\n|,/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }, [origins]);
 
-  const snippet =
-    widget && embedOrigin
-      ? `<script src="${embedOrigin}/widget.js" data-widget-id="${widget.id}" defer></script>`
-      : '';
+  const isDirty = useMemo(() => {
+    if (!widget) return false;
+    return (
+      form.agentId !== widget.agentId ||
+      form.enabled !== widget.enabled ||
+      form.title !== widget.title ||
+      form.greeting !== widget.greeting ||
+      form.color !== widget.color ||
+      form.position !== widget.position ||
+      JSON.stringify(parsedOrigins) !== JSON.stringify(widget.allowedOrigins)
+    );
+  }, [form, widget, parsedOrigins]);
 
-  const save = async (event: React.FormEvent) => {
-    event.preventDefault();
+  useUnsavedChanges(isDirty);
+
+  const update = <K extends keyof WidgetSettings>(key: K, val: WidgetSettings[K]) => {
+    setForm((prev) => ({ ...prev, [key]: val }));
+  };
+
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (busy) return;
     setBusy(true);
+
     try {
-      const response = await fetch('/api/integrations/widget', {
+      // Validate allowed origins: if empty, default to local/current domain or prompt
+      const originsToSend = parsedOrigins.length > 0 ? parsedOrigins : ['*'];
+
+      const payload = {
+        ...form,
+        allowedOrigins: originsToSend.includes('*') ? ['https://example.com'] : originsToSend,
+      };
+
+      const res = await fetch('/api/integrations/widget', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsed),
+        body: JSON.stringify(payload),
       });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Не удалось сохранить');
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось сохранить настройки');
       }
+
       setWidget(data.widget);
       setForm(settingsOnly(data.widget));
-      setOrigins(data.widget.allowedOrigins.join('\n'));
-      showToast('Настройки чата сохранены и активированы');
-    } catch (failure) {
+      setOrigins(data.widget.allowedOrigins?.join('\n') || '');
+      showToast('Настройки виджета сохранены');
+    } catch (err) {
       showToast(
-        'Настройки не сохранены',
-        failure instanceof Error ? failure.message : 'Ошибка сети',
+        'Ошибка сохранения',
+        err instanceof Error ? err.message : 'Проверьте соединение',
         'error'
       );
     } finally {
@@ -171,490 +197,651 @@ export function WebsiteWidgetModal({
     }
   };
 
-  const check = async () => {
+  const handleCheck = async () => {
     setChecking(true);
     try {
-      const response = await fetch('/api/integrations/widget');
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Проверка недоступна');
+      const res = await fetch('/api/integrations/widget');
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Проверка недоступна');
       setWidget(data.widget);
-      showToast(
-        data.widget?.lastSeenAt ? 'Запрос виджета с сайта обнаружен' : 'Установка пока не обнаружена',
-        data.widget?.lastSeenAt
-          ? data.widget.lastSeenOrigin
-          : 'Откройте страницу сайта с установленным кодом и повторите проверку.'
-      );
-    } catch (failure) {
-      showToast('Не удалось проверить', failure instanceof Error ? failure.message : 'Ошибка сети', 'error');
+      if (data.widget?.lastSeenAt) {
+        showToast(
+          'Установка подтверждена',
+          `Виджет зафиксирован на ${data.widget.lastSeenOrigin || 'сайте'}`
+        );
+      } else {
+        showToast(
+          'Установка пока не обнаружена',
+          'Откройте страницу вашего сайта в браузере и нажмите «Проверить» повторно.',
+          'info'
+        );
+      }
+    } catch (err) {
+      showToast('Ошибка проверки', err instanceof Error ? err.message : 'Ошибка сети', 'error');
     } finally {
       setChecking(false);
     }
   };
 
-  const requestHelp = async () => {
+  const handleRequestHelp = async () => {
     setHelping(true);
     try {
-      const response = await fetch('/api/integrations/widget', { method: 'POST' });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Не удалось отправить заявку');
-      setTicket(data.ticketNumber);
+      const res = await fetch('/api/integrations/widget', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Не удалось отправить заявку');
       showToast(
-        'Заявка на установку отправлена',
-        `Обращение №${data.ticketNumber} доступно в поддержке.`
+        'Заявка отправлена',
+        `Обращение №${data.ticketNumber} создано. Специалист свяжется с вами.`
       );
-    } catch (failure) {
-      showToast('Заявка не отправлена', failure instanceof Error ? failure.message : 'Ошибка сети', 'error');
+    } catch (err) {
+      showToast('Заявка не отправлена', err instanceof Error ? err.message : 'Ошибка сети', 'error');
     } finally {
       setHelping(false);
     }
   };
 
-  const handleCopySnippet = async () => {
-    if (!snippet) return;
+  const snippet = useMemo(() => {
+    const wid = widget?.id || 'demo_widget_id';
+    const origin = embedOrigin || 'https://chorla-ai.vercel.app';
+    return `<!-- gapcha AI Web Widget -->\n<script src="${origin}/widget.js" data-widget-id="${wid}" defer></script>`;
+  }, [widget, embedOrigin]);
+
+  const copySnippet = async () => {
     try {
       await navigator.clipboard.writeText(snippet);
       setCopiedSnippet(true);
-      showToast('Код виджета скопирован в буфер');
-      setTimeout(() => setCopiedSnippet(false), 2500);
+      showToast('Код виджета скопирован в буфер обмена');
+      setTimeout(() => setCopiedSnippet(false), 2000);
     } catch {
       showToast('Выделите и скопируйте код вручную', undefined, 'error');
     }
   };
 
-  const curlExample =
-    widget && embedOrigin
-      ? `curl -X POST "${embedOrigin}/api/widget/${widget.id}/messages" \\
-  -H "Content-Type: application/json" \\
-  -d '{"text": "Здравствуйте! Сколько стоят ваши услуги?"}'`
-      : '';
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-fade-in">
+      {/* 1. Header with Breadcrumbs & Back Link */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border)] dark:border-[#29374C] pb-5">
+        <div>
+          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/70 mb-1.5">
+            {onBack ? (
+              <button
+                type="button"
+                onClick={onBack}
+                className="hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <ArrowLeft size={13} />
+                <span>Все интеграции</span>
+              </button>
+            ) : (
+              <Link
+                href="/dashboard/integrations"
+                className="hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] transition-colors"
+              >
+                Интеграции
+              </Link>
+            )}
+            <span>/</span>
+            <span className="text-[var(--text-primary)] dark:text-[#F4F7FB] font-medium">Чат на сайте</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              Чат на сайте
+            </h1>
+            <Badge variant={widget?.enabled ? 'success' : 'neutral'}>
+              {widget?.enabled ? '● Активен' : '○ Не настроен'}
+            </Badge>
+          </div>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1">
+            Настройте внешний вид, скопируйте код для сайта и проверьте статус подключения.
+          </p>
+        </div>
 
-  const handleCopyCurl = async () => {
-    if (!curlExample) return;
-    try {
-      await navigator.clipboard.writeText(curlExample);
-      setCopiedApi(true);
-      showToast('Пример cURL скопирован');
-      setTimeout(() => setCopiedApi(false), 2500);
-    } catch {
-      showToast('Скопируйте пример вручную', undefined, 'error');
-    }
-  };
+        {/* Global Save Button */}
+        <div className="flex items-center gap-3">
+          {isDirty && (
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+              Есть несохранённые изменения
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="primary"
+            disabled={busy || loading}
+            isLoading={busy}
+            onClick={() => handleSave()}
+            className="bg-[#DC2626] hover:bg-[#b91c1c] text-white font-semibold text-xs px-4 py-2"
+          >
+            Сохранить изменения
+          </Button>
+        </div>
+      </div>
+
+      <DataState loading={loading} error={error} retry={load} />
+
+      {!loading && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* ========================================================= */}
+          {/* LEFT COLUMN: Settings Tabs (7 cols)                       */}
+          {/* ========================================================= */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* Nav Tabs */}
+            <div className="flex items-center gap-1 p-1 bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-xl text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setTab('appearance')}
+                className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  tab === 'appearance'
+                    ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
+                    : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                }`}
+              >
+                <Sliders size={14} />
+                <span>Оформление</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTab('install')}
+                className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  tab === 'install'
+                    ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
+                    : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                }`}
+              >
+                <Code2 size={14} />
+                <span>Установка</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTab('check')}
+                className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  tab === 'check'
+                    ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
+                    : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                }`}
+              >
+                <CheckCircle2 size={14} />
+                <span>Проверка</span>
+              </button>
+            </div>
+
+            {/* TAB 1: ОФОРМЛЕНИЕ */}
+            {tab === 'appearance' && (
+              <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 sm:p-6 space-y-5 shadow-xs">
+                {/* Agent select */}
+                <div>
+                  <Select
+                    label="Ответственный сотрудник"
+                    value={form.agentId}
+                    onChange={(e) => update('agentId', e.target.value)}
+                    options={[
+                      { value: '', label: 'Выберите сотрудника' },
+                      ...agents.map((a) => ({
+                        value: a.id,
+                        label: `${a.name}${a.isActive ? '' : ' (неактивен)'}`,
+                      })),
+                    ]}
+                    required
+                  />
+                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-1">
+                    ИИ-сотрудник будет отвечать на сообщения посетителей в виджете.
+                  </p>
+                </div>
+
+                {/* Widget title */}
+                <div>
+                  <Input
+                    label="Заголовок виджета"
+                    value={form.title}
+                    onChange={(e) => update('title', e.target.value)}
+                    maxLength={80}
+                    placeholder="Поможем с вашим вопросом"
+                    required
+                  />
+                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-1">
+                    Отображается в шапке окна чата.
+                  </p>
+                </div>
+
+                {/* Greeting text */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    Приветственное сообщение
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={form.greeting}
+                    onChange={(e) => update('greeting', e.target.value)}
+                    maxLength={500}
+                    placeholder="Здравствуйте! Я ИИ-помощник компании. Чем могу помочь?"
+                    className="w-full rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#101B2E] p-3 text-xs sm:text-sm text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-hidden focus:ring-2 focus:ring-[#DC2626]/30 transition-colors resize-none"
+                    required
+                  />
+                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                    Первая реплика, которую видит пользователь при открытии чата.
+                  </p>
+                </div>
+
+                {/* Color swatches */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    Цветовая тема
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {COLOR_PRESETS.map((preset) => {
+                      const selected = form.color.toLowerCase() === preset.value.toLowerCase();
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => update('color', preset.value)}
+                          className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all text-xs font-medium cursor-pointer ${
+                            selected
+                              ? 'border-[#DC2626] bg-[#DC2626]/5 dark:bg-rose-950/20 shadow-2xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]'
+                              : 'border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0] hover:border-[var(--border-strong)]'
+                          }`}
+                        >
+                          <span
+                            className="size-4.5 rounded-full shrink-0 border border-black/10 shadow-2xs"
+                            style={{ backgroundColor: preset.value }}
+                          />
+                          <span className="truncate">{preset.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Widget Position */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    Расположение на сайте
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => update('position', 'right')}
+                      className={`p-3 rounded-xl border text-xs font-medium transition-all text-left cursor-pointer ${
+                        form.position === 'right'
+                          ? 'border-[#DC2626] bg-[#DC2626]/5 dark:bg-rose-950/20 text-[var(--text-primary)] dark:text-[#F4F7FB] font-semibold'
+                          : 'border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0]'
+                      }`}
+                    >
+                      <div className="font-semibold">Справа (Рекомендуется)</div>
+                      <div className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-0.5">
+                        Привычный нижний правый угол
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => update('position', 'left')}
+                      className={`p-3 rounded-xl border text-xs font-medium transition-all text-left cursor-pointer ${
+                        form.position === 'left'
+                          ? 'border-[#DC2626] bg-[#DC2626]/5 dark:bg-rose-950/20 text-[var(--text-primary)] dark:text-[#F4F7FB] font-semibold'
+                          : 'border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0]'
+                      }`}
+                    >
+                      <div className="font-semibold">Слева</div>
+                      <div className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-0.5">
+                        Нижний левый угол страницы
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Enabled toggle */}
+                <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
+                  <div>
+                    <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                      Статус виджета
+                    </span>
+                    <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                      Включите, чтобы виджет отображался и отвечал посетителям
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={form.enabled}
+                      onChange={(e) => update('enabled', e.target.checked)}
+                      disabled={busy}
+                      className="sr-only peer"
+                    />
+                    <div className="w-10 h-5.5 bg-slate-200 peer-focus:outline-hidden peer-focus:ring-2 peer-focus:ring-[#DC2626]/30 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all dark:border-slate-600 peer-checked:bg-[#DC2626]" />
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: УСТАНОВКА */}
+            {tab === 'install' && (
+              <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 sm:p-6 space-y-5 shadow-xs">
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    Код для размещения на сайте
+                  </h3>
+                  <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    Скопируйте скрипт и вставьте его перед закрывающим тегом <code className="px-1.5 py-0.5 rounded bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[#DC2626] font-mono text-[11px]">&lt;/body&gt;</code> вашего сайта.
+                  </p>
+                </div>
+
+                {/* Code block */}
+                <div className="relative rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-slate-900 text-slate-100 p-4 font-mono text-xs overflow-x-auto shadow-inner">
+                  <pre className="pr-12 text-[11px] leading-relaxed select-all">{snippet}</pre>
+                  <button
+                    type="button"
+                    onClick={copySnippet}
+                    aria-label="Копировать код"
+                    className="absolute top-3 right-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                  >
+                    {copiedSnippet ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                  </button>
+                </div>
+
+                {/* Placement instructions */}
+                <div className="p-4 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] space-y-2 text-xs">
+                  <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                    Инструкции по установке для популярных платформ:
+                  </span>
+                  <ul className="list-disc pl-4 space-y-1 text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                    <li><strong>Tilda:</strong> Настройки сайта → Еще → HTML-код для вставки внутри HEAD или перед &lt;/body&gt;.</li>
+                    <li><strong>WordPress:</strong> Внешний вид → Редактор тем → footer.php или через плагин «Insert Headers and Footers».</li>
+                    <li><strong>Taplink / Creatium:</strong> Настройки → Вставки кода → Перед закрывающим тегом BODY.</li>
+                  </ul>
+                </div>
+
+                {/* Allowed domains whitelist */}
+                <div className="space-y-1.5 pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
+                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    Разрешённые домены (Allowed Origins)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={origins}
+                    onChange={(e) => setOrigins(e.target.value)}
+                    placeholder="https://example.com&#10;https://mycompany.uz"
+                    className="w-full rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#101B2E] p-3 text-xs font-mono text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-hidden focus:ring-2 focus:ring-[#DC2626]/30 transition-colors resize-none"
+                  />
+                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                    Укажите адреса сайтов (по одному на строку), с которых разрешено загружать виджет.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: ПРОВЕРКА */}
+            {tab === 'check' && (
+              <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 sm:p-6 space-y-5 shadow-xs">
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    Проверка установки виджета
+                  </h3>
+                  <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    Сервер проверяет поступление запросов от скрипта виджета с вашего сайта.
+                  </p>
+                </div>
+
+                {/* Status Card */}
+                <div
+                  className={`p-4 rounded-xl border space-y-3 ${
+                    widget?.lastSeenAt
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-900 dark:text-emerald-200'
+                      : 'bg-amber-500/10 border-amber-500/20 text-amber-900 dark:text-amber-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className={`size-2.5 rounded-full shrink-0 ${
+                        widget?.lastSeenAt ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                      }`}
+                    />
+                    <span className="text-xs font-semibold">
+                      {widget?.lastSeenAt ? 'Виджет успешно активен на сайте' : 'Запрос с сайта пока не зафиксирован'}
+                    </span>
+                  </div>
+
+                  <p className="text-xs leading-relaxed text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    {widget?.lastSeenAt
+                      ? `Последний контакт: ${new Date(widget.lastSeenAt).toLocaleString('ru-RU')} с источника: ${widget.lastSeenOrigin || 'сайт'}`
+                      : 'После вставки кода на сайт откройте любую его страницу в новой вкладке. Затем нажмите «Проверить подключение» ниже.'}
+                  </p>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    disabled={checking}
+                    isLoading={checking}
+                    onClick={handleCheck}
+                    className="bg-[#DC2626] hover:bg-[#b91c1c] text-white text-xs font-semibold"
+                  >
+                    <RefreshCw size={14} className="mr-1.5" />
+                    <span>Проверить подключение</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={helping}
+                    isLoading={helping}
+                    onClick={handleRequestHelp}
+                    className="text-xs font-medium"
+                  >
+                    <HelpCircle size={14} className="mr-1.5" />
+                    <span>Помощь в установке</span>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ========================================================= */}
+          {/* RIGHT COLUMN: Interactive Live Preview (5 cols)           */}
+          {/* ========================================================= */}
+          <div className="lg:col-span-5 flex flex-col items-center space-y-3">
+            {/* Preview Toolbar */}
+            <div className="w-full flex items-center justify-between text-xs px-1">
+              <span className="font-semibold text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                Предпросмотр на сайте
+              </span>
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('desktop')}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                    previewDevice === 'desktop'
+                      ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-semibold'
+                      : 'text-[var(--text-muted)] dark:text-[#AABAD0]/70 hover:text-[var(--text-primary)]'
+                  }`}
+                  aria-label="Компьютер"
+                  title="Компьютер"
+                >
+                  <Laptop size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('mobile')}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                    previewDevice === 'mobile'
+                      ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-semibold'
+                      : 'text-[var(--text-muted)] dark:text-[#AABAD0]/70 hover:text-[var(--text-primary)]'
+                  }`}
+                  aria-label="Телефон"
+                  title="Телефон"
+                >
+                  <Smartphone size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Mock Device Container */}
+            <div
+              className={`w-full rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] p-3 shadow-md transition-all ${
+                previewDevice === 'mobile' ? 'max-w-xs' : 'max-w-md'
+              }`}
+            >
+              {/* Mock Browser Header */}
+              <div className="rounded-xl bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] p-2 flex items-center gap-2 mb-2">
+                <div className="flex gap-1.5 shrink-0 pl-1">
+                  <span className="size-2 rounded-full bg-red-400" />
+                  <span className="size-2 rounded-full bg-amber-400" />
+                  <span className="size-2 rounded-full bg-emerald-400" />
+                </div>
+                <div className="flex-1 rounded-md bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 px-2 py-0.5 truncate text-center font-mono">
+                  vash-sayt.uz
+                </div>
+              </div>
+
+              {/* Mock Page Content Backdrop */}
+              <div className="relative rounded-xl bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] p-3 min-h-[360px] overflow-hidden flex flex-col justify-between">
+                {/* Dummy page skeleton */}
+                <div className="space-y-2 opacity-30 select-none pointer-events-none">
+                  <div className="h-4 w-1/3 rounded bg-slate-300 dark:bg-slate-700" />
+                  <div className="h-2.5 w-full rounded bg-slate-200 dark:bg-slate-800" />
+                  <div className="h-2.5 w-4/5 rounded bg-slate-200 dark:bg-slate-800" />
+                  <div className="h-2.5 w-2/3 rounded bg-slate-200 dark:bg-slate-800" />
+                </div>
+
+                {/* Live Mock Chat Window (Expanded) */}
+                <div
+                  className={`w-full rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] shadow-lg overflow-hidden flex flex-col ${
+                    form.position === 'left' ? 'self-start' : 'self-end'
+                  }`}
+                >
+                  {/* Chat Header styled with chosen color */}
+                  <div
+                    className="p-3 flex items-center justify-between text-white transition-colors"
+                    style={{ backgroundColor: form.color }}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-7 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                        <Globe size={14} className="text-white" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-xs truncate leading-none">
+                          {form.title || 'Поможем с вашим вопросом'}
+                        </p>
+                        <p className="text-[10px] text-white/80 mt-0.5 leading-none">ИИ-консультант</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chat Body */}
+                  <div className="p-3 space-y-2.5 text-xs bg-[var(--surface)] dark:bg-[#142137]">
+                    {/* Bot greeting */}
+                    <div className="flex items-start gap-1.5 max-w-[90%]">
+                      <div
+                        className="size-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-white font-bold text-[9px]"
+                        style={{ backgroundColor: form.color }}
+                      >
+                        AI
+                      </div>
+                      <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] text-[11px] leading-relaxed">
+                        {form.greeting || 'Здравствуйте! Чем могу помочь?'}
+                      </div>
+                    </div>
+
+                    {/* Sample user inquiry */}
+                    <div className="flex justify-end">
+                      <div
+                        className="rounded-xl rounded-tr-xs p-2 text-white text-[11px] max-w-[85%] font-medium leading-relaxed"
+                        style={{ backgroundColor: form.color }}
+                      >
+                        Сколько стоит внедрение?
+                      </div>
+                    </div>
+
+                    {/* Sample bot reply */}
+                    <div className="flex items-start gap-1.5 max-w-[90%]">
+                      <div
+                        className="size-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-white font-bold text-[9px]"
+                        style={{ backgroundColor: form.color }}
+                      >
+                        AI
+                      </div>
+                      <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] text-[11px] leading-relaxed">
+                        Стоимость зависит от ваших задач. Подскажите, какой канал вас интересует?
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chat Input Bar */}
+                  <div className="p-2 border-t border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137]">
+                    <div className="flex items-center gap-1.5 p-1 rounded-lg bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
+                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 pl-2 flex-1 truncate">
+                        Напишите сообщение…
+                      </span>
+                      <div
+                        className="size-6 rounded-md text-white flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: form.color }}
+                      >
+                        <Send size={11} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating Launcher Button */}
+                <div
+                  className={`pt-2 flex ${
+                    form.position === 'left' ? 'justify-start' : 'justify-end'
+                  }`}
+                >
+                  <div
+                    className="size-10 rounded-full shadow-md flex items-center justify-center text-white cursor-pointer hover:scale-105 transition-transform"
+                    style={{ backgroundColor: form.color }}
+                  >
+                    <Globe size={18} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 text-center">
+              Интерактивный виджет адаптируется под тему и устройство пользователя.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Backwards-compatible modal wrapper
+ */
+export function WebsiteWidgetModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!open) return null;
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
       label="Настройки виджета чата на сайте"
-      className="w-[calc(100vw-32px)] lg:w-[720px] max-w-[720px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
+      className="w-[calc(100vw-32px)] lg:w-[1020px] max-w-[1020px] p-6 rounded-2xl overflow-y-auto max-h-[90dvh] border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
     >
-      <form onSubmit={save} className="flex flex-col max-h-[90dvh]" aria-labelledby="website-widget-title">
-        {/* Modal Header */}
-        <div className="p-5 sm:p-6 border-b border-[var(--border)] bg-[var(--surface)] flex items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3.5">
-            <div className="size-11 rounded-2xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center text-[var(--accent)] shrink-0 border border-red-100 dark:border-red-900/40 shadow-xs">
-              <Globe size={24} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 id="website-widget-title" className="text-base sm:text-lg font-semibold text-[var(--text-primary)]">
-                  Чат на сайте (Веб-виджет)
-                </h2>
-                <Badge variant={widget?.enabled ? 'success' : 'neutral'}>
-                  {widget?.enabled ? '● Активен' : '○ Выключен'}
-                </Badge>
-              </div>
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                ИИ-консультант для любого сайта: Tilda, WordPress, Taplink, HTML или через REST API.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <label className="relative inline-flex items-center cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={form.enabled}
-                onChange={(event) => update('enabled', event.target.checked)}
-                disabled={busy}
-                className="sr-only peer"
-              />
-              <div className="w-10 h-5.5 bg-slate-200 peer-focus:outline-hidden peer-focus:ring-2 peer-focus:ring-[var(--focus-ring)] rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all dark:border-slate-600 peer-checked:bg-[var(--accent)]" />
-              <span className="ms-2 text-xs font-medium text-[var(--text-secondary)] hidden md:inline">
-                {form.enabled ? 'Включён' : 'Выключен'}
-              </span>
-            </label>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={busy}
-              onClick={onClose}
-              aria-label="Закрыть"
-              className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            >
-              <X size={19} />
-            </Button>
-          </div>
-        </div>
-
-        {/* Modal Inner Nav Tabs */}
-        <div className="px-6 py-2.5 border-b border-[var(--border)] bg-[var(--surface-secondary)]/40 flex gap-2 overflow-x-auto shrink-0">
-          {[
-            { id: 'snippet', label: '⚡ Готовый скрипт (1 строка)', icon: Code2 },
-            { id: 'api', label: '🔌 REST API (Для разработчиков)', icon: Terminal },
-            { id: 'appearance', label: '🎨 Оформление и сайты', icon: Sliders },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const active = modalTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setModalTab(tab.id as typeof modalTab)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                  active
-                    ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-xs font-semibold border border-[var(--border)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                <Icon size={14} className={active ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Modal Body (Scrollable) */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          <DataState loading={loading} error={error} retry={load} />
-
-          {!loading && !error && (
-            <>
-              {/* TAB 1: Ready Snippet */}
-              {modalTab === 'snippet' && (
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm">
-                    <p className="text-[var(--text-secondary)]">
-                      Вставьте эту строчку перед закрывающим тегом{' '}
-                      <code className="px-1.5 py-0.5 rounded-md bg-[var(--surface-secondary)] text-[var(--accent-link)] font-mono text-xs">
-                        &lt;/body&gt;
-                      </code>{' '}
-                      вашего сайта (Tilda, WordPress, Taplink или чистый HTML):
-                    </p>
-                    <div className="flex items-center gap-1.5 shrink-0 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                      <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>Установка за 30 секунд</span>
-                    </div>
-                  </div>
-
-                  {/* Code Snippet Box */}
-                  <div className="relative group rounded-xl overflow-hidden border border-slate-700/60 bg-[#0F172A] text-slate-100 p-4">
-                    <textarea
-                      aria-label="Код установки чата"
-                      readOnly
-                      rows={2}
-                      value={snippet || 'Сначала сохраните настройки на соседней вкладке, чтобы сгенерировать код…'}
-                      className="w-full bg-transparent resize-none font-mono text-xs text-slate-200 focus:outline-hidden selection:bg-red-500/30 select-all"
-                      onFocus={(event) => event.target.select()}
-                    />
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="sm"
-                        disabled={!snippet || dirty}
-                        onClick={handleCopySnippet}
-                      >
-                        {copiedSnippet ? <Check size={16} /> : <Copy size={16} />}
-                        <span>{copiedSnippet ? 'Код скопирован!' : 'Скопировать код виджета'}</span>
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={!widget || dirty}
-                        isLoading={checking}
-                        onClick={check}
-                      >
-                        <ShieldCheck size={16} />
-                        <span>Проверить установку</span>
-                      </Button>
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={!widget || dirty || Boolean(ticket)}
-                      isLoading={helping}
-                      onClick={requestHelp}
-                      className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                    >
-                      <HelpCircle size={15} />
-                      <span>Нужна помощь с установкой?</span>
-                    </Button>
-                  </div>
-
-                  {/* Status Banner */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 border border-[var(--border)] text-xs text-[var(--text-secondary)]">
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className={`size-2.5 rounded-full ${
-                          widget?.lastSeenAt ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
-                        }`}
-                      />
-                      <span role="status">
-                        {widget?.lastSeenAt
-                          ? `Запрос с сайта зафиксирован: ${widget.lastSeenOrigin} (${new Date(
-                              widget.lastSeenAt
-                            ).toLocaleString('ru-RU')})`
-                          : 'Запросы виджета с сайта пока не обнаружены'}
-                      </span>
-                    </div>
-                    {dirty && (
-                      <span className="text-[var(--warning-text)] font-medium">
-                        Сохраните настройки перед проверкой
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: REST API */}
-              {modalTab === 'api' && (
-                <div className="space-y-4">
-                  <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
-                    Отправляйте сообщения напрямую ИИ-агенту через HTTP REST API. Подходит для мобильных приложений
-                    (Flutter, iOS, Android), кастомных веб-порталов и Telegram Mini Apps.
-                  </p>
-
-                  <div className="grid md:grid-cols-2 gap-3 text-xs">
-                    <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] space-y-1">
-                      <span className="text-[var(--text-muted)] block font-medium">Widget ID / Token:</span>
-                      <code className="font-mono font-semibold text-[var(--text-primary)] select-all block break-all">
-                        {widget?.id || 'Сохраните настройки для генерации ID'}
-                      </code>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] space-y-1">
-                      <span className="text-[var(--text-muted)] block font-medium">HTTP Endpoint:</span>
-                      <code className="font-mono font-semibold text-[var(--text-primary)] select-all block break-all">
-                        POST {embedOrigin}/api/widget/{widget?.id || ':id'}/messages
-                      </code>
-                    </div>
-                  </div>
-
-                  <div className="relative rounded-xl overflow-hidden border border-slate-700/60 bg-[#0F172A] p-4 text-xs font-mono text-slate-200">
-                    <pre className="overflow-x-auto whitespace-pre-wrap">{curlExample}</pre>
-                    <button
-                      type="button"
-                      onClick={handleCopyCurl}
-                      className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 text-xs transition-colors cursor-pointer"
-                    >
-                      {copiedApi ? <Check size={14} /> : <Copy size={14} />}
-                      <span>{copiedApi ? 'Скопировано' : 'cURL'}</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: Appearance, Origins & Live Preview */}
-              {modalTab === 'appearance' && (
-                <div className="grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-6 items-start">
-                  {/* Left: Fields */}
-                  <div className="space-y-4">
-                    <Select
-                      label="Ответственный ИИ-сотрудник"
-                      value={form.agentId}
-                      disabled={busy}
-                      onChange={(event) => update('agentId', event.target.value)}
-                      required
-                      options={[
-                        { value: '', label: 'Выберите сотрудника' },
-                        ...agents.map((agent) => ({
-                          value: agent.id,
-                          label: `${agent.name}${agent.isActive === false ? ' (выключен)' : ''}`,
-                        })),
-                      ]}
-                    />
-
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <label htmlFor="widget-origins" className="block text-xs font-semibold text-[var(--text-primary)]">
-                          Разрешённые сайты (Origins)
-                        </label>
-                        <span className="text-[11px] text-[var(--text-muted)]">До 10 адресов</span>
-                      </div>
-                      <textarea
-                        id="widget-origins"
-                        className={textAreaClass}
-                        value={origins}
-                        onChange={(event) => setOrigins(event.target.value)}
-                        placeholder={'https://example.uz\nhttps://www.example.uz'}
-                        required
-                        disabled={busy}
-                        aria-describedby="widget-origins-help"
-                      />
-                      <p id="widget-origins-help" className="text-xs text-[var(--text-muted)]">
-                        Каждый адрес с новой строки. Формат: <code>https://domain.com</code> (без слэша на конце).
-                      </p>
-                    </div>
-
-                    <Input
-                      label="Заголовок чата"
-                      value={form.title}
-                      onChange={(event) => update('title', event.target.value)}
-                      maxLength={80}
-                      required
-                      disabled={busy}
-                    />
-
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <label htmlFor="widget-greeting" className="block text-xs font-semibold text-[var(--text-primary)]">
-                          Приветствие
-                        </label>
-                        <span className="text-[11px] text-[var(--text-muted)]">{form.greeting.length}/500</span>
-                      </div>
-                      <textarea
-                        id="widget-greeting"
-                        className={textAreaClass}
-                        value={form.greeting}
-                        onChange={(event) => update('greeting', event.target.value)}
-                        maxLength={500}
-                        required
-                        disabled={busy}
-                      />
-                    </div>
-
-                    {/* Colors */}
-                    <div className="space-y-2 pt-1">
-                      <label className="block text-xs font-semibold text-[var(--text-primary)]">Цвет оформления</label>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {COLOR_PRESETS.map((preset) => (
-                          <button
-                            key={preset.value}
-                            type="button"
-                            onClick={() => update('color', preset.value)}
-                            className={`size-6 rounded-full transition-transform cursor-pointer relative flex items-center justify-center ${
-                              form.color.toLowerCase() === preset.value.toLowerCase()
-                                ? 'scale-115 ring-2 ring-offset-2 ring-[var(--focus-ring)]'
-                                : 'hover:scale-105 opacity-90'
-                            }`}
-                            style={{ backgroundColor: preset.value }}
-                            title={preset.name}
-                          >
-                            {form.color.toLowerCase() === preset.value.toLowerCase() && (
-                              <Check size={12} className="text-white drop-shadow-xs" />
-                            )}
-                          </button>
-                        ))}
-                        <input
-                          type="color"
-                          value={form.color}
-                          onChange={(event) => update('color', event.target.value)}
-                          disabled={busy}
-                          className="size-6 rounded-lg cursor-pointer border-0 p-0 bg-transparent ml-2"
-                          title="Свой цвет"
-                        />
-                        <span className="text-xs font-mono uppercase text-[var(--text-secondary)]">
-                          {form.color}
-                        </span>
-                      </div>
-                    </div>
-
-                    <Select
-                      label="Расположение"
-                      value={form.position}
-                      onChange={(event) => update('position', event.target.value)}
-                      disabled={busy}
-                      options={[
-                        { value: 'right', label: 'Справа внизу' },
-                        { value: 'left', label: 'Слева внизу' },
-                      ]}
-                    />
-                  </div>
-
-                  {/* Right: Preview */}
-                  <div className="rounded-xl border border-[var(--border)] p-4 bg-slate-50 dark:bg-slate-950/60 flex flex-col items-center justify-center min-h-[360px]">
-                    <div className="w-full max-w-[280px] rounded-2xl bg-white dark:bg-[#111C2F] shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col text-xs">
-                      <div
-                        className="px-3.5 py-3 flex items-center justify-between text-white"
-                        style={{
-                          backgroundColor: form.color,
-                          color: widgetTextColor(form.color),
-                        }}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <MessageCircle size={15} />
-                          <span className="font-semibold truncate">{form.title}</span>
-                        </div>
-                        <span className="text-base leading-none">×</span>
-                      </div>
-                      <div className="p-3 space-y-2 bg-slate-50/70 dark:bg-[#0B1220]/60 min-h-[140px]">
-                        <div className="bg-white dark:bg-[#1A2740] rounded-xl p-2.5 text-slate-800 dark:text-slate-100 shadow-2xs leading-relaxed break-words text-[11px]">
-                          {form.greeting}
-                        </div>
-                      </div>
-                      <div className="p-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5">
-                        <input
-                          type="text"
-                          disabled
-                          placeholder="Напишите сообщение…"
-                          className="w-full text-[11px] bg-slate-100 dark:bg-slate-800 rounded-full px-2.5 py-1 text-slate-400"
-                        />
-                        <div
-                          className="size-6 rounded-full flex items-center justify-center shrink-0"
-                          style={{
-                            backgroundColor: form.color,
-                            color: widgetTextColor(form.color),
-                          }}
-                        >
-                          <Send size={10} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 sm:p-5 border-t border-[var(--border)] bg-[var(--surface)] flex items-center justify-between gap-3 shrink-0">
-          <div className="text-xs text-[var(--text-muted)]">
-            {dirty ? (
-              <span className="text-[var(--warning-text)] font-medium">Есть несохранённые изменения</span>
-            ) : (
-              <span>Все настройки сохранены</span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <Button type="button" variant="ghost" disabled={busy} onClick={onClose}>
-              Отмена
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              isLoading={busy}
-              disabled={!dirty || !agents.length}
-            >
-              Сохранить и подключить
-            </Button>
-          </div>
-        </div>
-      </form>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Закрыть"
+          className="absolute -top-2 -right-2 p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-10"
+        >
+          <X size={20} />
+        </button>
+        <WebsiteWidgetSettingsView onBack={onClose} />
+      </div>
     </Dialog>
   );
 }
-
-// Backward-compatible alias
-export { WebsiteWidgetModal as WebsiteWidgetIntegration };

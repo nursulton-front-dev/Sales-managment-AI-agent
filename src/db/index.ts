@@ -373,20 +373,28 @@ export async function verifyTelegramBusinessBindingUser(nonce: string, userId: s
 export async function redeemTelegramBusinessBindingForUser(userId: string): Promise<schema.TelegramBusinessBinding | null> {
   const now = new Date();
   if (db) {
-    const rows = await db.update(schema.telegramBusinessBindings)
-      .set({ redeemedAt: now })
-      .where(and(
-        eq(schema.telegramBusinessBindings.verifiedTelegramUserId, userId),
-        sql`${schema.telegramBusinessBindings.expiresAt} > ${now}`,
-        sql`${schema.telegramBusinessBindings.redeemedAt} IS NULL`
-      ))
-      .returning();
-    return rows[0] || null;
+    const rows = await db.execute<schema.TelegramBusinessBinding>(sql`
+      WITH target AS (
+        SELECT nonce FROM telegram_business_bindings
+        WHERE verified_telegram_user_id = ${userId}
+          AND expires_at > ${now}
+          AND redeemed_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+      )
+      UPDATE telegram_business_bindings
+      SET redeemed_at = ${now}
+      WHERE nonce = (SELECT nonce FROM target)
+      RETURNING *
+    `);
+    const result = rows.rows[0] as unknown as schema.TelegramBusinessBinding | undefined;
+    return result || null;
   }
   const store = readStore();
-  const binding = store.telegramBusinessBindings.find(
-    (b) => b.verifiedTelegramUserId === userId && new Date(b.expiresAt) > now && !b.redeemedAt
-  );
+  const active = store.telegramBusinessBindings
+    .filter((b) => b.verifiedTelegramUserId === userId && new Date(b.expiresAt) > now && !b.redeemedAt)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const binding = active[0] || null;
   if (!binding) return null;
   binding.redeemedAt = now;
   writeStore(store);

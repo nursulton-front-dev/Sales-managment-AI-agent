@@ -34,8 +34,14 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
 } from 'lucide-react';
-import { WebsiteWidgetModal } from '@/components/integrations/WebsiteWidgetIntegration';
+import {
+  WebsiteWidgetSettingsView,
+  WebsiteWidgetModal,
+} from '@/components/integrations/WebsiteWidgetIntegration';
 import { ChannelEventLog } from '@/components/integrations/ChannelEventLog';
 
 type CalendarStatus = {
@@ -65,6 +71,7 @@ const TABS = [
 export default function IntegrationsPage() {
   const { agents, agentsError, refreshAgents, refreshWorkspace, showToast } = useApp();
   const [tab, setTab] = useState<string>('all');
+  const [view, setView] = useState<'catalog' | 'widget_settings' | 'events'>('catalog');
   const [calendar, setCalendar] = useState<CalendarStatus | null>(null);
   const [instagram, setInstagram] = useState<InstagramStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +95,7 @@ export default function IntegrationsPage() {
 
   // Telegram Business / Account Secretary Mode State
   const [tgTab, setTgTab] = useState<'account' | 'custom_bot'>('account');
+  const [tgHelpOpen, setTgHelpOpen] = useState(false);
   const [tgBusinessStatus, setTgBusinessStatus] = useState<{
     connected: boolean;
     userId: string | null;
@@ -150,6 +158,22 @@ export default function IntegrationsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Real-time server status polling while Telegram modal is open
+  useEffect(() => {
+    if (!telegramOpen || tgBusinessStatus?.connected) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/integrations/telegram-business/status');
+        const data = await res.json();
+        if (data?.success && data.connected) {
+          setTgBusinessStatus(data);
+          showToast('Telegram-аккаунт успешно подтверждён!', undefined, 'success');
+        }
+      } catch {}
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [telegramOpen, tgBusinessStatus?.connected, showToast]);
 
   const update = async (url: string, body?: unknown, method = 'POST') => {
     if (busy) return false;
@@ -223,6 +247,14 @@ export default function IntegrationsPage() {
     (connectedAgents.length > 0 || tgBusinessStatus?.connected ? 1 : 0) +
     (calendar?.connected ? 1 : 0) +
     (instagram?.connected ? 1 : 0);
+
+  if (view === 'widget_settings') {
+    return (
+      <div className="max-w-6xl mx-auto py-2">
+        <WebsiteWidgetSettingsView onBack={() => setView('catalog')} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-10">
@@ -387,75 +419,73 @@ export default function IntegrationsPage() {
       {/* ========================================================================= */}
       {tab !== 'events' ? (
         <div className="space-y-5">
-          {/* 4.1 FEATURED HERO CARD: ЧАТ НА САЙТЕ */}
+          {/* 4.1 FEATURED HERO CARD: ЧАТ НА САЙТЕ (gapcha-integrations-v2) */}
           {['all', 'websites'].includes(tab) && (
-            <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 sm:p-8 shadow-xs relative overflow-hidden group">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                {/* Left Description & Action Column */}
-                <div className="lg:col-span-7 space-y-5">
+            <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 sm:p-7 shadow-xs">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+                {/* Left Description & Specs */}
+                <div className="lg:col-span-7 space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="size-13 rounded-2xl bg-red-500/10 dark:bg-red-500/15 border border-red-500/25 flex items-center justify-center text-[#FF7277] shrink-0 shadow-2xs">
-                      <Globe size={26} />
+                    <div className="size-11 rounded-2xl bg-[#DC2626]/10 flex items-center justify-center text-[#DC2626] shrink-0 border border-[#DC2626]/20 shadow-2xs">
+                      <Globe size={22} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                        <h2 className="text-lg font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
                           Чат на сайте
                         </h2>
                         <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          ● Доступен
+                          ● Готов к установке
                         </span>
                       </div>
                       <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                        Интерактивный веб-виджет или подключение через REST API
+                        Интерактивный виджет для общения с посетителями сайта в реальном времени
                       </p>
                     </div>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
-                    Умный ИИ-помощник в углу сайта. Моментально отвечает на вопросы посетителей по вашей
-                    базе знаний, удерживает тёплых клиентов 24/7 и передаёт контактные данные в CRM.
-                  </p>
-
-                  {/* Benefit Items */}
-                  <div className="space-y-2.5 pt-1">
-                    <div className="flex items-center gap-3 text-xs text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                      <div className="size-6 rounded-lg bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] flex items-center justify-center text-[#FF7277] shrink-0">
-                        <Zap size={14} />
-                      </div>
-                      <span>
-                        <strong>Быстрая установка</strong> — 1 строка скрипта на любой сайт (Tilda, WordPress, HTML)
+                  {/* 3 Concise Specs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                    <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs">
+                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block font-medium">
+                        Ваш сотрудник
+                      </span>
+                      <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block mt-0.5">
+                        {agents.find((a) => a.isActive)?.name || agents[0]?.name || 'Не выбран'}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                      <div className="size-6 rounded-lg bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] flex items-center justify-center text-[#FF7277] shrink-0">
-                        <Clock3 size={14} />
-                      </div>
-                      <span>
-                        <strong>Ответы 24/7 без задержек</strong> — помощь клиентам, когда менеджеры оффлайн
+                    <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs">
+                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block font-medium">
+                        Ваши цвета
                       </span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="size-3 rounded-full bg-[#DC2626] shrink-0" />
+                        <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] truncate">
+                          gapcha Red
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                      <div className="size-6 rounded-lg bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] flex items-center justify-center text-[#FF7277] shrink-0">
-                        <Sparkles size={14} />
-                      </div>
-                      <span>
-                        <strong>Сбор контактов и квалификация</strong> — имя, телефон и запись на консультацию
+                    <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs">
+                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block font-medium">
+                        Код установки
+                      </span>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 truncate block mt-0.5">
+                        Готов к размещению
                       </span>
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
                     <button
                       type="button"
-                      onClick={() => setWidgetOpen(true)}
-                      className="px-5 py-2.5 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs sm:text-sm shadow-sm transition-all cursor-pointer flex items-center gap-2"
+                      onClick={() => setView('widget_settings')}
+                      className="px-5 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#b91c1c] text-white font-semibold text-xs sm:text-sm shadow-xs transition-all cursor-pointer flex items-center gap-2"
                     >
-                      <span>Установить на сайт</span>
-                      <ArrowRight size={16} />
+                      <span>Настроить виджет</span>
+                      <ArrowRight size={15} />
                     </button>
 
                     <button
@@ -463,103 +493,80 @@ export default function IntegrationsPage() {
                       onClick={() => setWidgetGuideOpen(true)}
                       className="px-4 py-2.5 rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#101B2E] hover:border-[var(--border-strong)] text-xs sm:text-sm font-medium text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] transition-colors cursor-pointer flex items-center gap-1.5"
                     >
-                      <CircleHelp size={16} />
-                      <span>Как это работает</span>
+                      <CircleHelp size={15} />
+                      <span>Инструкция</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Right Interactive Chat Preview Column */}
+                {/* Right Preview Card */}
                 <div className="lg:col-span-5 flex flex-col items-center">
-                  <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] p-3.5 shadow-md">
+                  <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] p-3 shadow-sm">
                     {/* Mock Chat Header */}
-                    <div className="rounded-xl bg-gradient-to-r from-red-600 to-rose-600 p-3 text-white flex items-center justify-between shadow-xs">
-                      <div className="flex items-center gap-2.5">
-                        <div className="relative size-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white">
-                          <Users size={16} />
-                          <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-400 border border-white" />
+                    <div className="rounded-xl bg-[#DC2626] p-3 text-white flex items-center justify-between shadow-2xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="size-7 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                          <Globe size={14} className="text-white" />
                         </div>
-                        <div>
-                          <p className="font-semibold text-xs leading-none">ИИ-консультант gapcha</p>
-                          <p className="text-[10px] text-white/80 mt-0.5 leading-none">В сети · отвечает сразу</p>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-xs leading-none truncate">Поможем с вопросом</p>
+                          <p className="text-[10px] text-white/80 mt-0.5 leading-none">ИИ-консультант</p>
                         </div>
                       </div>
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-white/15">
-                        Онлайн
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-white/15 text-white shrink-0">
+                        Пример
                       </span>
                     </div>
 
-                    {/* Mock Chat Conversation Body */}
-                    <div className="py-3 px-1 space-y-2.5 text-xs">
-                      {/* Bot Message */}
-                      <div className="flex items-start gap-2 max-w-[85%]">
-                        <div className="size-6 rounded-full bg-red-100 dark:bg-red-950/60 text-[#FF7277] flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">
+                    {/* Chat Conversation Body */}
+                    <div className="py-2.5 px-1 space-y-2 text-xs">
+                      <div className="flex items-start gap-1.5 max-w-[88%]">
+                        <div className="size-5 rounded-full bg-[#DC2626] text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-[9px]">
                           AI
                         </div>
-                        <div className="rounded-2xl rounded-tl-xs p-2.5 bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs">
+                        <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] text-[11px] leading-relaxed">
                           Здравствуйте! Чем могу помочь вам сегодня?
-                          <span className="block text-[9px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-1 text-right">
-                            12:00
-                          </span>
                         </div>
                       </div>
 
-                      {/* Quick Chips */}
-                      <div className="flex flex-wrap gap-1 pl-8">
-                        <span className="px-2 py-0.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[10px] text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                          Узнать цены
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[10px] text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                          Записаться
-                        </span>
-                      </div>
-
-                      {/* User Message */}
                       <div className="flex justify-end">
-                        <div className="rounded-2xl rounded-tr-xs p-2.5 bg-[#FF7277] text-[#0B1220] font-medium max-w-[85%] shadow-2xs">
-                          Хочу подключить виджет на сайт
-                          <span className="block text-[9px] text-[#0B1220]/70 mt-1 text-right">
-                            12:01
-                          </span>
+                        <div className="rounded-xl rounded-tr-xs p-2 bg-[#DC2626] text-white text-[11px] font-medium max-w-[85%] leading-relaxed">
+                          Хочу узнать цены на услуги
                         </div>
                       </div>
 
-                      {/* Bot Reply */}
-                      <div className="flex items-start gap-2 max-w-[85%]">
-                        <div className="size-6 rounded-full bg-red-100 dark:bg-red-950/60 text-[#FF7277] flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">
+                      <div className="flex items-start gap-1.5 max-w-[88%]">
+                        <div className="size-5 rounded-full bg-[#DC2626] text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-[9px]">
                           AI
                         </div>
-                        <div className="rounded-2xl rounded-tl-xs p-2.5 bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs">
-                          Отлично! Установка занимает 1 минуту — достаточно скопировать готовую строчку кода.
-                          <span className="block text-[9px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-1 text-right">
-                            12:01
-                          </span>
+                        <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] text-[11px] leading-relaxed">
+                          С удовольствием подскажу! Вас интересует базовый тариф или персональное решение?
                         </div>
                       </div>
                     </div>
 
-                    {/* Mock Input Bar */}
+                    {/* Input Bar */}
                     <div className="pt-1">
-                      <div className="flex items-center gap-2 p-1.5 rounded-xl bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C]">
-                        <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 pl-2 flex-1">
+                      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C]">
+                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 pl-2 flex-1">
                           Напишите сообщение…
                         </span>
-                        <div className="size-7 rounded-lg bg-[#FF7277] text-[#0B1220] flex items-center justify-center shrink-0">
-                          <Send size={12} />
+                        <div className="size-6 rounded-lg bg-[#DC2626] text-white flex items-center justify-center shrink-0">
+                          <Send size={11} />
                         </div>
                       </div>
                     </div>
                   </div>
-                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-2.5 text-center">
-                    Предпросмотр виджета на вашем сайте
+                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-2 text-center">
+                    Пример виджета на сайте
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 4.2 COMPACT CHANNELS (2x2 GRID) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* 4.2 COMPACT CHANNELS (3-COLUMN GRID) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* CARD 1: Telegram */}
             {['all', 'messages'].includes(tab) && (
               <div
@@ -1064,157 +1071,198 @@ export default function IntegrationsPage() {
                   </div>
                 </div>
               ) : (
-                /* Unconnected State */
+                /* Unconnected State: 3 clear steps */
                 <div className="space-y-4">
-                  <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] space-y-2 text-xs">
-                    <p className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                      Автоматизация личного или бизнес-аккаунта (Secretary Mode)
-                    </p>
-                    <p className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
-                      ИИ-сотрудник будет отвечать клиентам от вашего имени прямо в личных диалогах Telegram. Токен от BotFather <strong>не требуется</strong>.
-                    </p>
-                    <div className="pt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                      <div className="p-2 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C]">
-                        <strong className="block text-[var(--text-primary)] dark:text-[#F4F7FB]">📱 Поддержка:</strong>
-                        Telegram Business (входит в подписку Premium).
-                      </div>
-                      <div className="p-2 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C]">
-                        <strong className="block text-[var(--text-primary)] dark:text-[#F4F7FB]">🔐 Разрешения:</strong>
-                        «Автоматизация чатов» с правом «Отвечать».
-                      </div>
+                  {/* Step Progress Indicators */}
+                  <div className="grid grid-cols-3 gap-2 pb-2 border-b border-[var(--border)] dark:border-[#29374C] text-xs">
+                    <div className="flex items-center gap-1.5 font-medium text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <span
+                        className={`size-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          agentId ? 'bg-emerald-500 text-white' : 'bg-[#DC2626] text-white'
+                        }`}
+                      >
+                        {agentId ? <Check size={11} strokeWidth={3} /> : '1'}
+                      </span>
+                      <span>Сотрудник</span>
+                    </div>
+
+                    <div
+                      className={`flex items-center gap-1.5 font-medium ${
+                        bindData
+                          ? 'text-[var(--text-primary)] dark:text-[#F4F7FB]'
+                          : 'text-[var(--text-muted)] dark:text-[#AABAD0]/70'
+                      }`}
+                    >
+                      <span
+                        className={`size-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          bindData
+                            ? 'bg-[#229ED9] text-white'
+                            : 'bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[var(--text-muted)] border border-[var(--border)] dark:border-[#29374C]'
+                        }`}
+                      >
+                        2
+                      </span>
+                      <span>Telegram</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 font-medium text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                      <span className="size-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[var(--text-muted)] border border-[var(--border)] dark:border-[#29374C]">
+                        3
+                      </span>
+                      <span>Проверка</span>
                     </div>
                   </div>
 
-                  <Select
-                    label="Ответственный ИИ-сотрудник"
-                    value={agentId}
-                    onChange={(e) => setAgentId(e.target.value)}
-                    required
-                    options={[
-                      { value: '', label: 'Выберите сотрудника' },
-                      ...agents.map((agent) => ({
-                        value: agent.id,
-                        label: agent.name,
-                      })),
-                    ]}
-                  />
+                  {/* Step 1: Select Employee */}
+                  <div>
+                    <Select
+                      label="Ответственный ИИ-сотрудник"
+                      value={agentId}
+                      onChange={(e) => setAgentId(e.target.value)}
+                      required
+                      options={[
+                        { value: '', label: 'Выберите сотрудника' },
+                        ...agents.map((agent) => ({
+                          value: agent.id,
+                          label: `${agent.name}${agent.isActive ? '' : ' (неактивен)'}`,
+                        })),
+                      ]}
+                    />
+                    <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-1">
+                      ИИ-сотрудник будет отвечать на сообщения клиентов в подключённом Telegram-аккаунте.
+                    </p>
+                  </div>
 
+                  {/* Step 2: Confirmation in Telegram */}
                   {!bindData ? (
-                    <div className="space-y-3 pt-1">
+                    <div className="pt-2">
                       <Button
                         type="button"
                         variant="primary"
-                        className="w-full"
+                        className="w-full bg-[#229ED9] hover:bg-[#1c8ec4] text-white text-xs font-semibold py-2.5 shadow-xs"
                         disabled={!agentId || bindLoading}
                         isLoading={bindLoading}
                         onClick={handleGenerateBindLink}
                       >
-                        Сгенерировать ссылку для привязки
+                        <span>Продолжить в Telegram ↗</span>
                       </Button>
-                      <p className="text-[11px] text-center text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                        Создаётся защищённая одноразовая ссылка с ограничением по времени (15 минут).
+                      <p className="text-[11px] text-center text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-2">
+                        Создаётся безопасная ссылка со сроком действия 15 минут.
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-3.5 pt-1">
-                      <div className="p-3.5 rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                            Одноразовая ссылка подтверждения:
-                          </span>
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                            Действует 15 минут
-                          </span>
-                        </div>
+                    <div className="space-y-3 pt-1">
+                      {/* Single Primary Action Button */}
+                      <a
+                        href={bindData.bindUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#229ED9] hover:bg-[#1c8ec4] text-white text-xs font-semibold transition-all shadow-xs"
+                      >
+                        <span>Открыть в Telegram</span>
+                        <ExternalLink size={14} />
+                      </a>
 
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            readOnly
-                            value={bindData.bindUrl}
-                            className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-mono text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] select-all outline-hidden"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 px-2.5 shrink-0"
-                            onClick={() => {
-                              void navigator.clipboard.writeText(bindData.bindUrl);
-                              setCopiedBindUrl(true);
-                              setTimeout(() => setCopiedBindUrl(false), 2000);
-                            }}
-                          >
-                            {copiedBindUrl ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                          </Button>
-                        </div>
-
-                        <div className="pt-1 flex gap-2">
-                          <a
-                            href={bindData.bindUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#229ED9] hover:bg-[#1c8ec4] text-white text-xs font-semibold transition-all shadow-xs"
-                          >
-                            <span>Открыть в Telegram</span>
-                            <ExternalLink size={13} />
-                          </a>
-                        </div>
-                      </div>
-
-                      {/* Step-by-Step Instructions */}
-                      <div className="rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] p-3.5 space-y-2.5">
-                        <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
-                          Пошаговые действия:
+                      {/* Secondary action: subtle copy & validity */}
+                      <div className="flex items-center justify-between px-1 text-xs">
+                        <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 flex items-center gap-1">
+                          <Clock3 size={12} />
+                          <span>Ссылка действительна 15 минут</span>
                         </span>
-                        <div className="space-y-2 text-xs">
-                          <div className="flex items-start gap-2.5">
-                            <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                              1
-                            </span>
-                            <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
-                              Нажмите «Открыть в Telegram» выше и отправьте команду <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[#F4F7FB]">/start</code> боту <strong>@{bindData.botUsername}</strong>.
-                            </span>
-                          </div>
 
-                          <div className="flex items-start gap-2.5">
-                            <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                              2
-                            </span>
-                            <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
-                              В приложении Telegram перейдите: <strong>Настройки → Telegram Business → Чат-боты</strong> (или <em>Автоматизация чатов</em>).
-                            </span>
-                          </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(bindData.bindUrl);
+                            setCopiedBindUrl(true);
+                            setTimeout(() => setCopiedBindUrl(false), 2000);
+                          }}
+                          className="text-[11px] text-[#229ED9] hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedBindUrl ? (
+                            <>
+                              <Check size={12} className="text-emerald-500" />
+                              <span>Скопировано</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={12} />
+                              <span>Скопировать ссылку</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
 
-                          <div className="flex items-start gap-2.5">
-                            <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                              3
-                            </span>
-                            <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
-                              Добавьте бота <strong>@{bindData.botUsername}</strong> и включите пункт <strong>«Отвечать на сообщения»</strong>.
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Rejection / Troubleshooting helper */}
-                        <div className="pt-2 border-t border-[var(--border)] dark:border-[#29374C] text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/80 space-y-1">
+                      {/* Real Server Status Indicator */}
+                      <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] flex items-center gap-2.5">
+                        <span className="size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                        <div className="text-xs">
                           <p className="font-medium text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                            ⚠️ Если Telegram отклоняет подключение или бот не отвечает:
+                            Ожидаем подтверждение в Telegram...
                           </p>
-                          <ul className="list-disc pl-4 space-y-0.5 leading-snug">
-                            <li>Убедитесь, что в Telegram активна подписка Telegram Premium.</li>
-                            <li>Проверьте, что боту предоставлено право «Отвечать на сообщения».</li>
-                            <li>Если прошло больше 15 минут, нажмите «Сбросить» и создайте новую ссылку.</li>
-                          </ul>
+                          <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-0.5">
+                            Отправьте /start боту и включите чат-бота в настройках Telegram.
+                          </p>
                         </div>
                       </div>
 
+                      {/* On-Demand Help Accordion */}
+                      <div className="rounded-xl border border-[var(--border)] dark:border-[#29374C] overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setTgHelpOpen(!tgHelpOpen)}
+                          className="w-full flex items-center justify-between p-3 bg-[var(--surface-secondary)]/30 dark:bg-[#101B2E]/60 text-xs font-semibold text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] transition-colors cursor-pointer"
+                        >
+                          <span>Нужна помощь?</span>
+                          {tgHelpOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+
+                        {tgHelpOpen && (
+                          <div className="p-3.5 space-y-2.5 text-xs border-t border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137]">
+                            <div className="space-y-2">
+                              <div className="flex items-start gap-2.5">
+                                <span className="size-4.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[#101B2E] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 text-[#229ED9]">
+                                  1
+                                </span>
+                                <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                                  Нажмите <strong>«Открыть в Telegram»</strong> и отправьте команду <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[#F4F7FB]">/start</code> боту <strong>@{bindData.botUsername}</strong>.
+                                </span>
+                              </div>
+
+                              <div className="flex items-start gap-2.5">
+                                <span className="size-4.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[#101B2E] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 text-[#229ED9]">
+                                  2
+                                </span>
+                                <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                                  В Telegram откройте: <strong>Настройки → Telegram Business → Чат-боты</strong>.
+                                </span>
+                              </div>
+
+                              <div className="flex items-start gap-2.5">
+                                <span className="size-4.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[#101B2E] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 text-[#229ED9]">
+                                  3
+                                </span>
+                                <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                                  Добавьте бота <strong>@{bindData.botUsername}</strong> и обязательно включите пункт <strong>«Отвечать на сообщения»</strong>.
+                                </span>
+                              </div>
+                            </div>
+
+                            <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
+                              Если ссылка истекла или Telegram отклонил запрос, нажмите «Сбросить» и создайте новую ссылку.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Modal Footer Controls */}
                       <div className="flex justify-between items-center pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => setBindData(null)}
+                          className="text-xs"
                         >
                           Сбросить
                         </Button>
@@ -1227,6 +1275,7 @@ export default function IntegrationsPage() {
                             await load();
                             showToast('Статус обновлён');
                           }}
+                          className="text-xs"
                         >
                           Проверить подключение
                         </Button>

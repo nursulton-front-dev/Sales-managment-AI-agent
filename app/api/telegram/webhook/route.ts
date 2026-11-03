@@ -486,17 +486,38 @@ export async function POST(req: NextRequest) {
       const contact = `id:${bm.chat.id}`;
       const agentId = workspace.telegramBusinessAgentId || (await getAllAgents(workspace.id))[0]?.id;
       if (!agentId) return NextResponse.json({ ok: true });
+      const clientName = [bm.from?.first_name, bm.from?.last_name].filter((v: unknown) => typeof v === 'string').join(' ').slice(0, 200) || 'Клиент Telegram';
       const convId = channelId('conversation', workspace.id, 'Telegram', agentId, contact);
 
+      // 3.3.1 Ensure conversation and message are saved immediately for instant dashboard visibility
+      const conversation = await createConversation({
+        id: convId,
+        workspaceId: workspace.id,
+        agentId,
+        channel: 'Telegram',
+        clientName,
+        clientPhone: contact,
+      });
+
+      const eventId = channelId('Telegram', agentId, String(updateId));
+      await createMessage({
+        id: `in_${eventId}`,
+        conversationId: conversation.id,
+        workspaceId: workspace.id,
+        sender: 'client',
+        text: bm.text,
+        tokensCost: 0,
+      });
+
       const event = await enqueueEvent({
-        id: channelId('Telegram', agentId, String(updateId)),
+        id: eventId,
         workspaceId: workspace.id,
         channel: 'Telegram',
-        conversationId: convId,
+        conversationId: conversation.id,
         payload: {
           agentId,
           contact,
-          clientName: [bm.from?.first_name, bm.from?.last_name].filter((v: unknown) => typeof v === 'string').join(' ').slice(0, 200) || 'Клиент Telegram',
+          clientName,
           text: bm.text,
           businessConnectionId: connId,
         },
@@ -519,20 +540,41 @@ export async function POST(req: NextRequest) {
       }
 
       const contact = `id:${message.chat.id}`;
+      const clientName = [message.from?.first_name, message.from?.last_name].filter((value: unknown) => typeof value === 'string').join(' ').slice(0, 200) || 'Клиент Telegram';
       const conversation = (await getAllConversations(agent.workspaceId)).find(
         (item) => item.channel === 'Telegram' && item.agentId === agent.id && item.clientPhone === contact
       );
       const convId = conversation?.id || channelId('conversation', agent.workspaceId, 'Telegram', agent.id, contact);
 
+      // 4.1 Ensure conversation and message are saved immediately
+      const savedConv = await createConversation({
+        id: convId,
+        workspaceId: agent.workspaceId,
+        agentId: agent.id,
+        channel: 'Telegram',
+        clientName,
+        clientPhone: contact,
+      });
+
+      const eventId = channelId('Telegram', agent.id, String(updateId));
+      await createMessage({
+        id: `in_${eventId}`,
+        conversationId: savedConv.id,
+        workspaceId: agent.workspaceId,
+        sender: 'client',
+        text: message.text,
+        tokensCost: 0,
+      });
+
       const event = await enqueueEvent({
-        id: channelId('Telegram', agent.id, String(updateId)),
+        id: eventId,
         workspaceId: agent.workspaceId,
         channel: 'Telegram',
-        conversationId: convId,
+        conversationId: savedConv.id,
         payload: {
           agentId: agent.id,
           contact,
-          clientName: [message.from?.first_name, message.from?.last_name].filter((value: unknown) => typeof value === 'string').join(' ').slice(0, 200) || 'Клиент Telegram',
+          clientName,
           text: message.text,
         },
       });
