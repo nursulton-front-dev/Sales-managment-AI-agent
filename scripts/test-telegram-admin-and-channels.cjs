@@ -56,7 +56,6 @@ async function main() {
   console.log('🚀 Running Telegram Admin, Channels & Queue Replay Verification Suite...\n');
 
   const tg = load('lib/server/telegram.ts');
-  const db = load('src/db/index.ts');
   const statsLib = load('lib/server/admin/channels-stats.ts');
   const webhookApi = load('app/api/telegram/webhook/route.ts');
   const statsApi = load('app/api/admin/channels/stats/route.ts');
@@ -170,6 +169,80 @@ async function main() {
   const editMsgCall = capturedCalls.find((c) => c.url.includes('editMessageText'));
   check('Owner receives updated diagnostics view in message',
     editMsgCall && JSON.parse(editMsgCall.options.body).text.includes('Диагностика системы gapcha AI'));
+
+  // 2.5 Public user /start: sends greeting with inline buttons
+  capturedCalls.length = 0;
+  const userStartReq = new NextRequest('http://localhost:3000/api/telegram/webhook?serviceBot=1', {
+    method: 'POST',
+    headers: {
+      'x-telegram-bot-api-secret-token': secretHeader,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      update_id: 1005,
+      message: {
+        message_id: 70,
+        from: { id: 11223344, first_name: 'Client' },
+        chat: { id: 11223344 },
+        text: '/start',
+      },
+    }),
+  });
+  const userStartRes = await webhookApi.POST(userStartReq);
+  check('Plain /start accepts public user with HTTP 200', userStartRes.status === 200);
+  const userStartMsg = capturedCalls.find((c) => c.url.includes('sendMessage'));
+  check('Public user receives greeting with inline buttons (connect, help, cabinet)',
+    userStartMsg &&
+    JSON.parse(userStartMsg.options.body).text.includes('официальный ИИ-ассистент платформы') &&
+    Boolean(JSON.parse(userStartMsg.options.body).reply_markup?.inline_keyboard?.length));
+
+  // 2.6 Public user clicks "user_connect" callback button
+  capturedCalls.length = 0;
+  const userConnectReq = new NextRequest('http://localhost:3000/api/telegram/webhook?serviceBot=1', {
+    method: 'POST',
+    headers: {
+      'x-telegram-bot-api-secret-token': secretHeader,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      update_id: 1006,
+      callback_query: {
+        id: 'cb_user_connect_1',
+        from: { id: 11223344 },
+        message: { message_id: 70, chat: { id: 11223344 } },
+        data: 'user_connect',
+      },
+    }),
+  });
+  const userConnectRes = await webhookApi.POST(userConnectReq);
+  check('Public user callback user_connect processed with HTTP 200', userConnectRes.status === 200);
+  const userConnectEdit = capturedCalls.find((c) => c.url.includes('editMessageText'));
+  check('Public user receives connection steps without requiring admin rights',
+    userConnectEdit && JSON.parse(userConnectEdit.options.body).text.includes('Подключение Telegram-аккаунта'));
+
+  // 2.7 Public user clicks "user_help" callback button
+  capturedCalls.length = 0;
+  const userHelpReq = new NextRequest('http://localhost:3000/api/telegram/webhook?serviceBot=1', {
+    method: 'POST',
+    headers: {
+      'x-telegram-bot-api-secret-token': secretHeader,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      update_id: 1007,
+      callback_query: {
+        id: 'cb_user_help_1',
+        from: { id: 11223344 },
+        message: { message_id: 70, chat: { id: 11223344 } },
+        data: 'user_help',
+      },
+    }),
+  });
+  const userHelpRes = await webhookApi.POST(userHelpReq);
+  check('Public user callback user_help processed with HTTP 200', userHelpRes.status === 200);
+  const userHelpEdit = capturedCalls.find((c) => c.url.includes('editMessageText'));
+  check('Public user receives FAQ guidance',
+    userHelpEdit && JSON.parse(userHelpEdit.options.body).text.includes('Справка и частые вопросы'));
 
   // 3. Queue Replay & Idempotency
   // Create a stuck test event

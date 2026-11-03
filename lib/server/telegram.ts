@@ -104,6 +104,46 @@ export function isTelegramAdmin(userId: number | string | undefined | null): boo
   return String(userId) === String(TELEGRAM_OWNER_ID);
 }
 
+export function getUserMenuKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🔗 Подключить аккаунт', callback_data: 'user_connect' },
+        { text: '❓ Помощь', callback_data: 'user_help' },
+      ],
+      [
+        { text: '🌐 Открыть кабинет gapcha AI', url: 'https://chorla-ai.vercel.app/dashboard' },
+      ],
+    ],
+  };
+}
+
+export function getAdminStartKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '📊 Сегодня', callback_data: 'admin_stats_today' },
+        { text: '📊 7 дней', callback_data: 'admin_stats_7d' },
+        { text: '📊 30 дней', callback_data: 'admin_stats_30d' },
+      ],
+      [
+        { text: '🩺 Диагностика системы', callback_data: 'admin_diag' },
+        { text: '🔄 Застрявшие события', callback_data: 'admin_stuck' },
+      ],
+      [
+        { text: '🔗 Подключить аккаунт', callback_data: 'user_connect' },
+        { text: '❓ Помощь', callback_data: 'user_help' },
+      ],
+      [
+        { text: '🌐 Открыть кабинет gapcha AI', url: 'https://chorla-ai.vercel.app/dashboard' },
+      ],
+      [
+        { text: '❌ Закрыть меню', callback_data: 'admin_close' },
+      ],
+    ],
+  };
+}
+
 export function getAdminMenuKeyboard() {
   return {
     inline_keyboard: [

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { isSupabaseConfigured, createClient } from '@/lib/supabase/client';
 import {
   GraduationCap,
   Stethoscope,
@@ -27,9 +26,7 @@ import {
   EyeOff,
   Send,
   Bot,
-  Sparkles,
   ShieldCheck,
-  Radio,
 } from 'lucide-react';
 
 interface NicheTemplate {
@@ -120,6 +117,25 @@ const PRIMARY_NICHES: NicheTemplate[] = [
       'Какой способ оплаты для вас удобнее (перевод, наличные или терминал)?'
     ],
     defaultName: 'ИИ-Консультант Магазина'
+  },
+  {
+    id: 'marketing',
+    title: 'Маркетинговое агентство',
+    target: 'Консультация по услугам рекламы, SMM и запись на аудит',
+    image: '/images/niches/marketing.jpg',
+    icon: Target,
+    description: 'Лидогенерация, таргетинг, контекст, SMM и запись на аудит.',
+    defaultPrice: `Прайс-лист услуг маркетингового агентства:
+- Аудит рекламы и текущей воронки продаж: Бесплатно (при первом обращении)
+- Настройка и ведение таргетированной/контекстной рекламы: от 3 500 000 сум / мес
+- Комплексный SMM (стратегия, рилс, постинг): от 4 500 000 сум / мес
+- Разработка конверсионного лендинга / сайта: от 5 000 000 сум`,
+    defaultQuestions: [
+      'Какой продукт или услугу вы продвигаете и какая у вас ниша бизнеса?',
+      'Запускали ли вы рекламу ранее и какой у вас ориентировочный рекламный бюджет?',
+      'В какой день и время вам удобно созвониться с маркетологом на 15-минутный разбор?'
+    ],
+    defaultName: 'ИИ-Маркетолог агентства'
   }
 ];
 
@@ -252,61 +268,79 @@ export default function NewAgentWizardPage() {
     setQuestions(updated);
   };
 
-  // Compile auto-generated system prompt
-  const generatedSystemPrompt = `Ты — профессиональный ИИ-сотрудник по продажам для компании "${selectedNiche?.title || 'Компания'}".
+  // Resolve real business title and target without placeholders or "Другая сфера бизнеса"
+  const businessTitle =
+    selectedNiche?.id === 'other' && customBusinessName.trim()
+      ? customBusinessName.trim()
+      : selectedNiche?.title || 'Компания';
+
+  const businessTarget =
+    selectedNiche?.id === 'other' && customBusinessName.trim()
+      ? `Консультировать клиентов компании "${customBusinessName.trim()}", квалифицировать потребности и согласовать следующий шаг.`
+      : selectedNiche?.target || 'Квалифицировать запрос и согласовать следующий шаг';
+
+  // Compile auto-generated system prompt with strict anti-cliché & natural dialogue rules
+  const generatedSystemPrompt = `Ты — профессиональный ИИ-консультант компании "${businessTitle}".
 Твое имя: "${agentName}".
 
 БИЗНЕС-ЦЕЛЬ:
-${selectedNiche?.target || 'Квалифицировать запрос и записать клиента'}.
+${businessTarget}
 
-ПРАВИЛА КВАЛИФИКАЦИИ КЛИЕНТА:
-Перед записью в календарь последовательно уточни следующие 3 вопроса:
-1. ${questions[0] || 'Уточнить запрос'}
-2. ${questions[1] || 'Уточнить детали'}
-3. ${questions[2] || 'Уточнить желаемое время'}
+ПРАВИЛА ОБЩЕНИЯ И ТОНАЛЬНОСТЬ:
+- Общайся естественно, живо и профессионально на языке клиента (русский или узбекский).
+- ЗАПРЕЩЕНЫ шаблонные фразы и клише в начале сообщений (например: "Отличный вопрос!", "Рад вам помочь!", "Безусловно, я могу..."). Сразу переходи к сути.
+- Длина реплики: 1–3 емких предложения. Не пиши полотна текста.
+- Задавай строго ОДИН вопрос за одно сообщение, не перегружай клиента списком вопросов.
+- Никогда не выдумывай несуществующие скидки, акции, цены или свободные слоты в календаре. Если информации нет в прайс-листе, скажи об этом прямо.
+- Если клиент прямо спрашивает, человек ли ты или робот: честно ответь, что ты ИИ-ассистент компании, и при необходимости предложи позвать человека-менеджера.
+
+КВАЛИФИКАЦИЯ КЛИЕНТА (задавай вопросы последовательно по одному в ходе диалога):
+1. ${questions[0] || 'Уточнить конкретную задачу или интерес'}
+2. ${questions[1] || 'Уточнить детали и параметры'}
+3. ${questions[2] || 'Согласовать дату и время для связи или визита'}
 
 ПРАЙС-ЛИСТ И УСЛУГИ:
 ${priceList}
 
-ИНТЕГРАЦИЯ С КАЛЕНДАРЕМ:
+РАБОТА С КАЛЕНДАРЕМ:
 ${
   googleCalendarEnabled
-    ? 'Уточни желаемое время. Не придумывай свободные часы и не подтверждай запись без результата календаря.'
-    : 'Календарь отключен — принимай контактные данные клиента для ручной связи.'
+    ? 'Если клиент готов записаться, согласуй удобную дату и время. Не подтверждай бронирование без доступного слота.'
+    : 'Календарь отключен — запроси номер телефона или контакт клиента для передачи живому менеджеру.'
 }
 ${
   autoReminderEnabled
-    ? 'Авто-напоминание за 2 часа до визита включено (расход: 1 токен).'
+    ? 'Авто-напоминание о записи отправляется автоматически.'
     : ''
-}
-
-ТОНАЛЬНОСТЬ:
-Вежливая, деловая, лаконичная. Не пиши простыни текста, общайся живыми короткими сообщениями.`;
+}`;
 
   const handleSaveAgent = async () => {
     if (!selectedNiche || isSavingAgent) return;
     setIsSavingAgent(true);
     try {
-    const newAgent = await createAgent({
-      name: agentName || selectedNiche.defaultName,
-      niche: selectedNiche.title,
-      nicheId: selectedNiche.id,
-      systemPrompt: generatedSystemPrompt,
-      priceList: priceList,
-      qualificationQuestions: questions,
-      telegramToken: botToken,
-      googleCalendarEnabled: googleCalendarEnabled,
-      autoReminderEnabled: autoReminderEnabled,
-      isActive: true
-    });
+      const newAgent = await createAgent({
+        name: agentName || selectedNiche.defaultName,
+        niche: businessTitle,
+        nicheId: selectedNiche.id,
+        systemPrompt: generatedSystemPrompt,
+        priceList: priceList,
+        qualificationQuestions: questions,
+        telegramToken: botToken,
+        googleCalendarEnabled: googleCalendarEnabled,
+        autoReminderEnabled: autoReminderEnabled,
+        isActive: true,
+      });
 
-    setSavedAgentId(newAgent.id);
-    setIsSaved(true);
-    try {
-      sessionStorage.removeItem('ai_agent_wizard_draft');
-    } catch {}
-    } catch (error) { showToast('Не удалось создать сотрудника', error instanceof Error ? error.message : 'Ошибка сети', 'error'); }
-    finally { setIsSavingAgent(false); }
+      setSavedAgentId(newAgent.id);
+      setIsSaved(true);
+      try {
+        sessionStorage.removeItem('ai_agent_wizard_draft');
+      } catch {}
+    } catch (error) {
+      showToast('Не удалось создать сотрудника', error instanceof Error ? error.message : 'Ошибка сети', 'error');
+    } finally {
+      setIsSavingAgent(false);
+    }
   };
 
   // Keyboard navigation for radio group
@@ -503,7 +537,7 @@ ${
               aria-checked={selectedNiche?.id === 'other'}
               tabIndex={0}
               onClick={() => handleSelectNiche(OTHER_NICHE)}
-              onKeyDown={(e) => handleKeyDown(e, 4)}
+              onKeyDown={(e) => handleKeyDown(e, PRIMARY_NICHES.length)}
               className={`rounded-[8px] p-4 sm:p-4.5 flex items-center justify-between gap-4 transition-all duration-150 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2 ${
                 selectedNiche?.id === 'other'
                   ? 'bg-[#FFF5F5] dark:bg-rose-950/25 border-2 border-[#DC2626] shadow-xs'
@@ -662,10 +696,10 @@ ${
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-[var(--text-primary)]">
-                          Вариант A — Личный или бизнес-аккаунт через общего бота gapcha AI
+                          Telegram-аккаунт (через @gapcha_assistant_bot)
                         </span>
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          Рекомендуем 95% компаний
+                          Рекомендуем
                         </span>
                       </div>
                       <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">
@@ -736,7 +770,7 @@ ${
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-[var(--text-primary)]">
-                          Вариант B — Собственный отдельный Telegram-бот
+                          Свой Telegram-бот (через токен @BotFather)
                         </span>
                       </div>
                       <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">
@@ -954,7 +988,7 @@ ${
             <div className="text-xs text-[var(--text-muted)]">
               {selectedNiche ? (
                 <span className="text-slate-600 dark:text-slate-300">
-                  Выбрано: <b>{selectedNiche.title}</b>
+                  Выбрано: <b>{businessTitle}</b>
                 </span>
               ) : (
                 'Выберите сферу бизнеса'

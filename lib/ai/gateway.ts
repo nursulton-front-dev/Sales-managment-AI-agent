@@ -140,9 +140,18 @@ export async function processAgentMessage({
   let provider: 'openai' | 'gemini' | 'deepseek' | 'rules_engine' = 'rules_engine';
   let modelName = 'local-rules-v1';
 
-  // Construct system prompt
-  const basePrompt = agent?.systemPrompt || `Вы — профессиональный ИИ-сотрудник компании. Ваша задача — квалифицировать клиента и записать на пробный урок/прием.`;
-  const fullSystemPrompt = `${basePrompt}\n\nБаза знаний и прайс:\n${agent?.knowledgeBase || 'Стандартные условия'}\n\nВопросы квалификации:\n${((agent?.qualificationQuestions as string[]) || []).join('\n')}\n\nЗапись на конкретное время требует подтверждения сотрудником. Не утверждай, что запись, оплата или заказ уже оформлены. При запросе записи собери пожелания и предложи обратиться к сотруднику.`;
+  // Construct system prompt with conversational safeguards and anti-cliché rules
+  const basePrompt = agent?.systemPrompt || `Вы — профессиональный ИИ-сотрудник компании. Ваша задача — квалифицировать клиента и помочь с выбором услуги.`;
+  const conversationalRules = `
+ПРАВИЛА ОБЩЕНИЯ И ТОНАЛЬНОСТЬ:
+- Отвечай коротко и по делу: строго 1–3 предложения на реплику.
+- Задавай не более одного вопроса за раз, не перегружай клиента анкетами.
+- Не используй шаблонные вступления и клише («Отличный вопрос!», «Рад помочь!», «Безусловно, я могу...»). Сразу переходи к сути.
+- Если клиент прямо спрашивает «ты робот?» или «ты человек?»: честно ответь, что ты официальный ИИ-ассистент компании, и предложи позвать живого менеджера при необходимости.
+- Никогда не выдумывай несуществующие скидки, акции, цены или свободные слоты в календаре, которых нет в базе знаний.
+- Общайся на языке клиента (русский или узбекский).`;
+
+  const fullSystemPrompt = `${basePrompt}\n\nБаза знаний и прайс:\n${agent?.knowledgeBase || 'Стандартные условия'}\n\nВопросы квалификации:\n${((agent?.qualificationQuestions as string[]) || []).join('\n')}\n${conversationalRules}\n\nЗапись на конкретное время требует подтверждения сотрудником. Не утверждай, что запись, оплата или заказ уже оформлены. При запросе записи собери пожелания и предложи обратиться к сотруднику.`;
 
   // Sandbox provider override: if AI_SANDBOX_PROVIDER=deepseek (or in sandbox mode with deepseek key)
   const useDeepSeek = (isSandbox && (process.env.AI_SANDBOX_PROVIDER === 'deepseek' || process.env.DEEPSEEK_API_KEY)) || process.env.AI_DEFAULT_PROVIDER === 'deepseek';

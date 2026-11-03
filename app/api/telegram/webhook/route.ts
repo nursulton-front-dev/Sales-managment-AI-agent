@@ -20,6 +20,8 @@ import {
   getServiceBotUsername,
   isTelegramAdmin,
   getAdminMenuKeyboard,
+  getAdminStartKeyboard,
+  getUserMenuKeyboard,
   answerTelegramCallbackQuery,
 } from '@/lib/server/telegram';
 import {
@@ -69,6 +71,7 @@ export async function POST(req: NextRequest) {
     }
 
     const raw = await readLimitedText(req, 100_000);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let update: Record<string, any>;
     try {
       update = JSON.parse(raw);
@@ -89,13 +92,93 @@ export async function POST(req: NextRequest) {
       return getServiceBotToken();
     };
 
-    // 0. Handle Admin Callback Queries (Interactive buttons in Telegram)
+    // 0. Handle Callback Queries (Interactive buttons in Telegram)
     if (update.callback_query) {
       const cq = update.callback_query;
       const fromId = cq.from?.id;
       const data = cq.data as string;
       const token = await getActiveBotToken();
+      const chatId = cq.message?.chat?.id || fromId;
 
+      // 0.1 Public User Callbacks (No admin rights required)
+      if (data === 'user_connect' || data === 'user_help' || data === 'user_back') {
+        if (token) {
+          await answerTelegramCallbackQuery(token, cq.id);
+        }
+        if (!chatId || !token) return NextResponse.json({ ok: true });
+
+        if (data === 'user_connect') {
+          const connectText =
+            `🔗 <b>Подключение Telegram-аккаунта к gapcha AI</b>\n\n` +
+            `ИИ-сотрудник отвечает клиентам прямо в личных диалогах (Telegram Business / Secretary Mode). Токен от BotFather не требуется.\n\n` +
+            `<b>Шаги подключения:</b>\n` +
+            `1. Войдите в личный кабинет: <a href="https://chorla-ai.vercel.app/dashboard/integrations">Интеграции → Telegram</a>\n` +
+            `2. Выберите нужного сотрудника и нажмите <b>«Сгенерировать ссылку»</b>\n` +
+            `3. Нажмите <b>«Открыть в Telegram»</b> для безопасной привязки\n` +
+            `4. В Telegram откройте: <b>Настройки → Telegram Business → Чат-боты</b>\n` +
+            `5. Добавьте бота <b>@${getServiceBotUsername()}</b> и включите тумблер <b>«Отвечать на сообщения»</b>.`;
+
+          void telegramCall(token, 'editMessageText', {
+            chat_id: chatId,
+            message_id: cq.message?.message_id,
+            text: connectText,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🌐 Открыть кабинет gapcha AI', url: 'https://chorla-ai.vercel.app/dashboard/integrations' }],
+                [{ text: '⬅️ Назад', callback_data: 'user_back' }],
+              ],
+            },
+          }).catch(() => {});
+          return NextResponse.json({ ok: true });
+        }
+
+        if (data === 'user_help') {
+          const helpText =
+            `❓ <b>Справка и частые вопросы</b>\n\n` +
+            `• <b>Нужен ли BotFather токен?</b>\n` +
+            `Нет, для Telegram-аккаунта токен не требуется. Бот подключается через официальный Telegram Business.\n\n` +
+            `• <b>Что нужно на аккаунте?</b>\n` +
+            `Подписка Telegram Premium (включает функции Telegram Business).\n\n` +
+            `• <b>Как отключить или поставить на паузу?</b>\n` +
+            `В Telegram: <i>Настройки → Telegram Business → Чат-боты</i>. Выключите тумблер «Отвечать на сообщения» или удалите бота.\n\n` +
+            `• <b>Что делать, если бот не отвечает?</b>\n` +
+            `1. Проверьте тумблер «Отвечать на сообщения».\n` +
+            `2. Если вы сами ответили клиенту в диалоге, ИИ передает управление вам (Human Takeover).`;
+
+          void telegramCall(token, 'editMessageText', {
+            chat_id: chatId,
+            message_id: cq.message?.message_id,
+            text: helpText,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🔗 Подключить аккаунт', callback_data: 'user_connect' }],
+                [{ text: '⬅️ Назад', callback_data: 'user_back' }],
+              ],
+            },
+          }).catch(() => {});
+          return NextResponse.json({ ok: true });
+        }
+
+        if (data === 'user_back') {
+          const isOwner = isTelegramAdmin(fromId);
+          const backText = isOwner
+            ? `👑 <b>Здравствуйте, администратор gapcha AI!</b>\n\nЭтот бот обслуживает интеграцию Telegram Business (Secretary Mode) для компаний платформы.\n\nИспользуйте кнопки меню ниже для управления.`
+            : `👋 <b>Здравствуйте!</b>\n\nЯ — официальный ИИ-ассистент платформы <b>gapcha AI</b>.\n\nЯ подключаюсь к вашему личному или корпоративному аккаунту в режиме <i>Telegram Business (Secretary Mode)</i> и автоматически консультирую клиентов от вашего имени.\n\nВыберите действие:`;
+
+          void telegramCall(token, 'editMessageText', {
+            chat_id: chatId,
+            message_id: cq.message?.message_id,
+            text: backText,
+            parse_mode: 'HTML',
+            reply_markup: isOwner ? getAdminStartKeyboard() : getUserMenuKeyboard(),
+          }).catch(() => {});
+          return NextResponse.json({ ok: true });
+        }
+      }
+
+      // 0.2 Handle Admin Callback Queries (Owner only)
       if (!isTelegramAdmin(fromId)) {
         if (token) {
           await answerTelegramCallbackQuery(token, cq.id, '⛔ Доступ запрещен');
@@ -107,7 +190,6 @@ export async function POST(req: NextRequest) {
         await answerTelegramCallbackQuery(token, cq.id);
       }
 
-      const chatId = cq.message?.chat?.id || fromId;
       if (!chatId || !token) return NextResponse.json({ ok: true });
 
       if (data === 'admin_close') {
@@ -308,7 +390,7 @@ export async function POST(req: NextRequest) {
               `Этот бот обслуживает интеграцию Telegram Business (Secretary Mode) для компаний платформы.\n\n` +
               formatTelegramStats(stats),
             parse_mode: 'HTML',
-            reply_markup: getAdminMenuKeyboard(),
+            reply_markup: getAdminStartKeyboard(),
           }).catch(() => {});
         } else {
           void telegramCall(token, 'sendMessage', {
@@ -316,12 +398,9 @@ export async function POST(req: NextRequest) {
             text: '👋 <b>Здравствуйте!</b>\n\n' +
               'Я — официальный ИИ-ассистент платформы <b>gapcha AI</b>.\n\n' +
               'Я подключаюсь к вашему личному или корпоративному аккаунту в режиме <i>Telegram Business (Secretary Mode)</i> и автоматически консультирую клиентов от вашего имени.\n\n' +
-              '<b>Чтобы привязать бота к вашей компании:</b>\n' +
-              '1. Откройте личный кабинет gapcha AI → раздел <b>«Интеграции»</b> → Telegram.\n' +
-              '2. Выберите ИИ-сотрудника и нажмите <b>«Сгенерировать ссылку для привязки»</b>.\n' +
-              '3. Нажмите кнопку <b>«Открыть в Telegram»</b> (в ссылке содержится одноразовый защищённый ключ привязки).\n' +
-              '4. В настройках Telegram (<i>Настройки → Telegram Business → Чат-боты</i>) добавьте бота и включите тумблер <b>«Отвечать на сообщения»</b>.',
+              'Выберите действие с помощью кнопок ниже:',
             parse_mode: 'HTML',
+            reply_markup: getUserMenuKeyboard(),
           }).catch(() => {});
         }
       }

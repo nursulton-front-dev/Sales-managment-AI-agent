@@ -23,7 +23,15 @@ export function SandboxDrawer() {
   const messages = sessions[agentId] || [];
   useEffect(() => { if (isSandboxOpen && sandboxAgent && !inFlight.current) { setSelected(sandboxAgent.id); setError(null); } }, [isSandboxOpen, sandboxAgent]);
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [sessions, sending]);
-  const prompts = agent?.nicheId === 'clinic' ? ['Какие специалисты принимают?', 'Как подготовиться к приёму?', 'Как записаться?'] : agent?.nicheId === 'courses' || agent?.nicheId === 'education' ? ['Какие курсы у вас есть?', 'Сколько стоит обучение?', 'Есть пробное занятие?'] : agent?.nicheId === 'ecommerce' ? ['Какие товары есть в наличии?', 'Как заказать доставку?', 'Какие способы оплаты?'] : ['Какие услуги вы предлагаете?', 'Сколько это стоит?', 'Как связаться с менеджером?'];
+  const prompts = agent?.nicheId === 'clinic'
+    ? ['Какие специалисты принимают?', 'Как подготовиться к приёму?', 'Как записаться?']
+    : agent?.nicheId === 'courses' || agent?.nicheId === 'education'
+    ? ['Какие курсы у вас есть?', 'Сколько стоит обучение?', 'Есть пробное занятие?']
+    : agent?.nicheId === 'marketing'
+    ? ['Сколько стоит настройка рекламы?', 'Вы делаете комплексный SMM?', 'Как записаться на аудит воронки?']
+    : agent?.nicheId === 'ecommerce'
+    ? ['Какие товары есть в наличии?', 'Как заказать доставку?', 'Какие способы оплаты?']
+    : ['Какие услуги вы предлагаете?', 'Сколько это стоит?', 'Как связаться с менеджером?'];
   const send = async (text = draft) => {
     if (!agent || !text.trim() || inFlight.current) return;
     inFlight.current = true; setSending(true); setError(null);
