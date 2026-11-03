@@ -17,6 +17,7 @@ import {
   serviceBotWebhookSecret,
   telegramCall,
   getServiceBotToken,
+  getServiceBotUsername,
   isTelegramAdmin,
   getAdminMenuKeyboard,
   answerTelegramCallbackQuery,
@@ -264,20 +265,93 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // 2. Handle /start bind_<nonce> deep link to verify Telegram user ID
-    if (update.message?.text?.startsWith('/start bind_')) {
-      const nonce = update.message.text.slice(12).trim();
+    // 2. Handle /start and direct service bot messages
+    if (update.message?.text?.startsWith('/start')) {
+      const text = update.message.text.trim();
       const fromUser = update.message.from;
-      if (fromUser?.id && nonce) {
-        const verified = await verifyTelegramBusinessBindingUser(nonce, String(fromUser.id), fromUser.username);
-        if (verified) {
-          const serviceToken = getServiceBotToken();
-          if (serviceToken) {
-            void telegramCall(serviceToken, 'sendMessage', {
-              chat_id: fromUser.id,
-              text: '✅ Ваш Telegram-аккаунт успешно верифицирован для компании в gapcha AI!\n\nСледующий шаг:\nОткройте Настройки Telegram → Настройки для бизнеса (Telegram Business) → Чат-боты (Автоматизация чатов), выберите этого бота и нажмите «Подключить».',
+      const chatId = update.message.chat?.id || fromUser?.id;
+      const token = await getActiveBotToken();
+
+      if (text.startsWith('/start bind_')) {
+        const nonce = text.slice(12).trim();
+        if (fromUser?.id && nonce) {
+          const verified = await verifyTelegramBusinessBindingUser(nonce, String(fromUser.id), fromUser.username);
+          if (verified && token && chatId) {
+            void telegramCall(token, 'sendMessage', {
+              chat_id: chatId,
+              text: '✅ <b>Ваш Telegram-аккаунт успешно верифицирован для компании в gapcha AI!</b>\n\n' +
+                'Следующий шаг:\n' +
+                '1. Откройте <b>Настройки Telegram → Telegram Business → Чат-боты</b> (или <i>Автоматизация чатов</i>).\n' +
+                '2. Выберите этого бота (<b>@' + (getServiceBotUsername()) + '</b>) и обязательно включите пункт <b>«Отвечать на сообщения»</b>.\n\n' +
+                'После этого ИИ-сотрудник начнёт отвечать клиентам в ваших личных диалогах!',
+              parse_mode: 'HTML',
+            }).catch(() => {});
+          } else if (!verified && token && chatId) {
+            void telegramCall(token, 'sendMessage', {
+              chat_id: chatId,
+              text: '⚠️ <b>Срок действия ссылки привязки истёк или она уже была использована.</b>\n\n' +
+                'Пожалуйста, вернитесь в личный кабинет gapcha AI в раздел «Интеграции» и нажмите «Сгенерировать ссылку для привязки» снова.',
+              parse_mode: 'HTML',
             }).catch(() => {});
           }
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      // Plain /start (without bind token)
+      if (token && chatId) {
+        if (isTelegramAdmin(fromUser?.id)) {
+          const stats = await getChannelAdminStats('today');
+          void telegramCall(token, 'sendMessage', {
+            chat_id: chatId,
+            text: `👑 <b>Здравствуйте, администратор gapcha AI!</b>\n\n` +
+              `Этот бот обслуживает интеграцию Telegram Business (Secretary Mode) для компаний платформы.\n\n` +
+              formatTelegramStats(stats),
+            parse_mode: 'HTML',
+            reply_markup: getAdminMenuKeyboard(),
+          }).catch(() => {});
+        } else {
+          void telegramCall(token, 'sendMessage', {
+            chat_id: chatId,
+            text: '👋 <b>Здравствуйте!</b>\n\n' +
+              'Я — официальный ИИ-ассистент платформы <b>gapcha AI</b>.\n\n' +
+              'Я подключаюсь к вашему личному или корпоративному аккаунту в режиме <i>Telegram Business (Secretary Mode)</i> и автоматически консультирую клиентов от вашего имени.\n\n' +
+              '<b>Чтобы привязать бота к вашей компании:</b>\n' +
+              '1. Откройте личный кабинет gapcha AI → раздел <b>«Интеграции»</b> → Telegram.\n' +
+              '2. Выберите ИИ-сотрудника и нажмите <b>«Сгенерировать ссылку для привязки»</b>.\n' +
+              '3. Нажмите кнопку <b>«Открыть в Telegram»</b> (в ссылке содержится одноразовый защищённый ключ привязки).\n' +
+              '4. В настройках Telegram (<i>Настройки → Telegram Business → Чат-боты</i>) добавьте бота и включите тумблер <b>«Отвечать на сообщения»</b>.',
+            parse_mode: 'HTML',
+          }).catch(() => {});
+        }
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    // 2.1 Handle /help or any other direct message to the Service Bot
+    if (isServiceBot && update.message?.chat?.type === 'private' && update.message?.text) {
+      const fromUser = update.message.from;
+      const chatId = update.message.chat?.id || fromUser?.id;
+      const token = await getActiveBotToken();
+
+      if (token && chatId) {
+        if (isTelegramAdmin(fromUser?.id)) {
+          const stats = await getChannelAdminStats('today');
+          void telegramCall(token, 'sendMessage', {
+            chat_id: chatId,
+            text: `👑 <b>Админ-панель gapcha AI</b>\n\nИспользуйте интерактивные кнопки ниже для навигации или команды:\n• <code>/admin</code> или <code>/stats</code> — сводка за сегодня\n• <code>/diag</code> — диагностика шлюзов и очередей\n• <code>/retry</code> — застрявшие события\n\n` +
+              formatTelegramStats(stats),
+            parse_mode: 'HTML',
+            reply_markup: getAdminMenuKeyboard(),
+          }).catch(() => {});
+        } else {
+          void telegramCall(token, 'sendMessage', {
+            chat_id: chatId,
+            text: 'ℹ️ <b>Это служебный бот gapcha AI</b>\n\n' +
+              'Бот не предназначен для обычной переписки тет-а-тет — он работает как ИИ-секретарь для вашего бизнес-аккаунта Telegram.\n\n' +
+              'Для настройки привязки откройте кабинет платформы: <b>Интеграции → Telegram → Сгенерировать ссылку</b>.',
+            parse_mode: 'HTML',
+          }).catch(() => {});
         }
       }
       return NextResponse.json({ ok: true });
