@@ -250,14 +250,14 @@ export default function IntegrationsPage() {
 
   if (view === 'widget_settings') {
     return (
-      <div className="max-w-6xl mx-auto py-2">
+      <div className="w-full max-w-[1680px] mx-auto py-2">
         <WebsiteWidgetSettingsView onBack={() => setView('catalog')} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-10">
+    <div className="space-y-6 w-full max-w-[1680px] mx-auto pb-10">
       {/* ========================================================================= */}
       {/* 1. PAGE HEADER & NEUTRAL CONNECTION COUNTER */}
       {/* ========================================================================= */}

@@ -249,7 +249,7 @@ export default function ConversationsPage() {
   });
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-10 text-left">
+    <div className="space-y-6 w-full pb-8 text-left">
       {/* Top Header */}
       <PageHeader
         title="Диалоги"
@@ -259,12 +259,12 @@ export default function ConversationsPage() {
       <DataState loading={isLoading} error={loadError} retry={loadConversations} />
 
       {!isLoading && !loadError && (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 h-[calc(100vh-230px)] min-h-[550px] max-h-[750px]">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 h-[calc(100dvh-200px)] min-h-[580px]">
           {/* ========================================================================= */}
           {/* LEFT COLUMN: CONVERSATION LIST (INBOX) */}
           {/* ========================================================================= */}
           <div
-            className={`md:col-span-5 lg:col-span-4 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex flex-col overflow-hidden shadow-xs ${
+            className={`md:col-span-5 lg:col-span-4 xl:col-span-4 2xl:col-span-3 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex flex-col overflow-hidden shadow-xs ${
               mobileView === 'chat' ? 'hidden md:flex' : 'flex'
             }`}
           >
@@ -391,7 +391,7 @@ export default function ConversationsPage() {
           {/* RIGHT COLUMN: ACTIVE CONVERSATION THREAD */}
           {/* ========================================================================= */}
           <div
-            className={`md:col-span-7 lg:col-span-8 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex flex-col overflow-hidden shadow-xs ${
+            className={`md:col-span-7 lg:col-span-8 xl:col-span-8 2xl:col-span-9 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex flex-col overflow-hidden shadow-xs ${
               mobileView === 'list' ? 'hidden md:flex' : 'flex'
             }`}
           >

@@ -71,7 +71,7 @@ export default function CompanyPage() {
   }, []);
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-10 text-left">
+    <div className="space-y-6 w-full max-w-[1680px] mx-auto pb-10 text-left">
       <PageHeader
         title="Компания и команда"
         description="Профиль организации, настройки рабочего пространства и права доступа."
