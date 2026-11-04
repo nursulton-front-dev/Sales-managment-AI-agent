@@ -51,7 +51,17 @@ export function isGoogleCalendarConfigured(): boolean {
  * while allowing custom URI or legacy fallback.
  */
 export function resolveCalendarRedirectUri(requestOrigin?: string, customRedirectUri?: string): string {
-  let uri = customRedirectUri || process.env.GOOGLE_REDIRECT_URI;
+  let uri = customRedirectUri;
+
+  if (!uri && process.env.GOOGLE_REDIRECT_URI) {
+    uri = process.env.GOOGLE_REDIRECT_URI;
+    // Canonical path in Google Cloud Console is /api/integrations/google-calendar/callback.
+    // If environment variable has the legacy /api/calendar/callback, normalize it to match console.
+    if (uri.includes('/api/calendar/callback')) {
+      uri = uri.replace('/api/calendar/callback', '/api/integrations/google-calendar/callback');
+    }
+  }
+
   if (!uri) {
     const origin =
       requestOrigin ||
