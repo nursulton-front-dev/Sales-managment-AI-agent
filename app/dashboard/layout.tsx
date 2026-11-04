@@ -76,7 +76,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Scrollable Main Area (flex-1, min-h-0, overflow-y-auto) */}
-        <main className="dashboard-content flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full max-w-[1800px] mx-auto">
+        <main className="dashboard-content flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full">
           {workspaceLoading || workspaceError ? <DataState loading={workspaceLoading} error={workspaceError} retry={refreshWorkspace} /> : user ? children : null}
         </main>
       </div>

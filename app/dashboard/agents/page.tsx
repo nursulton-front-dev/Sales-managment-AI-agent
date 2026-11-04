@@ -90,7 +90,7 @@ function AgentList() {
   }
 
   return (
-    <div className="space-y-6 w-full max-w-[1680px] mx-auto pb-10 text-left">
+    <div className="space-y-6 w-full pb-10 text-left">
       {/* Header with Quota Counter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)] dark:border-[#29374C]">
         <div>

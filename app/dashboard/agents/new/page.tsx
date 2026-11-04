@@ -357,7 +357,7 @@ ${
   };
 
   return (
-    <div className="w-full max-w-[1120px] mx-auto px-4 sm:px-6 md:px-8 pb-24 space-y-6">
+    <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 pb-24 space-y-6">
       {/* ------------------------------------------------------------- */}
       {/* 1. Header: Clean title + "Как это работает" button              */}
       {/* ------------------------------------------------------------- */}

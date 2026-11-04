@@ -288,7 +288,7 @@ export default function SupportPage() {
   };
 
   return (
-    <div className="space-y-6 w-full max-w-[1680px] mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageHeader
           title="Поддержка и предложения"
