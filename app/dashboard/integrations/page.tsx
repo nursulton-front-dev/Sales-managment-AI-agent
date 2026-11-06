@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -13,30 +12,26 @@ import { Select } from '@/components/ui/Select';
 import { Dialog } from '@/components/ui/Dialog';
 import { DataState } from '@/components/ui/DataState';
 import { useUnsavedChanges } from '@/lib/useUnsavedChanges';
+import { normalizeWorkingHours } from '@/lib/calendar/working-hours';
+import { instagramConnectionMessage } from '@/lib/instagram/connection-errors';
 import {
   Globe,
-  Zap,
   Clock3,
-  Sparkles,
   History,
   Headphones,
   X,
   ExternalLink,
   Copy,
   Check,
-  CheckCircle2,
   ArrowRight,
   Send,
   Flag,
-  Users,
   CircleHelp,
-  ArrowUpRight,
+  ShieldCheck,
   Eye,
   EyeOff,
-  ShieldCheck,
   ChevronDown,
   ChevronUp,
-  Loader2,
 } from 'lucide-react';
 import {
   WebsiteWidgetSettingsView,
@@ -76,6 +71,8 @@ export default function IntegrationsPage() {
   const [instagram, setInstagram] = useState<InstagramStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [connectionNotice, setConnectionNotice] = useState<string | null>(null);
+  const [telegramStatusError, setTelegramStatusError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Modals for each service
@@ -87,7 +84,8 @@ export default function IntegrationsPage() {
   const [whatsappOpen, setWhatsappOpen] = useState(false);
 
   // Form states for modals
-  const [agentId, setAgentId] = useState('');
+  const [chosenAgentId, setAgentId] = useState('');
+  const agentId = chosenAgentId || agents[0]?.id || '';
   const [token, setToken] = useState('');
   const [hours, setHours] = useState('');
   const [duration, setDuration] = useState('45');
@@ -121,31 +119,42 @@ export default function IntegrationsPage() {
   );
   useUnsavedChanges(dirty || Boolean(token));
 
-  // Auto-select first agent if none selected
-  useEffect(() => {
-    if (agents.length > 0 && !agentId) {
-      setAgentId(agents[0].id);
-    }
-  }, [agents, agentId]);
-
   const load = useCallback(async () => {
     try {
       const responses = await Promise.all([
-        fetch('/api/calendar/status'),
-        fetch('/api/instagram/status'),
-        fetch('/api/integrations/telegram-business/status'),
+        fetch('/api/calendar/status', { cache: 'no-store' }),
+        fetch('/api/instagram/status', { cache: 'no-store' }),
+        fetch('/api/integrations/telegram-business/status', { cache: 'no-store' }),
       ]);
       const [cal, ig, tg] = await Promise.all(responses.map((res) => res.json()));
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('instagram_error')) {
+        setConnectionNotice(instagramConnectionMessage(params.get('instagram_error') || ''));
+      } else if (params.get('instagram_connected') === 'true') {
+        setConnectionNotice(ig.success && ig.connected
+          ? 'Instagram подключён. Выберите сотрудника и включите автоответы в настройках канала.'
+          : 'Не удалось подтвердить подключение Instagram в текущей компании. Проверьте статус и повторите подключение.');
+      }
+      if (params.has('instagram_error') || params.has('instagram_connected')) {
+        params.delete('instagram_error');
+        params.delete('instagram_connected');
+        params.delete('username');
+        const query = params.toString();
+        window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+      }
       if (responses.slice(0, 2).some((res) => !res.ok) || !cal.success || !ig.success) {
         throw new Error('Не удалось проверить подключения. Повторите запрос.');
       }
       setError(null);
       setCalendar(cal);
       setInstagram(ig);
-      if (tg?.success) {
+      if (responses[2].ok && tg?.success) {
         setTgBusinessStatus(tg);
+        setTelegramStatusError(null);
+      } else {
+        setTelegramStatusError('Не удалось проверить Telegram. Повторите проверку подключения.');
       }
-      setHours(cal.workingHours);
+      setHours(normalizeWorkingHours(cal.workingHours) || '');
       setDuration(String(cal.slotDuration));
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Ошибка сети');
@@ -154,8 +163,8 @@ export default function IntegrationsPage() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- Asynchronous status refresh on mount.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Fetch external integration status on mount.
     void load();
   }, [load]);
 
@@ -164,13 +173,17 @@ export default function IntegrationsPage() {
     if (!telegramOpen || tgBusinessStatus?.connected) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch('/api/integrations/telegram-business/status');
+        const res = await fetch('/api/integrations/telegram-business/status', { cache: 'no-store' });
         const data = await res.json();
+        if (!res.ok || !data.success) throw new Error('Telegram status unavailable');
+        setTelegramStatusError(null);
         if (data?.success && data.connected) {
           setTgBusinessStatus(data);
           showToast('Telegram-аккаунт успешно подтверждён!', undefined, 'success');
         }
-      } catch {}
+      } catch {
+        setTelegramStatusError('Не удалось проверить Telegram. Повторите проверку подключения.');
+      }
     }, 3000);
     return () => clearInterval(interval);
   }, [telegramOpen, tgBusinessStatus?.connected, showToast]);
@@ -258,6 +271,18 @@ export default function IntegrationsPage() {
 
   return (
     <div className="space-y-6 w-full pb-10">
+      {connectionNotice && (
+        <div role="status" className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm flex items-start justify-between gap-3">
+          <span>{connectionNotice}</span>
+          <Button variant="ghost" size="sm" aria-label="Скрыть уведомление" onClick={() => setConnectionNotice(null)}><X size={16} /></Button>
+        </div>
+      )}
+      {telegramStatusError && (
+        <div role="alert" className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm">
+          {telegramStatusError}
+          <Button variant="ghost" size="sm" onClick={() => void load()}>Повторить</Button>
+        </div>
+      )}
       {/* ========================================================================= */}
       {/* 1. PAGE HEADER & NEUTRAL CONNECTION COUNTER */}
       {/* ========================================================================= */}
@@ -582,7 +607,7 @@ export default function IntegrationsPage() {
                       <Image src="/integrations/telegram.svg" width={30} height={30} alt="Telegram" />
                     </div>
                     <Badge variant={tgBusinessStatus?.connected || connectedAgents.length > 0 ? 'success' : 'neutral'}>
-                      {agentsError
+                      {agentsError || telegramStatusError
                         ? 'Статус недоступен'
                         : tgBusinessStatus?.connected
                         ? '● Аккаунт подключён'
@@ -1578,10 +1603,15 @@ export default function IntegrationsPage() {
               className="space-y-4"
               onSubmit={async (e) => {
                 e.preventDefault();
+                const normalizedHours = normalizeWorkingHours(hours);
+                if (!normalizedHours) {
+                  showToast('Проверьте расписание', 'Начало рабочего дня должно быть раньше окончания.', 'error');
+                  return;
+                }
                 const ok = await update(
                   '/api/workspace/settings',
                   {
-                    googleCalendarWorkingHours: hours,
+                    googleCalendarWorkingHours: normalizedHours,
                     googleCalendarSlotDuration: Number(duration),
                   },
                   'PATCH'
@@ -1596,13 +1626,12 @@ export default function IntegrationsPage() {
                 </span>
               </div>
 
-              <Input
-                label="Рабочие часы для записи клиентов"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-                placeholder="10:00-18:00"
-                required
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Начало рабочего дня" type="time" value={hours.split('-')[0] || ''}
+                  onChange={(e) => setHours(`${e.target.value}-${hours.split('-')[1] || ''}`)} required />
+                <Input label="Окончание рабочего дня" type="time" value={hours.split('-')[1] || ''}
+                  onChange={(e) => setHours(`${hours.split('-')[0] || ''}-${e.target.value}`)} required />
+              </div>
 
               <Select
                 label="Длительность слота встречи"

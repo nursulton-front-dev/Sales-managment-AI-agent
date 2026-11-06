@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       process.env.NEXT_PUBLIC_APP_URL ||
       req.nextUrl.origin;
 
-    const redirectUri = `${origin}/api/instagram/callback`;
+    const redirectUri = new URL('/api/instagram/callback', origin).toString();
 
     // Secure cryptographic state signed with HMAC-SHA256, binds workspaceId and userId
     const state = createOAuthState(session.workspaceId, session.userEmail || undefined);
@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
       authUrl.searchParams.set('config_id', configId);
       authUrl.searchParams.set('redirect_uri', redirectUri);
       authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('override_default_response_type', 'true');
       authUrl.searchParams.set('state', state);
     } else {
       // Legacy standalone Instagram Login fallback
@@ -75,8 +76,8 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.redirect(authUrl.toString());
-  } catch (error: any) {
-    console.error('Error initiating Instagram auth:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch {
+    console.error('Error initiating Instagram auth');
+    return NextResponse.json({ success: false, error: 'Не удалось начать подключение Instagram. Проверьте настройки сервера.' }, { status: 500 });
   }
 }

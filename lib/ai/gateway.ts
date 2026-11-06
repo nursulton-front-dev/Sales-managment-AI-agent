@@ -3,6 +3,7 @@ import {
   getWorkspaceById,
   recordTokenTransaction,
 } from '@/src/db';
+import { isWorkspaceEntitled } from '@/lib/server/security/entitlements';
 
 export interface ChatCompletionOptions {
   message: string;
@@ -128,12 +129,24 @@ export async function processAgentMessage({
   // Messaging produces an answer only; bookings require a separate confirmed workflow.
   const tokensCost = 1;
 
-  // Check balance before proceeding
-  if (ws && ws.tokenBalance < tokensCost) {
-    throw new AgentReplyUnavailableError(
-      `Недостаточно токенов на балансе компании (баланс: ${ws.tokenBalance}, требуется: ${tokensCost}). Пополните баланс в разделе "Тарифы и Баланс".`,
-      'insufficient_balance'
-    );
+  // Check balance and subscription entitlement before proceeding
+  if (ws) {
+    const entitlement = isWorkspaceEntitled(ws);
+    if (!entitlement.entitled) {
+      if (entitlement.reason === 'subscription_expired') {
+        throw new AgentReplyUnavailableError(
+          'Срок действия тарифа или пробного периода компании истёк. Продлите тариф в разделе «Тарифы и баланс».',
+          'subscription_expired'
+        );
+      }
+      if (entitlement.reason === 'insufficient_balance' || ws.tokenBalance < tokensCost) {
+        throw new AgentReplyUnavailableError(
+          `Недостаточно токенов на балансе компании (баланс: ${ws.tokenBalance}, требуется: ${tokensCost}). Пополните баланс в разделе "Тарифы и Баланс".`,
+          'insufficient_balance'
+        );
+      }
+      throw new AgentReplyUnavailableError('Компания деактивирована.', 'inactive');
+    }
   }
 
   let reply = '';

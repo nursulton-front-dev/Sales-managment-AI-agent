@@ -16,6 +16,7 @@ import {
   Play,
   RotateCcw,
 } from 'lucide-react';
+import { useAdminRole } from '../AdminShell';
 import { useApp } from '@/context/AppContext';
 
 interface ChannelStatsData {
@@ -75,6 +76,7 @@ interface ChannelStatsData {
 export default function AdminChannelsPage() {
   const { showToast } = useApp();
 
+  const isOwner = useAdminRole() === 'super_admin';
   const [period, setPeriod] = useState<'today' | '7d' | '30d'>('today');
   const [loading, setLoading] = useState(true);
   const [retryingId, setRetryingId] = useState<string | null>(null);
@@ -462,7 +464,8 @@ export default function AdminChannelsPage() {
                       <button
                         type="button"
                         onClick={() => handleRetryEvent(evt.id)}
-                        disabled={retryingId === evt.id}
+                        disabled={!isOwner || retryingId === evt.id}
+                        title={!isOwner ? 'Повторы доступны только главному администратору' : undefined}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[4px] bg-[#DC2626] hover:bg-[#b91c1c] text-white text-[11px] font-sans font-medium transition-all disabled:opacity-50 cursor-pointer"
                       >
                         <Play className={`w-3 h-3 ${retryingId === evt.id ? 'animate-spin' : ''}`} />

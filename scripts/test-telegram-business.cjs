@@ -140,7 +140,7 @@ async function main() {
       user: { id: 987654321, username: 'business_director', first_name: 'Director' },
       user_chat_id: 987654321,
       date: Math.floor(Date.now() / 1000),
-      can_reply: true,
+      rights: { can_reply: true },
       is_enabled: true,
     },
   };
@@ -156,6 +156,15 @@ async function main() {
   check('Workspace stores businessConnectionId', activeWs.telegramBusinessConnectionId === 'biz_conn_alpha_777');
   check('Workspace stores telegramBusinessUserId', activeWs.telegramBusinessUserId === '987654321');
   check('Workspace stores telegramBusinessCanReply = true', activeWs.telegramBusinessCanReply === true);
+
+  const revokedRights = {
+    ...connectionUpdate,
+    update_id: 1004,
+    business_connection: { ...connectionUpdate.business_connection, can_reply: true, rights: {} },
+  };
+  await tgWebhook.POST(request('/api/telegram/webhook?serviceBot=1', revokedRights, { 'x-telegram-bot-api-secret-token': serviceSecret }));
+  check('Current rights override the legacy can_reply flag when permission is revoked', (await db.getWorkspaceById(ws.id)).telegramBusinessCanReply === false);
+  await tgWebhook.POST(request('/api/telegram/webhook?serviceBot=1', connectionUpdate, { 'x-telegram-bot-api-secret-token': serviceSecret }));
 
   // 6. Incoming client business_message
   const clientMsgUpdate = {

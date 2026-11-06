@@ -1,6 +1,6 @@
 import { validateAttachments, attachmentLinks } from '@/lib/server/support/attachments';
 import { NextRequest, NextResponse, connection } from 'next/server';
-import { getServerSessionContext } from '@/src/server/auth/session';
+import { adminCan } from '@/src/server/admin/access';
 import {
   getSupportTicketById,
   getTicketMessages,
@@ -16,8 +16,8 @@ export async function GET(
   await connection();
   try {
     const { id } = await params;
-    const session = await getServerSessionContext();
-    if (!session.isSuperAdmin) {
+    const session = await adminCan('support');
+    if (!session) {
       return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin' }, { status: 403 });
     }
 
@@ -47,8 +47,8 @@ export async function POST(
   await connection();
   try {
     const { id } = await params;
-    const session = await getServerSessionContext();
-    if (!session.isSuperAdmin) {
+    const session = await adminCan('support');
+    if (!session) {
       return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin' }, { status: 403 });
     }
 

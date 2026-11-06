@@ -16,9 +16,14 @@ const assert = require('assert');
 const crypto = require('crypto');
 
 function getDatabaseUrl() {
-  const envPath = path.join(__dirname, '..', '.env.local');
-  const env = fs.readFileSync(envPath, 'utf8');
-  return env.match(/DATABASE_URL=["']?([^"'\n]+)/)?.[1];
+  const testDbUrl = process.env.TEST_DATABASE_URL;
+  if (!testDbUrl) {
+    console.error('❌ SAFETY GATE: Refusing to run live write tests against .env.local DATABASE_URL.');
+    console.error('Provide an isolated TEST_DATABASE_URL to run end-to-end database tests.');
+    console.error('Example: TEST_DATABASE_URL="postgresql://test:test@localhost:5432/test_db" node scripts/test-telegram-account-dialog.cjs');
+    process.exit(1);
+  }
+  return testDbUrl;
 }
 
 function channelId(...parts) {

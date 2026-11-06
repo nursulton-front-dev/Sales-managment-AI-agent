@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, jsonb, index, uniqueIndex, bigserial } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, jsonb, index, uniqueIndex, bigserial, check } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // 1. Workspaces (Организации)
@@ -416,3 +416,27 @@ export type NewTelegramBusinessBinding = typeof telegramBusinessBindings.$inferI
 export type WebsiteWidget = typeof websiteWidgets.$inferSelect;
 export type WidgetSession = typeof widgetSessions.$inferSelect;
 export type ChannelEvent = typeof channelEvents.$inferSelect;
+
+// Platform staff access is independent from customer workspace membership.
+export const platformAdminAccess = pgTable('platform_admin_access', {
+  email: text('email').primaryKey(),
+  userId: text('user_id'),
+  role: text('role').notNull(),
+  status: text('status').notNull(),
+  tokenHash: text('token_hash').unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  check('platform_admin_access_role_check', sql`${table.role} IN ('support', 'finance', 'operator')`),
+  check('platform_admin_access_status_check', sql`${table.status} IN ('pending', 'active', 'revoked')`),
+  check('platform_admin_access_email_check', sql`${table.email} = lower(trim(${table.email}))`),
+  check('platform_admin_access_check', sql`${table.status} <> 'active' OR ${table.userId} IS NOT NULL`),
+]);
+export const platformAdminAccessEvents = pgTable('platform_admin_access_events', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  actorEmail: text('actor_email').notNull(),
+  targetEmail: text('target_email').notNull(),
+  action: text('action').notNull(),
+  role: text('role').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

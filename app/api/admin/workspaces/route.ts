@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { getAllWorkspaces, updateWorkspace, addTokenLog, getAllTokenLogs, createAdminAuditLog } from '@/src/db';
-import { getServerSessionContext } from '@/src/server/auth/session';
+import { publicWorkspace } from '@/lib/server/public-data';
+import { adminCan } from '@/src/server/admin/access';
 
 export async function GET(req: NextRequest) {
   await connection();
   try {
-    const session = await getServerSessionContext();
-    const adminRoleHeader = req.headers.get('x-admin-role');
-    if (!session.isSuperAdmin && adminRoleHeader !== 'super_admin') {
+    const session = await adminCan('workspaces');
+    if (!session) {
       return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin платформы' }, { status: 403 });
     }
 
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
         totalTokensIssued,
         totalTokensSpent,
       },
-      workspaces,
+      workspaces: workspaces.map(publicWorkspace),
     });
   } catch (error: any) {
     console.error('Error fetching admin workspaces:', error);
@@ -104,14 +104,16 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSessionContext();
-    const adminRoleHeader = req.headers.get('x-admin-role');
-    if (!session.isSuperAdmin && adminRoleHeader !== 'super_admin') {
+    const session = await adminCan('team');
+    if (!session) {
       return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin платформы' }, { status: 403 });
     }
 
     const body = await req.json();
-    const { workspaceId, action, tokensToAdd, newPlan, daysToAdd, status, reason, adminEmail = 'founder@platform.local', adminRole = 'super_admin' } = body;
+    const { workspaceId, action, tokensToAdd, newPlan, daysToAdd, status, reason } = body;
+
+    const adminEmail = session.userEmail;
+    const adminRole = session.role;
 
     if (!workspaceId) {
       return NextResponse.json({ error: 'workspaceId обязателен' }, { status: 400 });
@@ -153,7 +155,7 @@ export async function PATCH(req: NextRequest) {
         result: 'success',
       });
 
-      return NextResponse.json({ success: true, workspace: updated });
+      return NextResponse.json({ success: true, workspace: updated ? publicWorkspace(updated) : null });
     }
 
     if (action === 'change_plan') {
@@ -195,7 +197,7 @@ export async function PATCH(req: NextRequest) {
         result: 'success',
       });
 
-      return NextResponse.json({ success: true, workspace: updated });
+      return NextResponse.json({ success: true, workspace: updated ? publicWorkspace(updated) : null });
     }
 
     if (action === 'extend_trial') {
@@ -222,7 +224,7 @@ export async function PATCH(req: NextRequest) {
         result: 'success',
       });
 
-      return NextResponse.json({ success: true, workspace: updated });
+      return NextResponse.json({ success: true, workspace: updated ? publicWorkspace(updated) : null });
     }
 
     if (action === 'suspend' || action === 'restore' || action === 'set_status') {
@@ -241,7 +243,7 @@ export async function PATCH(req: NextRequest) {
         result: 'success',
       });
 
-      return NextResponse.json({ success: true, workspace: updated });
+      return NextResponse.json({ success: true, workspace: updated ? publicWorkspace(updated) : null });
     }
 
     if (action === 'verify_email') {
@@ -277,7 +279,7 @@ export async function PATCH(req: NextRequest) {
         result: 'success',
       });
 
-      return NextResponse.json({ success: true, workspace: updated });
+      return NextResponse.json({ success: true, workspace: updated ? publicWorkspace(updated) : null });
     }
 
     return NextResponse.json({ error: 'Неизвестное действие' }, { status: 400 });

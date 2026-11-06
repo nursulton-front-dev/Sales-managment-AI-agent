@@ -151,8 +151,7 @@ const passwordPolicyPlugin = () => ({
 const login2FAPlugin = () => ({
   id: 'login-2fa',
   endpoints: {
-    complete2FALogin: createAuthEndpoint(
-      '/login/complete-2fa',
+    complete2FALogin: createAuthEndpoint.serverOnly(
       {
         method: 'POST',
         body: z.object({
@@ -176,6 +175,8 @@ const login2FAPlugin = () => ({
 });
 
 export let auth = betterAuth({
+  // Password login must pass the application OTP flow; server-side API calls remain available.
+  disabledPaths: ['/sign-in/email', '/sign-in/email-otp'],
   database: db
     ? drizzleAdapter(db, {
         provider: 'pg',

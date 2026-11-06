@@ -192,26 +192,67 @@ async function main() {
     process.exit(1);
   }
 
-  // Verify backup contains every ID that will be deleted
+  // Verify backup contains every ID that will be deleted across ALL entities
   const backupConvIds = new Set((backupData.conversations || []).map((c) => c.id));
   const backupMsgIds = new Set((backupData.messages || []).map((m) => m.id));
+  const backupLeadIds = new Set((backupData.leads || []).map((l) => l.id));
+  const backupApptIds = new Set((backupData.appointments || []).map((a) => a.id));
+  const backupOrderIds = new Set((backupData.orders || []).map((o) => o.id));
+  const backupEventIds = new Set((backupData.channelEvents || []).map((e) => e.id));
+  const backupBindingIds = new Set((backupData.telegramBusinessBindings || []).map((b) => b.id));
 
-  for (const cId of manifestData.recordIds.conversationIds) {
+  for (const cId of manifestData.recordIds.conversationIds || []) {
     if (!backupConvIds.has(cId)) {
       console.error(`❌ FATAL ERROR: Conversation ID ${cId} is in manifest but missing from backup! Aborting.`);
       process.exit(1);
     }
   }
-  for (const mId of manifestData.recordIds.messageIds) {
+  for (const mId of manifestData.recordIds.messageIds || []) {
     if (!backupMsgIds.has(mId)) {
       console.error(`❌ FATAL ERROR: Message ID ${mId} is in manifest but missing from backup! Aborting.`);
       process.exit(1);
     }
   }
+  for (const lId of manifestData.recordIds.leadIds || []) {
+    if (!backupLeadIds.has(lId)) {
+      console.error(`❌ FATAL ERROR: Lead ID ${lId} is in manifest but missing from backup! Aborting.`);
+      process.exit(1);
+    }
+  }
+  for (const aId of manifestData.recordIds.appointmentIds || []) {
+    if (!backupApptIds.has(aId)) {
+      console.error(`❌ FATAL ERROR: Appointment ID ${aId} is in manifest but missing from backup! Aborting.`);
+      process.exit(1);
+    }
+  }
+  for (const oId of manifestData.recordIds.orderIds || []) {
+    if (!backupOrderIds.has(oId)) {
+      console.error(`❌ FATAL ERROR: Order ID ${oId} is in manifest but missing from backup! Aborting.`);
+      process.exit(1);
+    }
+  }
+  for (const eId of manifestData.recordIds.channelEventIds || []) {
+    if (!backupEventIds.has(eId)) {
+      console.error(`❌ FATAL ERROR: Channel Event ID ${eId} is in manifest but missing from backup! Aborting.`);
+      process.exit(1);
+    }
+  }
+  for (const bId of manifestData.recordIds.telegramBindingIds || []) {
+    if (!backupBindingIds.has(bId)) {
+      console.error(`❌ FATAL ERROR: Telegram Binding ID ${bId} is in manifest but missing from backup! Aborting.`);
+      process.exit(1);
+    }
+  }
   console.log('✅ All candidate manifest IDs verified to exist in validated backup.');
 
-  // Gate 3: Concurrency protection
-  console.log('🔒 Gate 3: Pausing workspace and stopping queue events to prevent concurrent webhooks/workers...');
+  // Gate 3: Concurrency protection & preserve original workspace status
+  console.log('🔒 Gate 3: Preserving workspace status, pausing workspace and stopping queue events...');
+  const wsRows = await sql`SELECT status FROM workspaces WHERE id = ${targetWorkspaceId}`;
+  if (wsRows.length === 0) {
+    console.error(`❌ FATAL ERROR: Workspace ${targetWorkspaceId} not found!`);
+    process.exit(1);
+  }
+  const originalStatus = wsRows[0].status;
   await sql`UPDATE workspaces SET status = 'maintenance' WHERE id = ${targetWorkspaceId}`;
 
   try {
@@ -221,47 +262,48 @@ async function main() {
         UPDATE channel_events
         SET status = 'ignored', locked_until = NULL, error_code = 'maintenance_cleanup'
         WHERE conversation_id = ANY(${manifestData.recordIds.conversationIds})
+          AND workspace_id = ${targetWorkspaceId}
       `;
     }
 
-    // Gate 4: Transactional deletion by exact frozen ID list
-    console.log('🗑️ Gate 4: Executing transactional deletion of exact frozen record IDs...');
+    // Gate 4: Transactional deletion by exact frozen ID list bounded by workspace_id
+    console.log('🗑️ Gate 4: Executing transactional deletion of exact frozen record IDs with workspace boundary...');
 
     const txQueries = [];
 
     // 1. Messages (foreign key to conversations)
     if (manifestData.recordIds.messageIds.length > 0) {
-      txQueries.push(sql`DELETE FROM messages WHERE id = ANY(${manifestData.recordIds.messageIds})`);
+      txQueries.push(sql`DELETE FROM messages WHERE id = ANY(${manifestData.recordIds.messageIds}) AND workspace_id = ${targetWorkspaceId}`);
     }
 
     // 2. Appointments (foreign key to leads)
     if (manifestData.recordIds.appointmentIds.length > 0) {
-      txQueries.push(sql`DELETE FROM appointments WHERE id = ANY(${manifestData.recordIds.appointmentIds})`);
+      txQueries.push(sql`DELETE FROM appointments WHERE id = ANY(${manifestData.recordIds.appointmentIds}) AND workspace_id = ${targetWorkspaceId}`);
     }
 
     // 3. Orders (foreign key to leads)
     if (manifestData.recordIds.orderIds.length > 0) {
-      txQueries.push(sql`DELETE FROM orders WHERE id = ANY(${manifestData.recordIds.orderIds})`);
+      txQueries.push(sql`DELETE FROM orders WHERE id = ANY(${manifestData.recordIds.orderIds}) AND workspace_id = ${targetWorkspaceId}`);
     }
 
     // 4. Leads
     if (manifestData.recordIds.leadIds.length > 0) {
-      txQueries.push(sql`DELETE FROM leads WHERE id = ANY(${manifestData.recordIds.leadIds})`);
+      txQueries.push(sql`DELETE FROM leads WHERE id = ANY(${manifestData.recordIds.leadIds}) AND workspace_id = ${targetWorkspaceId}`);
     }
 
     // 5. Conversations
     if (manifestData.recordIds.conversationIds.length > 0) {
-      txQueries.push(sql`DELETE FROM conversations WHERE id = ANY(${manifestData.recordIds.conversationIds})`);
+      txQueries.push(sql`DELETE FROM conversations WHERE id = ANY(${manifestData.recordIds.conversationIds}) AND workspace_id = ${targetWorkspaceId}`);
     }
 
     // 6. Channel Events
     if (manifestData.recordIds.channelEventIds.length > 0) {
-      txQueries.push(sql`DELETE FROM channel_events WHERE id = ANY(${manifestData.recordIds.channelEventIds})`);
+      txQueries.push(sql`DELETE FROM channel_events WHERE id = ANY(${manifestData.recordIds.channelEventIds}) AND workspace_id = ${targetWorkspaceId}`);
     }
 
     // 7. Telegram Bindings
     if (manifestData.recordIds.telegramBindingIds.length > 0) {
-      txQueries.push(sql`DELETE FROM telegram_business_bindings WHERE id = ANY(${manifestData.recordIds.telegramBindingIds})`);
+      txQueries.push(sql`DELETE FROM telegram_business_bindings WHERE id = ANY(${manifestData.recordIds.telegramBindingIds}) AND workspace_id = ${targetWorkspaceId}`);
     }
 
     if (txQueries.length > 0) {
@@ -271,13 +313,13 @@ async function main() {
     console.log('✅ Transactional deletion committed successfully.');
   } catch (err) {
     console.error('❌ Deletion failed in transaction:', err);
-    // Restore workspace status on failure
-    await sql`UPDATE workspaces SET status = 'active' WHERE id = ${targetWorkspaceId}`.catch(() => {});
+    // Restore original workspace status on failure
+    await sql`UPDATE workspaces SET status = ${originalStatus} WHERE id = ${targetWorkspaceId}`.catch(() => {});
     process.exit(1);
   } finally {
-    // Unpause workspace
-    console.log('🔓 Unpausing workspace back to active status...');
-    await sql`UPDATE workspaces SET status = 'active' WHERE id = ${targetWorkspaceId}`.catch(() => {});
+    // Restore original workspace status
+    console.log(`🔓 Restoring workspace back to original status (${originalStatus})...`);
+    await sql`UPDATE workspaces SET status = ${originalStatus} WHERE id = ${targetWorkspaceId}`.catch(() => {});
   }
 
   console.log('\n🎉 Cleanup of frozen candidate records finished successfully.');

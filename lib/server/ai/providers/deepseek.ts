@@ -28,6 +28,7 @@ export class DeepSeekProvider implements LLMProvider {
 
     try {
       const res = await fetch(`${this.baseUrl}/models`, {
+        signal: AbortSignal.timeout(10_000),
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
         },

@@ -15,7 +15,7 @@ function extractRows<T = Record<string, unknown>>(result: unknown): T[] {
   return [];
 }
 
-export function maskEmail(email: string): string {
+function maskEmail(email: string): string {
   const parts = email.split('@');
   if (parts.length !== 2) return email;
   const [local, domain] = parts;
@@ -37,6 +37,37 @@ export async function POST(req: NextRequest) {
 
     if (!db) {
       return NextResponse.json({ success: false, error: 'Сервер авторизации временно недоступен' }, { status: 503 });
+    }
+
+    // 0. Pre-Auth Rate Limiting: protect against brute-force attacks by IP and target account
+    const ipLimitId = `rate-limit:login-ip:${clientIp}`;
+    const failedLimitId = `rate-limit:login-failed:${cleanEmail}`;
+
+    // A. IP throttle: max 30 attempts per 5 minutes per IP
+    const ipRes = await db.execute(sql`
+      INSERT INTO ${schema.verifications} (id, identifier, value, expires_at, created_at, updated_at)
+      VALUES (${ipLimitId}, ${ipLimitId}, '1', NOW() + INTERVAL '5 minutes', NOW(), NOW())
+      ON CONFLICT (id) DO UPDATE
+      SET value = (CASE WHEN verifications.expires_at <= NOW() THEN 1 ELSE (COALESCE(NULLIF(verifications.value, ''), '0')::integer + 1) END)::text,
+          expires_at = (CASE WHEN verifications.expires_at <= NOW() THEN NOW() + INTERVAL '5 minutes' ELSE verifications.expires_at END),
+          updated_at = NOW()
+      RETURNING value
+    `);
+    const ipAttempts = parseInt(extractRows<{ value: string }>(ipRes)[0]?.value || '1', 10);
+    if (ipAttempts > 30) {
+      return NextResponse.json(
+        { success: false, error: 'Слишком много попыток входа с вашего IP-адреса. Пожалуйста, подождите 5 минут.' },
+        { status: 429 }
+      );
+    }
+
+    // B. Account lockout: max 5 failed attempts per 5 minutes per email
+    const failedCheck = await db.select().from(schema.verifications).where(eq(schema.verifications.id, failedLimitId)).limit(1);
+    if (failedCheck[0] && failedCheck[0].expiresAt > new Date() && parseInt(failedCheck[0].value || '0', 10) >= 5) {
+      return NextResponse.json(
+        { success: false, error: 'Слишком много неудачных попыток входа для этого аккаунта. Пожалуйста, подождите 5 минут.' },
+        { status: 429 }
+      );
     }
 
     // 1. Verify credential account & password
@@ -67,6 +98,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (!isPasswordCorrect) {
+      // Increment failed attempts for this email
+      await db.execute(sql`
+        INSERT INTO ${schema.verifications} (id, identifier, value, expires_at, created_at, updated_at)
+        VALUES (${failedLimitId}, ${failedLimitId}, '1', NOW() + INTERVAL '5 minutes', NOW(), NOW())
+        ON CONFLICT (id) DO UPDATE
+        SET value = (CASE WHEN verifications.expires_at <= NOW() THEN 1 ELSE (COALESCE(NULLIF(verifications.value, ''), '0')::integer + 1) END)::text,
+            expires_at = (CASE WHEN verifications.expires_at <= NOW() THEN NOW() + INTERVAL '5 minutes' ELSE verifications.expires_at END),
+            updated_at = NOW()
+      `);
+
       // Check if user is strictly a legacy workspace user without a Better Auth credential account
       const workspace = await getWorkspaceByEmail(cleanEmail);
       if (workspace && workspace.passwordHash && workspace.passwordHash.startsWith('hash_')) {
@@ -79,6 +120,9 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({ success: false, error: 'Неверный email или пароль' }, { status: 401 });
     }
+
+    // Password is correct: clear failed attempts for this email
+    await db.delete(schema.verifications).where(eq(schema.verifications.id, failedLimitId));
 
     // 2. Atomic 60-second cooldown check in shared storage (verifications table)
     const rateLimitId = `rate-limit:login:${cleanEmail}`;

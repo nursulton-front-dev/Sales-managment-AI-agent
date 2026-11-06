@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { getAllAdminAuditLogs } from '@/src/db';
-import { getServerSessionContext } from '@/src/server/auth/session';
+import { adminCan } from '@/src/server/admin/access';
 
 export async function GET(req: NextRequest) {
   await connection();
   try {
-    const session = await getServerSessionContext();
-    const adminRoleHeader = req.headers.get('x-admin-role');
-    if (!session.isSuperAdmin && adminRoleHeader !== 'super_admin') {
+    const session = await adminCan('audit');
+    if (!session) {
       return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin платформы' }, { status: 403 });
     }
 

@@ -15,23 +15,20 @@ import { getServerSessionContext } from '@/src/server/auth/session';
 
 export async function GET(req: NextRequest) {
   await connection();
+  let failureCode = 'token_exchange_failed';
   try {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
     const state = searchParams.get('state');
     const error = searchParams.get('error');
     const errorReason = searchParams.get('error_reason');
-    const errorDescription = searchParams.get('error_description');
 
     const redirectBase = '/dashboard/integrations';
 
     if (error || errorReason) {
-      console.warn('Instagram OAuth denied by user:', error, errorDescription);
       return NextResponse.redirect(
         new URL(
-          `${redirectBase}?instagram_error=${encodeURIComponent(
-            errorDescription || error || 'Отказ в авторизации'
-          )}`,
+          `${redirectBase}?instagram_error=access_denied`,
           req.url
         )
       );
@@ -75,7 +72,7 @@ export async function GET(req: NextRequest) {
       process.env.BETTER_AUTH_URL ||
       process.env.NEXT_PUBLIC_APP_URL ||
       req.nextUrl.origin;
-    const redirectUri = `${origin}/api/instagram/callback`;
+    const redirectUri = new URL('/api/instagram/callback', origin).toString();
 
     // 4. Exchange code for access token
     const tokenData = await exchangeCodeForInstagramToken(code, redirectUri);
@@ -99,8 +96,8 @@ export async function GET(req: NextRequest) {
           } else {
             expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
           }
-        } catch (llErr) {
-          console.warn('Long-lived Meta token exchange warning, retaining token:', llErr);
+        } catch {
+          console.warn('Long-lived Meta token exchange failed; retaining original expiry');
           expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
         }
       } else {
@@ -120,20 +117,23 @@ export async function GET(req: NextRequest) {
             expiresAt = new Date(Date.now() + longLived.expires_in * 1000);
           }
         }
-      } catch (llErr) {
-        console.warn('Long-lived legacy Instagram token exchange warning, falling back to 1h:', llErr);
+      } catch {
+        console.warn('Long-lived Instagram token exchange failed; retaining original token');
       }
     }
 
     // 6. Fetch user profile (username, account ID, account type)
+    failureCode = 'profile_unavailable';
     const profile = await getInstagramUserProfile(longLivedToken, tokenData.user_id);
 
     // 7. Subscribe to Meta Webhooks for messages
+    failureCode = 'subscription_failed';
     if (!await subscribeInstagramWebhook(profile.id, longLivedToken)) {
       throw new Error('Instagram не подтвердил подписку на сообщения. Проверьте разрешения приложения.');
     }
 
     // 8. Encrypt access token at rest using AES-256-GCM
+    failureCode = 'save_failed';
     const encryptedToken = encryptToken(longLivedToken);
 
     // Default scopes depending on token source
@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
       : ['instagram_business_basic', 'instagram_business_manage_messages'];
 
     // 9. Atomically save connection in Neon Postgres
-    await updateWorkspace(verifiedWorkspaceId, {
+    const saved = await updateWorkspace(verifiedWorkspaceId, {
       instagramConnected: true,
       instagramUserId: profile.id,
       instagramUsername: profile.username || `ig_${profile.id}`,
@@ -155,6 +155,7 @@ export async function GET(req: NextRequest) {
       instagramLastError: null,
       // Default auto-reply off until user explicitly selects agent & activates
     });
+    if (!saved) throw new Error('Workspace was not saved');
 
     return NextResponse.redirect(
       new URL(
@@ -165,12 +166,11 @@ export async function GET(req: NextRequest) {
       )
     );
   } catch {
-    console.error('Instagram OAuth connection failed');
+    // Only a fixed stage code is logged: provider exceptions may contain tokens or URLs.
+    console.error('Instagram OAuth connection failed', { code: failureCode });
     return NextResponse.redirect(
       new URL(
-        `/dashboard/integrations?instagram_error=${encodeURIComponent(
-          'Не удалось подключить Instagram. Проверьте разрешения приложения и настройки сервера.'
-        )}`,
+        `/dashboard/integrations?instagram_error=${failureCode}`,
         req.url
       )
     );

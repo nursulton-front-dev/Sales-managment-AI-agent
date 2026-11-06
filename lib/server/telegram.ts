@@ -97,7 +97,7 @@ export async function sendTelegramChatAction(
  * Platform Owner Telegram ID for administrative commands & diagnostics.
  * Server-only verification on every incoming action.
  */
-export const TELEGRAM_OWNER_ID = process.env.TELEGRAM_ADMIN_USER_ID || '6804139305';
+export const TELEGRAM_OWNER_ID = '6804139305';
 
 export function isTelegramAdmin(userId: number | string | undefined | null): boolean {
   if (!userId) return false;

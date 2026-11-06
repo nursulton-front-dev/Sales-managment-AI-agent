@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
-import { getServerSessionContext } from '@/src/server/auth/session';
+import { adminCan } from '@/src/server/admin/access';
 import { getAllSupportTicketsForAdmin } from '@/lib/server/support';
 
 export async function GET(req: NextRequest) {
   await connection();
   try {
-    const session = await getServerSessionContext();
-    if (!session.isSuperAdmin) {
+    const session = await adminCan('support');
+    if (!session) {
       return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin' }, { status: 403 });
     }
 

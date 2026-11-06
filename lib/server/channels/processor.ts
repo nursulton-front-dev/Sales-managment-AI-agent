@@ -7,9 +7,24 @@ import type { ChannelEvent } from '@/src/db/schema';
 import { claimEvent, dueEvents, patchEvent, advanceConversationRetries, oldestEligibleConversationEvent } from './events';
 import { DeliveryRejectedError } from './errors';
 import { widgetForWorkspace } from '@/lib/server/widget/repository';
+import { isWorkspaceEntitled } from '@/lib/server/security/entitlements';
 
 async function stop(event: ChannelEvent, code: string) {
-  await patchEvent(event.id, { status: 'ignored', errorCode: code, lockedUntil: null });
+  if (event.payload?.tokensCost && event.payload.tokensCost > 0) {
+    try {
+      const { recordTokenTransaction } = await import('@/src/db');
+      await recordTokenTransaction({
+        workspaceId: event.workspaceId,
+        actionType: 'refund',
+        tokensDelta: event.payload.tokensCost,
+        description: `Возврат токенов: ответ не отправлен (${code}) [event:${event.id}]`,
+      });
+      event.payload.tokensCost = 0;
+    } catch (refundErr) {
+      console.warn('Failed to refund undelivered tokens:', refundErr);
+    }
+  }
+  await patchEvent(event.id, { payload: event.payload, status: 'ignored', errorCode: code, lockedUntil: null });
 }
 
 export async function processChannelEvent(id: string) {
@@ -20,7 +35,8 @@ export async function processChannelEvent(id: string) {
   try {
     const [workspace, agents] = await Promise.all([getWorkspaceById(event.workspaceId), getAllAgents(event.workspaceId)]);
     const agent = agents.find((item) => item.id === payload.agentId);
-    if (!workspace || workspace.status !== 'active' || !agent) { await stop(event, 'inactive'); return; }
+    const entitlement = isWorkspaceEntitled(workspace);
+    if (!workspace || !entitlement.entitled || !agent) { await stop(event, entitlement.reason || 'inactive'); return; }
     const conversation = await createConversation({ id: event.conversationId, workspaceId: event.workspaceId, agentId: agent.id, channel: event.channel, clientName: payload.clientName, clientPhone: payload.contact });
     await createMessage({ id: `in_${event.id}`, conversationId: conversation.id, workspaceId: event.workspaceId, sender: 'client', text: payload.text, createdAt: event.createdAt });
 
@@ -30,7 +46,14 @@ export async function processChannelEvent(id: string) {
       const tgToken = payload.businessConnectionId
         ? (process.env.TELEGRAM_SERVICE_BOT_TOKEN || agent.tgBotToken)
         : agent.tgBotToken;
-      if (!agent.isActive || (event.channel === 'WebWidget' && (!widget?.enabled || widget.agentId !== agent.id)) || (event.channel === 'Instagram' && (!workspace.instagramConnected || !workspace.instagramAutoReply || workspace.instagramAgentId !== agent.id)) || (event.channel === 'Telegram' && !tgToken)) { await stop(event, 'inactive'); return; }
+      const isTgBusiness = Boolean(payload.businessConnectionId);
+      const tgBusinessInvalid = isTgBusiness && (
+        !workspace.telegramBusinessConnected ||
+        !workspace.telegramBusinessEnabled ||
+        !workspace.telegramBusinessCanReply ||
+        (workspace.telegramBusinessConnectionId && workspace.telegramBusinessConnectionId !== payload.businessConnectionId)
+      );
+      if (!agent.isActive || (event.channel === 'WebWidget' && (!widget?.enabled || widget.agentId !== agent.id)) || (event.channel === 'Instagram' && (!workspace.instagramConnected || !workspace.instagramAutoReply || workspace.instagramAgentId !== agent.id)) || (event.channel === 'Telegram' && (!tgToken || tgBusinessInvalid))) { await stop(event, 'inactive'); return; }
       if (conversation.status !== 'active') { await stop(event, 'human_takeover'); return; }
     }
 
@@ -65,7 +88,14 @@ export async function processChannelEvent(id: string) {
       const currentTgToken = payload.businessConnectionId
         ? (process.env.TELEGRAM_SERVICE_BOT_TOKEN || currentAgent?.tgBotToken)
         : currentAgent?.tgBotToken;
-      if (!currentAgent?.isActive || currentWorkspace?.status !== 'active' || (event.channel === 'Telegram' && !currentTgToken) || (event.channel === 'Instagram' && (!currentWorkspace.instagramAutoReply || !currentWorkspace.instagramConnected || currentWorkspace.instagramAgentId !== agent.id)) || (event.channel === 'WebWidget' && (!currentWidget?.enabled || currentWidget.agentId !== agent.id))) { await stop(event, 'inactive'); return; }
+      const currentTgBusinessInvalid = Boolean(payload.businessConnectionId) && (
+        !currentWorkspace?.telegramBusinessConnected ||
+        !currentWorkspace?.telegramBusinessEnabled ||
+        !currentWorkspace?.telegramBusinessCanReply ||
+        (currentWorkspace?.telegramBusinessConnectionId && currentWorkspace.telegramBusinessConnectionId !== payload.businessConnectionId)
+      );
+      const freshEntitlement = isWorkspaceEntitled(currentWorkspace);
+      if (!currentAgent?.isActive || !freshEntitlement.entitled || (event.channel === 'Telegram' && (!currentTgToken || currentTgBusinessInvalid)) || (event.channel === 'Instagram' && (!currentWorkspace?.instagramAutoReply || !currentWorkspace?.instagramConnected || currentWorkspace?.instagramAgentId !== agent.id)) || (event.channel === 'WebWidget' && (!currentWidget?.enabled || currentWidget.agentId !== agent.id))) { await stop(event, freshEntitlement.reason || 'inactive'); return; }
       if (!payload.reply) throw new Error('Missing prepared reply');
       // Persist this boundary BEFORE the external side effect. An uncertain send is never retried.
       stage = 'sending';
@@ -116,7 +146,24 @@ export async function processChannelEvent(id: string) {
       }
     }
     if (event.attempts >= 5 && status === 'retry') { status = 'review'; code = 'attempts_exhausted'; }
-    if (status === 'review') await updateConversation(event.conversationId, { status: 'human_takeover' });
+    if (status === 'review') {
+      await updateConversation(event.conversationId, { status: 'human_takeover' });
+      // If delivery failed permanently, refund the debited tokens
+      if (payload.tokensCost && payload.tokensCost > 0) {
+        try {
+          const { recordTokenTransaction } = await import('@/src/db');
+          await recordTokenTransaction({
+            workspaceId: event.workspaceId,
+            actionType: 'refund',
+            tokensDelta: payload.tokensCost,
+            description: `Возврат токенов: ошибка доставки (${code}) [event:${event.id}]`,
+          });
+          payload.tokensCost = 0;
+        } catch (refundErr) {
+          console.warn('Failed to refund undelivered tokens:', refundErr);
+        }
+      }
+    }
     const backoffSeconds = Math.min(3600, 30 * 2 ** event.attempts);
     await patchEvent(id, { status, stage, payload, errorCode: code, lockedUntil: null, availableAt: new Date(Date.now() + backoffSeconds * 1000) });
     console.warn(JSON.stringify({ time: new Date().toISOString(), channel: event.channel, eventId: id, code, status }));

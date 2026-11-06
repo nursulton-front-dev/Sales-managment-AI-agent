@@ -105,21 +105,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await sendInstagramDirectMessage({ recipientId: conv.clientPhone.slice(3), text, accessToken });
     } else if (conv.channel === 'Telegram' && conv.clientPhone?.startsWith('id:')) {
       const { getAllAgents, getWorkspaceById } = await import('@/src/db');
+      const { conversationEvents } = await import('@/lib/server/channels/events');
       const { telegramCall, getServiceBotToken } = await import('@/lib/server/telegram');
-      const [agents, workspace] = await Promise.all([
+      const [agents, workspace, events] = await Promise.all([
         getAllAgents(conv.workspaceId),
         getWorkspaceById(conv.workspaceId),
+        conversationEvents(conv.workspaceId, conv.id),
       ]);
       const agent = agents.find((item) => item.id === conv.agentId);
-      const isBusinessChat = Boolean(workspace?.telegramBusinessConnectionId && workspace.telegramBusinessConnected);
+
+      // Determine the true origin of this specific conversation:
+      // If it originated from Telegram Business, use Service Bot + business_connection_id.
+      // If it originated from Custom Bot, use agent.tgBotToken without business_connection_id.
+      const businessEvent = events.find((e) => e.payload?.businessConnectionId);
+      const conversationBusinessConnId = businessEvent?.payload?.businessConnectionId ? String(businessEvent.payload.businessConnectionId) : null;
+
+      const isBusinessChat = Boolean(conversationBusinessConnId || (!agent?.tgBotToken && workspace?.telegramBusinessConnected));
       const botToken = isBusinessChat
-        ? (getServiceBotToken() || agent?.tgBotToken)
+        ? getServiceBotToken()
         : agent?.tgBotToken;
       if (!botToken) return NextResponse.json({ success: false, error: 'Переподключите Telegram' }, { status: 409 });
 
       const sendBody: Record<string, unknown> = { chat_id: conv.clientPhone.slice(3), text };
-      if (isBusinessChat && workspace?.telegramBusinessConnectionId) {
-        sendBody.business_connection_id = workspace.telegramBusinessConnectionId;
+      if (isBusinessChat) {
+        const connId = conversationBusinessConnId || workspace?.telegramBusinessConnectionId;
+        if (connId) {
+          sendBody.business_connection_id = connId;
+        }
       }
       await telegramCall(botToken, 'sendMessage', sendBody);
     } else if (conv.channel === 'WebWidget') {

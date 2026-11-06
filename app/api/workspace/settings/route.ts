@@ -3,6 +3,7 @@ import { NextRequest, NextResponse, connection } from 'next/server';
 import { cookies } from 'next/headers';
 import { updateWorkspace } from '@/src/db';
 import { getServerSessionContext } from '@/src/server/auth/session';
+import { normalizeWorkingHours } from '@/lib/calendar/working-hours';
 
 export async function GET() {
   await connection();
@@ -77,8 +78,9 @@ export async function PATCH(req: NextRequest) {
     if (typeof niche === 'string' && niche.length <= 100) updates.niche = niche;
     if (typeof ownerPhone === 'string' && ownerPhone.length <= 40) updates.ownerPhone = ownerPhone;
     if (googleCalendarWorkingHours !== undefined) {
-      if (typeof googleCalendarWorkingHours !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/.test(googleCalendarWorkingHours) || googleCalendarWorkingHours.slice(0,5) >= googleCalendarWorkingHours.slice(6)) return NextResponse.json({ success: false, error: 'Проверьте рабочие часы' }, { status: 400 });
-      updates.googleCalendarWorkingHours = googleCalendarWorkingHours;
+      const normalized = normalizeWorkingHours(googleCalendarWorkingHours);
+      if (!normalized) return NextResponse.json({ success: false, error: 'Укажите часы в формате 10:00-18:00. Начало должно быть раньше окончания.' }, { status: 400 });
+      updates.googleCalendarWorkingHours = normalized;
     }
     if (googleCalendarSlotDuration !== undefined) {
       if (![15, 30, 45, 60, 90, 120].includes(Number(googleCalendarSlotDuration))) return NextResponse.json({ success: false, error: 'Некорректная длительность записи' }, { status: 400 });

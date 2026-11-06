@@ -39,6 +39,7 @@ const load = loader(
   {
     'next/server': { NextResponse, connection: async () => {}, after: (fn) => fn() },
     '@/src/server/auth/session': { getServerSessionContext: async () => identity },
+    '@/src/server/admin/access': { adminCan: async () => identity?.isSuperAdmin ? identity : null },
   },
   async (url, options) => {
     capturedCalls.push({ url: String(url), options });

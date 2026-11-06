@@ -133,6 +133,27 @@ export async function cancelConversationEvents(conversationId: string, code = 'h
   }
 }
 
+export async function cancelWorkspaceChannelEvents(workspaceId: string, channel: 'Telegram' | 'Instagram' | 'WebWidget', code = 'channel_disabled') {
+  const now = new Date();
+  if (db) {
+    await db.update(channelEvents)
+      .set({ status: 'ignored', errorCode: code, lockedUntil: null, updatedAt: now })
+      .where(and(
+        eq(channelEvents.workspaceId, workspaceId),
+        eq(channelEvents.channel, channel),
+        inArray(channelEvents.status, ['pending', 'retry'])
+      ));
+  } else {
+    localIntegrations((store) => {
+      for (const event of store.events) {
+        if (event.workspaceId === workspaceId && event.channel === channel && ['pending', 'retry'].includes(event.status)) {
+          Object.assign(event, { status: 'ignored', errorCode: code, lockedUntil: null, updatedAt: now });
+        }
+      }
+    }, true);
+  }
+}
+
 export async function advanceConversationRetries(conversationId: string) {
   const now = new Date();
   if (db) {

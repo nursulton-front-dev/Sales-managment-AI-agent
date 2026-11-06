@@ -2,6 +2,7 @@ import { getAllAgents, getWorkspaceById } from '@/src/db';
 import { widgetById } from './repository';
 import { widgetTextColor } from '@/lib/widget-presentation';
 import { readLimitedText, RequestBodyError } from '@/lib/server/request-body';
+import { isWorkspaceEntitled } from '@/lib/server/security/entitlements';
 
 export class WidgetError extends Error {
   constructor(message: string, public readonly status = 400) { super(message); }
@@ -24,7 +25,8 @@ export async function authorizeWidget(request: Request, id: string) {
   const widget = await widgetById(id);
   if (!widget?.enabled || !widget.allowedOrigins.includes(origin)) throw new WidgetError('Чат на этом сайте недоступен', 403);
   const [workspace, agents] = await Promise.all([getWorkspaceById(widget.workspaceId), getAllAgents(widget.workspaceId)]);
-  if (!workspace || workspace.status !== 'active' || !agents.some((agent) => agent.id === widget.agentId && agent.isActive)) throw new WidgetError('Чат временно недоступен', 503);
+  const entitlement = isWorkspaceEntitled(workspace);
+  if (!entitlement.entitled || !agents.some((agent) => agent.id === widget.agentId && agent.isActive)) throw new WidgetError('Чат временно недоступен', 503);
   return { widget, origin };
 }
 export function widgetResponse(request: Request, body: unknown, status = 200) {

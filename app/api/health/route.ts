@@ -1,91 +1,47 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { neon } from '@neondatabase/serverless';
-import { Resend } from 'resend';
-import { isNeonConfigured } from '@/src/db';
+import { adminCan } from '@/src/server/admin/access';
 
 export async function GET(req: NextRequest) {
   await connection();
   const startTime = Date.now();
-  const checks: Record<string, any> = {};
 
-  // 1. Neon Database Check
+  let dbConnected = false;
   try {
     const dbUrl = process.env.DATABASE_URL;
     if (dbUrl && !dbUrl.includes('placeholder')) {
       const sql = neon(dbUrl);
-      const pingStart = Date.now();
-      const dbRes = await sql`SELECT current_database(), now();`;
-      const pingMs = Date.now() - pingStart;
-
-      const tables = await sql`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        ORDER BY table_name;
-      `;
-
-      checks.neonPostgres = {
-        status: 'CONNECTED',
-        database: dbRes[0]?.current_database || 'neondb',
-        pingMs,
-        tablesCount: tables.length,
-        tables: tables.map((t: any) => t.table_name),
-      };
-    } else {
-      checks.neonPostgres = {
-        status: 'LOCAL_FALLBACK',
-        message: 'DATABASE_URL not configured, using JSON file store',
-      };
+      await sql`SELECT 1;`;
+      dbConnected = true;
     }
-  } catch (err: any) {
-    checks.neonPostgres = {
-      status: 'ERROR',
-      error: err.message,
-    };
+  } catch {
+    dbConnected = false;
   }
 
-  // 2. Resend API Check
-  try {
-    const resendKey = process.env.RESEND_API_KEY;
-    if (resendKey && resendKey.startsWith('re_')) {
-      checks.resend = {
-        status: 'CONFIGURED',
-        apiKeyPrefix: resendKey.substring(0, 7) + '...',
-      };
-    } else {
-      checks.resend = {
-        status: 'MISSING_OR_INVALID',
-        message: 'RESEND_API_KEY missing or not starting with re_',
-      };
-    }
-  } catch (err: any) {
-    checks.resend = {
-      status: 'ERROR',
-      error: err.message,
-    };
+  const resendConfigured = Boolean(process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.startsWith('re_'));
+  const betterAuthConfigured = Boolean(process.env.BETTER_AUTH_SECRET);
+  const isHealthy = dbConnected && resendConfigured && betterAuthConfigured;
+
+  // Check if caller is authenticated platform admin with operations rights
+  const isAdmin = await adminCan('operations');
+
+  if (!isAdmin) {
+    // Public minimal health check: never expose internal infrastructure, table names or keys
+    return NextResponse.json({
+      status: isHealthy ? 'HEALTHY' : 'DEGRADED',
+      timestamp: new Date().toISOString(),
+    });
   }
 
-  // 3. Better Auth Check
-  checks.betterAuth = {
-    status: process.env.BETTER_AUTH_SECRET ? 'CONFIGURED' : 'SECRET_MISSING',
-    url: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
-    secretConfigured: Boolean(process.env.BETTER_AUTH_SECRET),
-  };
-
-  // 4. Overall Status
-  const isHealthy =
-    checks.neonPostgres.status === 'CONNECTED' &&
-    checks.resend.status === 'CONFIGURED' &&
-    checks.betterAuth.status === 'CONFIGURED';
-
+  // Authenticated admin view: structured status without sensitive values or key prefixes
   return NextResponse.json({
     status: isHealthy ? 'HEALTHY' : 'DEGRADED',
     timestamp: new Date().toISOString(),
-    totalDurationMs: Date.now() - startTime,
-    env: {
-      appEnv: process.env.NEXT_PUBLIC_APP_ENV || 'development',
-      neonConfigured: isNeonConfigured,
+    durationMs: Date.now() - startTime,
+    services: {
+      database: { status: dbConnected ? 'CONNECTED' : 'DISCONNECTED' },
+      email: { status: resendConfigured ? 'CONFIGURED' : 'UNAVAILABLE' },
+      auth: { status: betterAuthConfigured ? 'CONFIGURED' : 'SECRET_MISSING' },
     },
-    services: checks,
   });
 }

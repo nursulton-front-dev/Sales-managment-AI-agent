@@ -1,6 +1,7 @@
 import {
   INSTAGRAM_GRAPH_BASE_URL,
   META_GRAPH_BASE_URL,
+  INSTAGRAM_CONFIG_ID,
 } from './config';
 import { DeliveryRejectedError } from '@/lib/server/channels/errors';
 
@@ -68,9 +69,11 @@ export async function exchangeCodeForInstagramToken(
         token_source: 'meta_unified',
       };
     }
-  } catch (metaErr) {
-    console.warn('Meta Graph OAuth code exchange attempt failed, trying fallback:', metaErr);
+  } catch {
+    // The configured provider owns the code; do not send it to an unrelated OAuth endpoint.
   }
+
+  if (INSTAGRAM_CONFIG_ID) throw new Error('Meta OAuth code exchange failed');
 
   // 2. Fallback path: Standalone api.instagram.com OAuth endpoint
   const formData = new URLSearchParams();
@@ -200,7 +203,7 @@ export async function getInstagramUserProfile(
     if (assignedRes.ok && Array.isArray(assignedData.data) && assignedData.data.length > 0) {
       // Support multi-account portfolios: match target userId if specified, otherwise choose first
       const matched = userId && userId !== 'me'
-        ? assignedData.data.find((item: any) => String(item.id) === String(userId))
+        ? assignedData.data.find((item: { id: string | number }) => String(item.id) === String(userId))
         : null;
       const ig = matched || assignedData.data[0];
       return {
@@ -211,8 +214,8 @@ export async function getInstagramUserProfile(
         profile_picture_url: ig.profile_picture_url,
       };
     }
-  } catch (err) {
-    console.warn('Unified login assigned_instagram_accounts check warning:', err);
+  } catch {
+    console.warn('Unified login assigned_instagram_accounts check failed');
   }
 
   // 2. Facebook Pages with linked instagram_business_account fallback
@@ -223,7 +226,7 @@ export async function getInstagramUserProfile(
     const pagesRes = await fetch(pagesUrl.toString(), { method: 'GET' });
     const pagesData = await pagesRes.json();
     if (pagesRes.ok && Array.isArray(pagesData.data)) {
-      let selectedIg: any = null;
+      let selectedIg: InstagramUserProfile | null = null;
       for (const page of pagesData.data) {
         if (page.instagram_business_account?.id) {
           if (userId && userId !== 'me' && String(page.instagram_business_account.id) === String(userId)) {
@@ -245,8 +248,8 @@ export async function getInstagramUserProfile(
         };
       }
     }
-  } catch (err) {
-    console.warn('Page accounts query check warning:', err);
+  } catch {
+    console.warn('Page accounts query failed');
   }
 
   // 3. Direct lookup on graph.facebook.com
@@ -257,7 +260,7 @@ export async function getInstagramUserProfile(
     fbUrl.searchParams.set('access_token', accessToken);
     const fbRes = await fetch(fbUrl.toString(), { method: 'GET' });
     const fbData = await fbRes.json();
-    if (fbRes.ok && fbData.id) {
+    if (fbRes.ok && fbData.id && fbData.username && fbData.account_type) {
       return {
         id: String(fbData.id),
         username: fbData.username || `ig_${fbData.id}`,
@@ -316,8 +319,8 @@ export async function subscribeInstagramWebhook(
     if (fbRes.ok && fbData.success === true) {
       return true;
     }
-  } catch (err) {
-    console.warn('graph.facebook.com webhook subscription warning:', err);
+  } catch {
+    console.warn('graph.facebook.com webhook subscription failed');
   }
 
   // 2. Try graph.instagram.com/{target}/subscribed_apps
@@ -336,8 +339,8 @@ export async function subscribeInstagramWebhook(
     });
     const data = await res.json();
     return res.ok && data.success === true;
-  } catch (err) {
-    console.warn('graph.instagram.com webhook subscription warning:', err);
+  } catch {
+    console.warn('graph.instagram.com webhook subscription failed');
     return false;
   }
 }
@@ -355,50 +358,50 @@ export async function sendInstagramDirectMessage({
   text: string;
   accessToken: string;
 }): Promise<InstagramSendResult> {
-  // 1. Unified Login path via graph.facebook.com/v21.0/me/messages
-  try {
-    const fbRes = await fetch(`${META_GRAPH_BASE_URL}/me/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+  // Deterministic single transport: Meta Graph for Unified Login (when config_id configured), otherwise direct Instagram Graph
+  const useMetaGraph = Boolean(INSTAGRAM_CONFIG_ID);
+  const targetUrl = useMetaGraph
+    ? `${META_GRAPH_BASE_URL}/me/messages`
+    : `${INSTAGRAM_GRAPH_BASE_URL}/me/messages`;
+
+  const requestHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (!useMetaGraph) {
+    requestHeaders['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  const payloadBody = useMetaGraph
+    ? {
         recipient: { id: recipientId },
         message: { text },
         access_token: accessToken,
-      }),
+      }
+    : {
+        recipient: { id: recipientId },
+        message: { text },
+      };
+
+  let res: Response;
+  try {
+    res = await fetch(targetUrl, {
+      method: 'POST',
+      headers: requestHeaders,
+      body: JSON.stringify(payloadBody),
       signal: AbortSignal.timeout(8000),
     });
-    const fbData = await fbRes.json();
-    if (fbRes.ok && fbData.message_id) {
-      return {
-        recipient_id: String(fbData.recipient_id || recipientId),
-        message_id: String(fbData.message_id),
-      };
-    }
-  } catch {}
+  } catch (netErr: unknown) {
+    // Network timeout or socket abort: the external side effect is ambiguous.
+    // Do NOT attempt a secondary POST or fallback; route to operator review.
+    throw new DeliveryRejectedError(false, 'outcome_unknown');
+  }
 
-  // 2. Direct Instagram Graph path via graph.instagram.com/v21.0/me/messages
-  const url = `${INSTAGRAM_GRAPH_BASE_URL}/me/messages`;
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({
-      recipient: {
-        id: recipientId,
-      },
-      message: {
-        text,
-      },
-    }),
-    signal: AbortSignal.timeout(8000),
-  });
-
-  const data = await res.json();
+  let data: any;
+  try {
+    data = await res.json();
+  } catch {
+    throw new DeliveryRejectedError(false, 'outcome_unknown');
+  }
 
   if (!res.ok || data.error) {
     const errorCode = data.error?.code;
@@ -418,7 +421,7 @@ export async function sendInstagramDirectMessage({
   }
 
   return {
-    recipient_id: data.recipient_id,
-    message_id: data.message_id,
+    recipient_id: String(data.recipient_id || recipientId),
+    message_id: String(data.message_id),
   };
 }

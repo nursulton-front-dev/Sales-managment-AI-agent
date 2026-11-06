@@ -326,7 +326,7 @@ export async function POST(req: NextRequest) {
             telegramBusinessConnectionId: bc.id,
             telegramBusinessUserId: userId,
             telegramBusinessUsername: bc.user?.username || '',
-            telegramBusinessCanReply: Boolean(bc.can_reply),
+            telegramBusinessCanReply: Boolean(bc.rights ? bc.rights.can_reply : bc.can_reply),
             telegramBusinessEnabled: Boolean(bc.is_enabled),
             telegramBusinessAgentId: binding.agentId,
             telegramBusinessConnectedAt: new Date(),
@@ -339,7 +339,7 @@ export async function POST(req: NextRequest) {
             await updateWorkspace(existingWs.id, {
               telegramBusinessConnected: Boolean(bc.is_enabled),
               telegramBusinessConnectionId: bc.is_enabled ? bc.id : null,
-              telegramBusinessCanReply: Boolean(bc.can_reply),
+              telegramBusinessCanReply: Boolean(bc.rights ? bc.rights.can_reply : bc.can_reply),
               telegramBusinessEnabled: Boolean(bc.is_enabled),
             });
           }

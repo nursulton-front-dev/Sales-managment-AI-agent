@@ -20,6 +20,11 @@ export async function POST() {
       telegramBusinessEnabled: newEnabled,
     });
 
+    if (!newEnabled) {
+      const { cancelWorkspaceChannelEvents } = await import('@/lib/server/channels/events');
+      await cancelWorkspaceChannelEvents(session.workspaceId, 'Telegram', 'telegram_business_disabled');
+    }
+
     return NextResponse.json({ success: true, enabled: newEnabled });
   } catch (error) {
     return NextResponse.json(

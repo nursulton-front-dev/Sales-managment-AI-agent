@@ -2,25 +2,15 @@ import { NextRequest, NextResponse, connection } from 'next/server';
 import { db } from '@/src/db';
 import * as schema from '@/src/db/schema';
 import { getAllWorkspaces } from '@/src/db';
+import { sql } from 'drizzle-orm';
 
-// Rate limiting in-memory store: IP / Email -> timestamp array
-const rateLimitMap = new Map<string, number[]>();
-const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const MAX_REQUESTS = 5; // Max 5 tickets per 15 minutes per IP
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(ip) || [];
-  const validTimestamps = timestamps.filter((t) => now - t < WINDOW_MS);
-  
-  if (validTimestamps.length >= MAX_REQUESTS) {
-    rateLimitMap.set(ip, validTimestamps);
-    return true;
+function extractRows<T = Record<string, unknown>>(result: unknown): T[] {
+  if (!result) return [];
+  if (Array.isArray(result)) return result as T[];
+  if (typeof result === 'object' && 'rows' in result && Array.isArray((result as { rows: unknown }).rows)) {
+    return (result as { rows: T[] }).rows;
   }
-
-  validTimestamps.push(now);
-  rateLimitMap.set(ip, validTimestamps);
-  return false;
+  return [];
 }
 
 export async function POST(req: NextRequest) {
@@ -28,12 +18,25 @@ export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown-ip';
 
-    if (isRateLimited(ip)) {
+    if (!db) {
+      throw new Error('База данных временно недоступна');
+    }
+
+    // Shared distributed rate limit via PostgreSQL
+    const rateLimitKey = `rate-limit:public-support:${ip}`;
+    const rateRes = await db.execute(sql`
+      INSERT INTO ${schema.verifications} (id, identifier, value, expires_at, created_at, updated_at)
+      VALUES (${rateLimitKey}, ${rateLimitKey}, '1', NOW() + INTERVAL '15 minutes', NOW(), NOW())
+      ON CONFLICT (id) DO UPDATE
+      SET value = (CASE WHEN verifications.expires_at <= NOW() THEN 1 ELSE (COALESCE(NULLIF(verifications.value, ''), '0')::integer + 1) END)::text,
+          expires_at = (CASE WHEN verifications.expires_at <= NOW() THEN NOW() + INTERVAL '15 minutes' ELSE verifications.expires_at END),
+          updated_at = NOW()
+      RETURNING value
+    `);
+    const count = parseInt(extractRows<{ value: string }>(rateRes)[0]?.value || '1', 10);
+    if (count > 5) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Слишком много обращений. Пожалуйста, подождите 15 минут перед повторной отправкой.',
-        },
+        { success: false, error: 'Слишком много обращений. Пожалуйста, подождите 15 минут перед повторной отправкой.' },
         { status: 429 }
       );
     }
@@ -63,26 +66,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!db) {
-      throw new Error('База данных временно недоступна');
-    }
-
-    // Resolve target workspace: either existing workspace with this email or default system workspace
+    // Isolate public unverified submissions from customer workspaces:
+    // Never assign unauthenticated public tickets to customer workspaces.
     const allWorkspaces = await getAllWorkspaces();
-    const existingWs = allWorkspaces.find((w) => w.ownerEmail.toLowerCase() === email.trim().toLowerCase());
-    const targetWorkspaceId = existingWs ? existingWs.id : allWorkspaces[0]?.id;
+    const systemWs = allWorkspaces.find((w) => w.id === 'ws_system_support' || w.companyName === 'gapcha AI Platform')
+      || allWorkspaces.find((w) => w.ownerEmail.includes('admin') || w.ownerEmail.includes('founder'))
+      || allWorkspaces[0];
 
-    if (!targetWorkspaceId) {
+    if (!systemWs) {
       throw new Error('Система поддержки временно настраивается');
     }
 
-    // Generate ticket number
-    const allTickets = await db.select().from(schema.supportTickets);
-    const ticketNumber = 1000 + allTickets.length + 1;
+    // Atomic ticket number generation
+    const maxNumRes = await db.execute(sql`SELECT COALESCE(MAX(ticket_number), 1000) AS max_num FROM ${schema.supportTickets}`);
+    const maxNumRows = extractRows<{ max_num: number | string }>(maxNumRes);
+    const maxNum = parseInt(String(maxNumRows[0]?.max_num || '1000'), 10);
+    const ticketNumber = maxNum + 1;
+
     const ticketId = `ticket_pub_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const now = new Date();
 
-    const cleanAuthorName = authorName?.trim() || email.split('@')[0];
+    const cleanAuthorName = `[Публичное обращение] ${authorName?.trim() || email.split('@')[0]}`;
     const cleanSubject = subject?.trim() || 'Публичное обращение (404 страница)';
     const cleanDescription = message.trim();
 
@@ -91,7 +95,7 @@ export async function POST(req: NextRequest) {
       .values({
         id: ticketId,
         ticketNumber,
-        workspaceId: targetWorkspaceId,
+        workspaceId: systemWs.id,
         authorEmail: email.trim().toLowerCase(),
         authorName: cleanAuthorName,
         type: 'question',
@@ -120,13 +124,17 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      ticketNumber: ticket.ticketNumber,
-      message: `Ваше обращение #${ticket.ticketNumber} успешно зарегистрировано. Команда поддержки ответит на ${email.trim()}.`,
+      ticket: {
+        id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        status: ticket.status,
+      },
+      message: 'Ваше обращение принято. Мы свяжемся с вами по указанному адресу электронной почты.',
     });
-  } catch (err: any) {
-    console.error('Public support ticket error:', err);
+  } catch (error: any) {
+    console.error('Public support ticket error:', error);
     return NextResponse.json(
-      { success: false, error: err.message || 'Не удалось отправить обращение' },
+      { success: false, error: error.message || 'Ошибка при отправке обращения' },
       { status: 500 }
     );
   }

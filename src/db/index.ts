@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import * as schema from './schema';
 import fs from 'fs';
 import path from 'path';
+import { encryptToken, decryptToken } from '@/lib/instagram/config';
 
 export const isNeonConfigured = Boolean(
   process.env.DATABASE_URL &&
@@ -357,13 +358,14 @@ export async function verifyTelegramBusinessBindingUser(nonce: string, userId: s
   if (db) {
     const res = await db.update(schema.telegramBusinessBindings)
       .set({ verifiedTelegramUserId: userId, verifiedTelegramUsername: username || null })
-      .where(and(eq(schema.telegramBusinessBindings.id, nonce), sql`${schema.telegramBusinessBindings.expiresAt} > ${now}`, sql`${schema.telegramBusinessBindings.redeemedAt} IS NULL`))
+      .where(and(eq(schema.telegramBusinessBindings.id, nonce), sql`${schema.telegramBusinessBindings.expiresAt} > ${now}`, sql`${schema.telegramBusinessBindings.redeemedAt} IS NULL`, sql`(${schema.telegramBusinessBindings.verifiedTelegramUserId} IS NULL OR ${schema.telegramBusinessBindings.verifiedTelegramUserId} = ${userId})`))
       .returning();
     return res.length > 0;
   }
   const store = readStore();
   const binding = store.telegramBusinessBindings.find((b) => b.id === nonce && new Date(b.expiresAt) > now && !b.redeemedAt);
   if (!binding) return false;
+  if (binding.verifiedTelegramUserId && binding.verifiedTelegramUserId !== userId) return false;
   binding.verifiedTelegramUserId = userId;
   binding.verifiedTelegramUsername = username || null;
   writeStore(store);
@@ -375,17 +377,21 @@ export async function redeemTelegramBusinessBindingForUser(userId: string): Prom
   if (db) {
     const rows = await db.execute<schema.TelegramBusinessBinding>(sql`
       WITH target AS (
-        SELECT nonce FROM telegram_business_bindings
+        SELECT id FROM telegram_business_bindings
         WHERE verified_telegram_user_id = ${userId}
           AND expires_at > ${now}
           AND redeemed_at IS NULL
         ORDER BY created_at DESC
         LIMIT 1
+        FOR UPDATE SKIP LOCKED
       )
       UPDATE telegram_business_bindings
       SET redeemed_at = ${now}
-      WHERE nonce = (SELECT nonce FROM target)
-      RETURNING *
+      WHERE id = (SELECT id FROM target) AND redeemed_at IS NULL
+      RETURNING id, workspace_id AS "workspaceId", agent_id AS "agentId",
+        verified_telegram_user_id AS "verifiedTelegramUserId",
+        verified_telegram_username AS "verifiedTelegramUsername",
+        expires_at AS "expiresAt", redeemed_at AS "redeemedAt", created_at AS "createdAt"
     `);
     const result = rows.rows[0] as unknown as schema.TelegramBusinessBinding | undefined;
     return result || null;
@@ -402,61 +408,37 @@ export async function redeemTelegramBusinessBindingForUser(userId: string): Prom
 }
 
 export async function clearAllTestData(): Promise<void> {
-  if (db) {
-    try {
-      await db.delete(schema.supportMessages);
-      await db.delete(schema.supportTickets);
-      await db.delete(schema.adminAuditLogs);
-      await db.delete(schema.messages);
-      await db.delete(schema.conversations);
-      await db.delete(schema.appointments);
-      await db.delete(schema.orders);
-      await db.delete(schema.tokenLogs);
-      await db.delete(schema.leads);
-      await db.delete(schema.agents);
-      await db.delete(schema.supportSessions);
-      await db.delete(schema.trialGrants);
-      await db.delete(schema.workspaces);
-      return;
-    } catch (err) {
-      console.warn('Neon clearAllTestData error:', err);
-      throw err;
-    }
-  }
-  const store = readStore();
-  store.workspaces = [];
-  store.agents = [];
-  store.leads = [];
-  store.tokenLogs = [];
-  store.conversations = [];
-  store.messages = [];
-  store.appointments = [];
-  store.orders = [];
-  store.supportSessions = [];
-  store.trialGrants = [];
-  writeStore(store);
+  // Destructive mass wipe is disabled on production to prevent data loss.
+  throw new Error('Массовая очистка данных через метод clearAllTestData отключена. Используйте регламентированную процедуру scripts/db-cleanup-dry-run.cjs с резервной копией.');
 }
 
 export async function getAllAgents(workspaceId?: string): Promise<schema.Agent[]> {
+  let list: schema.Agent[] = [];
   if (db) {
     try {
       if (workspaceId) {
-        return await db.select().from(schema.agents).where(eq(schema.agents.workspaceId, workspaceId));
+        list = await db.select().from(schema.agents).where(eq(schema.agents.workspaceId, workspaceId));
+      } else {
+        list = await db.select().from(schema.agents);
       }
-      return await db.select().from(schema.agents);
     } catch (err) {
       console.warn('Neon select agents error:', err);
       throw err;
     }
+  } else {
+    const store = readStore();
+    list = workspaceId ? store.agents.filter((a) => a.workspaceId === workspaceId) : store.agents;
   }
-  const store = readStore();
-  if (workspaceId) {
-    return store.agents.filter((a) => a.workspaceId === workspaceId);
-  }
-  return store.agents;
+  return list.map((a) => ({
+    ...a,
+    tgBotToken: a.tgBotToken ? decryptToken(a.tgBotToken) : null,
+  }));
 }
 
-export async function createAgent(data: Partial<schema.NewAgent> & { workspaceId: string; name: string; systemPrompt: string; nicheTemplate?: string }): Promise<schema.Agent> {
+export async function createAgent(
+  data: Partial<schema.NewAgent> & { workspaceId: string; name: string; systemPrompt: string; nicheTemplate?: string },
+  maxAgents?: number
+): Promise<schema.Agent> {
   const newAgent: schema.Agent = {
     id: data.id || `agent_${Date.now()}`,
     workspaceId: data.workspaceId,
@@ -471,27 +453,61 @@ export async function createAgent(data: Partial<schema.NewAgent> & { workspaceId
     createdAt: new Date(),
   };
 
+  const encryptedTgBotToken = data.tgBotToken ? encryptToken(data.tgBotToken) : null;
+
   if (db) {
     try {
-      await db.insert(schema.agents).values(newAgent);
+      if (typeof maxAgents === 'number') {
+        const res = await db.execute(sql`
+          INSERT INTO ${schema.agents} (
+            id, workspace_id, name, niche_template, knowledge_base, qualification_questions, system_prompt, tg_bot_token, google_calendar_connected, is_active, created_at
+          )
+          SELECT
+            ${newAgent.id}, ${newAgent.workspaceId}, ${newAgent.name}, ${newAgent.nicheTemplate}, ${newAgent.knowledgeBase}, ${JSON.stringify(newAgent.qualificationQuestions)}::jsonb, ${newAgent.systemPrompt}, ${encryptedTgBotToken}, ${newAgent.googleCalendarConnected}, ${newAgent.isActive}, NOW()
+          WHERE (SELECT COUNT(*) FROM ${schema.agents} WHERE workspace_id = ${newAgent.workspaceId}) < ${maxAgents}
+          RETURNING *
+        `);
+        const rows = (res as any)?.rows || (Array.isArray(res) ? res : []);
+        if (rows.length === 0) {
+          throw new Error('AGENT_LIMIT_REACHED');
+        }
+      } else {
+        await db.insert(schema.agents).values({
+          ...newAgent,
+          tgBotToken: encryptedTgBotToken,
+        });
+      }
       return newAgent;
-    } catch (err) {
+    } catch (err: any) {
+      if (err.message === 'AGENT_LIMIT_REACHED') throw err;
       console.warn('Neon insert agent error:', err);
       throw err;
     }
   }
 
   const store = readStore();
+  if (typeof maxAgents === 'number') {
+    const existingCount = store.agents.filter((a) => a.workspaceId === newAgent.workspaceId).length;
+    if (existingCount >= maxAgents) {
+      throw new Error('AGENT_LIMIT_REACHED');
+    }
+  }
   store.agents.unshift(newAgent);
   writeStore(store);
   return newAgent;
 }
 
 export async function updateAgent(id: string, updates: Partial<schema.Agent>): Promise<schema.Agent | null> {
+  const dbUpdates = { ...updates };
+  if (updates.tgBotToken !== undefined) {
+    dbUpdates.tgBotToken = updates.tgBotToken ? encryptToken(updates.tgBotToken) : null;
+  }
+
   if (db) {
     try {
-      const rows = await db.update(schema.agents).set(updates).where(eq(schema.agents.id, id)).returning();
-      return rows[0] || null;
+      const rows = await db.update(schema.agents).set(dbUpdates).where(eq(schema.agents.id, id)).returning();
+      const row = rows[0];
+      return row ? { ...row, tgBotToken: row.tgBotToken ? decryptToken(row.tgBotToken) : null } : null;
     } catch (err) {
       console.warn('Neon update agent error:', err);
       throw err;

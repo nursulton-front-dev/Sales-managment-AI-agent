@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
-import { getServerSessionContext } from '@/src/server/auth/session';
+import { adminCan } from '@/src/server/admin/access';
 import { DeepSeekProvider } from '@/lib/server/ai/providers/deepseek';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   await connection();
   try {
-    const session = await getServerSessionContext();
-    if (!session.isSuperAdmin) {
+    const session = await adminCan('operations');
+    if (!session) {
       return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin' }, { status: 403 });
     }
 
@@ -30,8 +30,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   await connection();
   try {
-    const session = await getServerSessionContext();
-    if (!session.isSuperAdmin) {
+    const session = await adminCan('operations');
+    if (!session) {
       return NextResponse.json({ success: false, error: 'Доступ разрешен только SuperAdmin' }, { status: 403 });
     }
 
@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
         error: 'DEEPSEEK_API_KEY отсутствует. Добавьте DEEPSEEK_API_KEY в .env.local для проведения теста.',
       });
     }
+
+    if (req.headers.get('origin') !== new URL(req.url).origin) return NextResponse.json({ error: 'Недопустимый источник запроса' }, { status: 403 });
 
     // Check health & model availability
     const health = await provider.checkHealth();
@@ -65,7 +67,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      success: true,
+      success: Boolean(testResult.content?.trim()),
+      healthy: Boolean(testResult.content?.trim()),
+      checkedAt: new Date().toISOString(),
+      error: testResult.content?.trim() ? undefined : 'Провайдер вернул пустой ответ',
       configured: true,
       model: provider.defaultModel,
       healthMessage: health.message,

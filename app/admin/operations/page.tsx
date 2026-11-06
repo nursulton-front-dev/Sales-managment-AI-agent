@@ -4,15 +4,10 @@ import React, { useState, useEffect } from 'react';
 import {
   Cpu,
   RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  Plug,
   Calendar,
   Send,
   Mail,
   CreditCard,
-  Bot,
   Shield,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
@@ -21,69 +16,77 @@ export default function AdminOperationsPage() {
   const { showToast } = useApp();
 
   const [loading, setLoading] = useState(false);
-  const [deepseekStatus, setDeepseekStatus] = useState<any | null>(null);
+  const [deepseekStatus, setDeepseekStatus] = useState<{ configured?: boolean; healthy?: boolean; model?: string; checkedAt?: string; error?: string; durationMs?: number } | null>(null);
 
   const checkDeepseek = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/deepseek');
+      const res = await fetch('/api/admin/deepseek', { method: 'POST' });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Проверка недоступна');
       setDeepseekStatus(data);
       if (data.healthy) {
-        showToast('DeepSeek активен', `Модель ${data.model}, latency ${data.latencyMs}ms`, 'success');
+        showToast('DeepSeek активен', `Модель ${data.model}, latency ${data.durationMs}ms`, 'success');
       } else {
-        showToast('Статус DeepSeek', data.message || 'Ключ не настроен', 'info');
+        showToast('Статус DeepSeek', data.error || 'Проверка не завершена', 'info');
       }
-    } catch (err: any) {
-      showToast('Ошибка проверки', err.message, 'error');
+    } catch (err: unknown) {
+      setDeepseekStatus(previous => ({ ...previous, healthy: false, error: 'Проверка не завершена' }));
+      showToast('Ошибка проверки', err instanceof Error ? err.message : 'Не удалось проверить', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    checkDeepseek();
+    let active = true;
+    fetch('/api/admin/deepseek').then(async res => {
+      if (!res.ok) throw new Error('Статус недоступен');
+      const data = await res.json();
+      if (active) setDeepseekStatus(data);
+    }).catch(() => { if (active) setDeepseekStatus({ error: 'Статус недоступен' }); });
+    return () => { active = false; };
   }, []);
 
   const components = [
     {
       name: 'Google Calendar API',
       type: 'Интеграция расписания',
-      status: 'Работает',
-      statusColor: 'emerald',
+      status: 'Не проверено',
+      statusColor: 'amber',
       desc: 'OAuth 2.0 flow c динамическим origin, вставка событий, проверка занятости FreeBusy',
       icon: Calendar,
     },
     {
       name: 'Telegram Bot Gateway',
       type: 'Канал коммуникации',
-      status: 'Работает',
-      statusColor: 'emerald',
+      status: 'Не проверено',
+      statusColor: 'amber',
       desc: 'Webhook-обработка входящих сообщений клиентов и автоответы',
       icon: Send,
     },
     {
       name: 'Resend Email Service',
       type: 'Транзакционная почта',
-      status: 'Работает',
-      statusColor: 'emerald',
+      status: 'Не проверено',
+      statusColor: 'amber',
       desc: 'Отправка 6-значных кодов подтверждения email при регистрации',
       icon: Mail,
     },
     {
       name: 'Payme / Click / Uzum',
       type: 'Платёжный шлюз',
-      status: 'Работает',
-      statusColor: 'emerald',
-      desc: 'Приём платежей по тарифам и докупкам с серверной защитой от дублей',
+      status: 'Не проверено',
+      statusColor: 'amber',
+      desc: 'Готовность оплаты требует отдельной проверки реальной транзакции',
       icon: CreditCard,
     },
     {
       name: 'DeepSeek API (Песочница)',
       type: 'AI-провайдер песочницы',
-      status: deepseekStatus?.healthy ? 'Работает' : 'Не настроено',
+      status: loading ? 'Проверяем' : deepseekStatus?.healthy ? 'Проверка пройдена' : deepseekStatus?.error ? 'Ошибка проверки' : deepseekStatus?.configured === false ? 'Ключ не настроен' : deepseekStatus?.configured ? 'Настроено · не проверено' : 'Статус неизвестен',
       statusColor: deepseekStatus?.healthy ? 'emerald' : 'amber',
-      desc: `Модель: deepseek-flash · Режим размышления отключен (thinking: disabled) · Инструменты check_slots, book_appointment`,
+      desc: `Модель: ${deepseekStatus?.model || '—'}. ${deepseekStatus?.checkedAt ? 'Проверено: ' + new Date(deepseekStatus.checkedAt).toLocaleString('ru-RU') : 'Проверка выполняет короткий запрос к провайдеру.'} ${deepseekStatus?.error || ''}`,
       icon: Cpu,
     },
   ];
@@ -97,7 +100,7 @@ export default function AdminOperationsPage() {
             Агенты, интеграции и операции
           </h1>
           <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-            Фактический статус работы системных компонентов, каналов и тестового контура AI
+            Настройки компонентов и результат последней проверки ИИ в этой вкладке
           </p>
         </div>
 
@@ -107,7 +110,7 @@ export default function AdminOperationsPage() {
           className="px-3 py-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-secondary)] text-xs font-semibold text-[var(--text-primary)] transition-colors self-start sm:self-auto cursor-pointer flex items-center gap-2"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Проверить интеграции</span>
+          <span>Проверить ответ ИИ</span>
         </button>
       </div>
 

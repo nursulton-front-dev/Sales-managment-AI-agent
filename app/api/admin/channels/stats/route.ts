@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
-import { getServerSessionContext } from '@/src/server/auth/session';
+import { adminCan } from '@/src/server/admin/access';
 import { getChannelAdminStats } from '@/lib/server/admin/channels-stats';
 
 export async function GET(req: NextRequest) {
   await connection();
   try {
-    const session = await getServerSessionContext();
-    if (!session.isSuperAdmin) {
+    const session = await adminCan('channels');
+    if (!session) {
       return NextResponse.json(
         { success: false, error: 'Доступ разрешен только SuperAdmin платформы' },
         { status: 403 }

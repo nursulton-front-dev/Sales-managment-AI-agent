@@ -3,7 +3,8 @@ import { getWorkspaceById, getWorkspaceByEmail, getActiveSupportSession } from '
 import type { Workspace } from '@/src/db/schema';
 import { auth } from '@/lib/auth';
 
-export const FOUNDER_SUPERADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.SUPERADMIN_EMAIL || 'maxramovnursulton1@gmail.com';
+import { PLATFORM_OWNER_EMAIL } from '@/src/server/admin/policy';
+export const FOUNDER_SUPERADMIN_EMAIL = PLATFORM_OWNER_EMAIL;
 export interface UserSessionContext {
   workspace: Workspace | null; workspaceId: string | null; userEmail: string | null; userName: string | null;
   userEmailVerified: boolean;

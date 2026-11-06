@@ -70,17 +70,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const agent = await createAgent({
-      workspaceId,
-      name: body.name,
-      nicheTemplate: body.nicheTemplate || 'other',
-      knowledgeBase: body.knowledgeBase || '',
-      qualificationQuestions: body.qualificationQuestions || [],
-      systemPrompt: body.systemPrompt,
-      tgBotToken: null,
-      googleCalendarConnected: body.googleCalendarConnected ?? false,
-      isActive: body.isActive ?? true,
-    });
+    let agent;
+    try {
+      agent = await createAgent({
+        workspaceId,
+        name: body.name,
+        nicheTemplate: body.nicheTemplate || 'other',
+        knowledgeBase: body.knowledgeBase || '',
+        qualificationQuestions: body.qualificationQuestions || [],
+        systemPrompt: body.systemPrompt,
+        tgBotToken: null,
+        googleCalendarConnected: body.googleCalendarConnected ?? false,
+        isActive: body.isActive ?? true,
+      }, maxAgents);
+    } catch (createErr: any) {
+      if (createErr.message === 'AGENT_LIMIT_REACHED') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Достигнут лимит сотрудников для тарифа ${currentPlan.toUpperCase()} (максимум ${maxAgents} ${maxAgents === 1 ? 'сотрудник' : 'сотрудника'}). Для добавления сотрудников перейдите на тариф BUSINESS или PRO.`,
+            code: 'AGENT_LIMIT_REACHED',
+            maxAgents,
+          },
+          { status: 403 }
+        );
+      }
+      throw createErr;
+    }
 
     if (body.tgBotToken) {
       try { await connectTelegram(agent.id, body.tgBotToken); await updateAgent(agent.id, { tgBotToken: body.tgBotToken }); }

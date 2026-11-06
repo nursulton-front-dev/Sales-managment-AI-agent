@@ -23,9 +23,11 @@ import {
   LifeBuoy,
   History,
 } from 'lucide-react';
+import { useAdminRole } from '../AdminShell';
 import { useApp } from '@/context/AppContext';
 
 export default function AdminOrganizationsPage() {
+  const isOwner = useAdminRole() === 'super_admin';
   const { showToast } = useApp();
 
   const [workspaces, setWorkspaces] = useState<any[]>([]);
@@ -309,7 +311,7 @@ export default function AdminOrganizationsPage() {
             </div>
 
             {/* Quick Actions Bar */}
-            <div className="p-3 bg-[var(--surface-secondary)] rounded-[6px] flex flex-wrap gap-2 text-xs">
+            {isOwner && <div className="p-3 bg-[var(--surface-secondary)] rounded-[6px] flex flex-wrap gap-2 text-xs">
               <button
                 onClick={() => setActionType('add_tokens')}
                 className="px-2.5 py-1 rounded bg-[var(--surface)] border border-[var(--border)] font-medium hover:border-[#DC2626] transition-colors cursor-pointer"
@@ -343,10 +345,10 @@ export default function AdminOrganizationsPage() {
                   Приостановить организацию
                 </button>
               )}
-            </div>
+            </div>}
 
             {/* Action Form if triggered */}
-            {actionType && (
+            {isOwner && actionType && (
               <div className="p-4 rounded-[6px] border border-[#DC2626]/30 bg-[#FEF2F2]/40 dark:bg-[rgba(220,38,38,0.06)] space-y-3">
                 <div className="text-xs font-bold text-[#DC2626]">
                   {actionType === 'add_tokens' && 'Начисление токенов на баланс компании'}
