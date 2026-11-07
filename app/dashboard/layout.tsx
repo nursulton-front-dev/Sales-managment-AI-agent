@@ -7,6 +7,7 @@ import { DataState } from '@/components/ui/DataState';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { SandboxDrawer } from '@/components/sandbox/SandboxDrawer';
+import { PlatformAssistantDrawer } from '@/components/assistant/PlatformAssistantDrawer';
 import { GoogleCalendarModal } from '@/components/calendar/GoogleCalendarModal';
 import { ToastContainer } from '@/components/ui/Toast';
 import { ShieldAlert, LogOut } from 'lucide-react';
@@ -83,6 +84,9 @@ export default function DashboardLayout({
 
       {/* Interactive Global Sandbox Drawer */}
       <SandboxDrawer />
+
+      {/* Platform Support & Diagnostics Assistant Drawer */}
+      <PlatformAssistantDrawer />
 
       {/* Google Calendar Connection Modal */}
       <GoogleCalendarModal />

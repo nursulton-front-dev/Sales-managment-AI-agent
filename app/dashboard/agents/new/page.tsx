@@ -27,7 +27,9 @@ import {
   Send,
   Bot,
   ShieldCheck,
+  Edit3,
 } from 'lucide-react';
+import { AgentSetupWizard } from '@/components/wizard/AgentSetupWizard';
 
 interface NicheTemplate {
   id: string;
@@ -170,6 +172,7 @@ const STEP_TITLES = [
 export default function NewAgentWizardPage() {
   const router = useRouter();
   const { createAgent, openSandbox, showToast } = useApp();
+  const [creationMode, setCreationMode] = useState<'ai' | 'manual'>('ai');
   const [isSavingAgent, setIsSavingAgent] = useState(false);
 
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -418,6 +421,59 @@ ${
           </div>
         </div>
       )}
+
+      {/* Mode Selector: AI Wizard vs Manual */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => setCreationMode('ai')}
+          className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-3.5 ${
+            creationMode === 'ai'
+              ? 'border-red-600 bg-red-50/50 dark:bg-red-950/20 shadow-xs ring-1 ring-red-600'
+              : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-secondary)] text-[var(--text-secondary)]'
+          }`}
+        >
+          <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-950/40 text-red-600 flex items-center justify-center shrink-0">
+            <Bot className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
+              <span>Настроить с ИИ</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-600 text-white font-bold">Рекомендуется</span>
+            </div>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5 leading-snug">
+              Интерактивный диалог: мастер задаст 1 вопрос за шаг, заполнит прайс и правила, запустит тест-драйв.
+            </p>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCreationMode('manual')}
+          className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-3.5 ${
+            creationMode === 'manual'
+              ? 'border-red-600 bg-red-50/50 dark:bg-red-950/20 shadow-xs ring-1 ring-red-600'
+              : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-secondary)] text-[var(--text-secondary)]'
+          }`}
+        >
+          <div className="w-9 h-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center shrink-0">
+            <Edit3 className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="font-bold text-sm text-[var(--text-primary)]">
+              Заполнить самостоятельно
+            </div>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5 leading-snug">
+              Классическая форма: ручной выбор ниши, самостоятельный ввод системного промпта и базы знаний.
+            </p>
+          </div>
+        </button>
+      </div>
+
+      {creationMode === 'ai' ? (
+        <AgentSetupWizard onCancelManual={() => setCreationMode('manual')} />
+      ) : (
+        <>
 
       {/* ------------------------------------------------------------- */}
       {/* 2. Compact Stepper (Desktop: 4 items; Mobile: Step X of 4)     */}
@@ -1016,6 +1072,8 @@ ${
             </div>
           ) : null}
         </div>
+      )}
+        </>
       )}
     </div>
   );
