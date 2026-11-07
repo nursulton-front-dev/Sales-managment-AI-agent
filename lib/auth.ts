@@ -6,7 +6,7 @@ import { db } from '@/src/db';
 import * as schema from '@/src/db/schema';
 
 // Resolve public production / deployment host
-const configuredBaseUrl =
+let configuredBaseUrl =
   process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : process.env.BETTER_AUTH_URL ||
@@ -15,6 +15,10 @@ const configuredBaseUrl =
         : process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
         : 'http://localhost:3000');
+
+if (configuredBaseUrl.startsWith('http://') && !configuredBaseUrl.includes('localhost') && !configuredBaseUrl.includes('127.0.0.1')) {
+  configuredBaseUrl = configuredBaseUrl.replace('http://', 'https://');
+}
 
 import { getCurrentAuthEndpointContext } from '@better-auth/core/context';
 import { APIError, createAuthEndpoint } from 'better-auth/api';
