@@ -1,4 +1,4 @@
-import { createConversation, createMessage, getAllAgents, getConversationById, getMessagesByConversationId, getWorkspaceById, updateConversation, updateWorkspace } from '@/src/db';
+import { createConversation, createMessage, getAllAgents, getConversationById, getMessagesByConversationId, getWorkspaceById, updateConversation, updateWorkspace, upsertLead } from '@/src/db';
 import { processAgentMessage, AgentReplyUnavailableError } from '@/lib/ai/gateway';
 import { telegramCall, sendTelegramChatAction } from '@/lib/server/telegram';
 import { decryptToken } from '@/lib/instagram/config';
@@ -38,6 +38,15 @@ export async function processChannelEvent(id: string) {
     const entitlement = isWorkspaceEntitled(workspace);
     if (!workspace || !entitlement.entitled || !agent) { await stop(event, entitlement.reason || 'inactive'); return; }
     const conversation = await createConversation({ id: event.conversationId, workspaceId: event.workspaceId, agentId: agent.id, channel: event.channel, clientName: payload.clientName, clientPhone: payload.contact });
+    if (event.channel !== 'WebWidget') {
+      await upsertLead({
+        workspaceId: event.workspaceId,
+        agentId: agent.id,
+        clientName: payload.clientName || 'Клиент',
+        clientPhone: payload.contact,
+        channel: event.channel,
+      });
+    }
     await createMessage({ id: `in_${event.id}`, conversationId: conversation.id, workspaceId: event.workspaceId, sender: 'client', text: payload.text, createdAt: event.createdAt });
 
     // Finalize a confirmed delivery even when an operator paused the conversation meanwhile.
@@ -75,6 +84,17 @@ export async function processChannelEvent(id: string) {
       });
       payload.reply = result.reply;
       payload.tokensCost = result.tokensCost;
+      if (result.isBooking && result.appointmentTime) {
+        await upsertLead({
+          workspaceId: event.workspaceId,
+          agentId: agent.id,
+          clientName: conversation.clientName,
+          clientPhone: conversation.clientPhone,
+          channel: event.channel,
+          status: 'booked',
+          appointmentTime: new Date(result.appointmentTime),
+        });
+      }
       stage = 'prepared';
       await patchEvent(id, { payload, stage });
     }

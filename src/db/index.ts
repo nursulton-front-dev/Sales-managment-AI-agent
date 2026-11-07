@@ -213,6 +213,7 @@ export async function createWorkspace(data: schema.NewWorkspace): Promise<schema
     telegramBusinessEnabled: data.telegramBusinessEnabled !== undefined ? data.telegramBusinessEnabled : false,
     telegramBusinessAgentId: data.telegramBusinessAgentId || null,
     telegramBusinessConnectedAt: data.telegramBusinessConnectedAt || null,
+    settings: (data as any).settings || {},
     createdAt: new Date(),
   };
 
@@ -579,6 +580,56 @@ export async function createLead(data: Partial<schema.NewLead> & { workspaceId: 
   store.leads.unshift(newLead);
   writeStore(store);
   return newLead;
+}
+
+export async function findLeadByContact(workspaceId: string, clientPhone: string): Promise<schema.Lead | null> {
+  if (db) {
+    try {
+      const rows = await db
+        .select()
+        .from(schema.leads)
+        .where(and(eq(schema.leads.workspaceId, workspaceId), eq(schema.leads.clientPhone, clientPhone)))
+        .limit(1);
+      return rows[0] || null;
+    } catch (err) {
+      console.warn('Neon select lead by contact error:', err);
+      throw err;
+    }
+  }
+
+  const store = readStore();
+  return store.leads.find((l) => l.workspaceId === workspaceId && l.clientPhone === clientPhone) || null;
+}
+
+export async function upsertLead(
+  data: Partial<schema.NewLead> & {
+    workspaceId: string;
+    clientName: string;
+    clientPhone: string;
+    channel: string;
+  }
+): Promise<schema.Lead> {
+  const existing = await findLeadByContact(data.workspaceId, data.clientPhone);
+  if (existing) {
+    const updates: Partial<schema.Lead> = {};
+    if (data.clientName && data.clientName !== 'Клиент' && data.clientName !== existing.clientName) {
+      updates.clientName = data.clientName;
+    }
+    if (data.agentId && !existing.agentId) updates.agentId = data.agentId;
+    if (data.status && data.status !== 'new') updates.status = data.status;
+    if (data.appointmentTime) updates.appointmentTime = data.appointmentTime;
+    if (data.googleEventId) updates.googleEventId = data.googleEventId;
+    if (data.googleEventLink) updates.googleEventLink = data.googleEventLink;
+    if (data.tokensSpent) updates.tokensSpent = (existing.tokensSpent || 0) + data.tokensSpent;
+
+    if (Object.keys(updates).length > 0) {
+      const updated = await updateLead(existing.id, updates);
+      return updated || existing;
+    }
+    return existing;
+  }
+
+  return await createLead(data);
 }
 
 export async function updateLead(id: string, updates: Partial<schema.Lead>): Promise<schema.Lead | null> {

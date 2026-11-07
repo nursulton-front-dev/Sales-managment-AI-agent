@@ -14,6 +14,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { DataState } from '@/components/ui/DataState';
 import { useUnsavedChanges } from '@/lib/useUnsavedChanges';
 import { getMaxAgentsForPlan } from '@/lib/pricing';
+import { getAgentChannelStatuses } from '@/lib/channels/status';
 import {
   Users,
   Plus,
@@ -72,9 +73,7 @@ function AgentList() {
       (filter === 'all' || (filter === 'active' ? agent.isActive : !agent.isActive))
   );
 
-  const connected = (agent: Agent) =>
-    agent.telegramConnected ||
-    (workspace?.instagramConnected && workspace.instagramAgentId === agent.id);
+  const getAgentStatus = (agent: Agent) => getAgentChannelStatuses(agent, workspace);
 
   const maxAgents = getMaxAgentsForPlan(plan || 'trial');
   const isLimitReached = agents.length >= maxAgents;
@@ -206,7 +205,9 @@ function AgentList() {
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Left Column: Agents Cards */}
           <div className="xl:col-span-8 space-y-5">
-            {filtered.map((agent) => (
+            {filtered.map((agent) => {
+              const statusInfo = getAgentStatus(agent);
+              return (
               <div
                 key={agent.id}
                 className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs space-y-5 hover:border-[var(--border-strong)] transition-all"
@@ -227,20 +228,8 @@ function AgentList() {
                     </div>
                   </div>
 
-                  <Badge
-                    variant={
-                      !agent.isActive
-                        ? 'neutral'
-                        : connected(agent)
-                        ? 'success'
-                        : 'warning'
-                    }
-                  >
-                    {!agent.isActive
-                      ? 'На паузе'
-                      : connected(agent)
-                      ? '● Канал подключён'
-                      : '○ Только тестирование'}
+                  <Badge variant={statusInfo.primaryBadge.variant === 'error' ? 'danger' : statusInfo.primaryBadge.variant}>
+                    {statusInfo.primaryBadge.label}
                   </Badge>
                 </div>
 
@@ -264,8 +253,8 @@ function AgentList() {
                       <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
                         Каналы связи
                       </span>
-                      <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block">
-                        {connected(agent) ? 'Подключены' : 'Не подключены'}
+                      <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block" title={statusInfo.primaryChannelText}>
+                        {statusInfo.channels.length > 0 ? statusInfo.primaryChannelText : 'Не подключены'}
                       </strong>
                     </div>
                   </div>
@@ -286,16 +275,18 @@ function AgentList() {
                 </div>
 
                 {/* Status Notice if not connected */}
-                {!connected(agent) && (
+                {!statusInfo.canReplyAnywhere && (
                   <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-3">
                     <span>
-                      Подключите Telegram, Instagram или виджет на сайт, чтобы сотрудник начал отвечать клиентам.
+                      {statusInfo.channels.length > 0 && statusInfo.channels[0].details
+                        ? statusInfo.channels[0].details
+                        : 'Подключите Telegram, Instagram или виджет на сайт, чтобы сотрудник начал отвечать клиентам.'}
                     </span>
                     <Link
                       href="/dashboard/integrations"
-                      className="font-semibold underline shrink-0"
+                      className="font-semibold underline shrink-0 hover:text-amber-900 dark:hover:text-amber-200"
                     >
-                      Подключить →
+                      Настроить каналы →
                     </Link>
                   </div>
                 )}
@@ -329,7 +320,8 @@ function AgentList() {
                   </Button>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
 
           {/* Right Column: Tips & Next Steps */}

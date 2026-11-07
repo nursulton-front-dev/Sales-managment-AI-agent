@@ -23,7 +23,10 @@ import {
   UserRound,
   Sparkles,
   Zap,
+  AlertTriangle,
+  Eye,
 } from 'lucide-react';
+import { getWorkspaceChannelsSummary } from '@/lib/channels/status';
 
 export default function DashboardOverviewPage() {
   const {
@@ -49,9 +52,38 @@ export default function DashboardOverviewPage() {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const connected =
-    agents.some((agent) => agent.telegramConnected) ||
-    Boolean(workspace?.instagramConnected);
+  const workspaceSummary = getWorkspaceChannelsSummary(workspace, agents);
+  const connected = workspaceSummary.hasActiveMessagingChannel;
+
+  const testDriveDone =
+    leads.length > 0 ||
+    (workspace?.tokenBalance !== undefined && workspace.tokenBalance < 100) ||
+    Boolean(workspace?.settings?.testDriveCompleted);
+
+  const isQuickStartDone = agents.length > 0 && connected && testDriveDone;
+  const isDismissed = Boolean(workspace?.settings?.quickStartDismissed);
+  const [forceShowQuickStart, setForceShowQuickStart] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
+
+  const handleToggleQuickStart = async (dismiss: boolean) => {
+    try {
+      setDismissing(true);
+      await fetch('/api/workspace/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quickStartDismissed: dismiss }),
+      });
+      setForceShowQuickStart(!dismiss);
+      if (workspace) {
+        workspace.settings = { ...(workspace.settings || {}), quickStartDismissed: dismiss };
+      }
+    } catch {
+      // ignore
+    } finally {
+      setDismissing(false);
+    }
+  };
+
   const booked = leads.filter((lead) => lead.status === 'Записан в календарь').length;
   const recent = [...leads]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -148,137 +180,213 @@ export default function DashboardOverviewPage() {
         </section>
       )}
 
+      {/* Channel Disconnection Alerts (Inline notice without restoring initial onboarding) */}
+      {workspaceSummary.disconnectedAlerts.map((alertText, idx) => (
+        <div
+          key={idx}
+          className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3 shadow-2xs"
+        >
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle size={17} className="text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>{alertText}</span>
+          </div>
+          <Link
+            href="/dashboard/integrations"
+            className="font-semibold text-amber-700 dark:text-amber-300 hover:underline shrink-0"
+          >
+            В интеграции →
+          </Link>
+        </div>
+      ))}
+
       {/* Main Grid: Onboarding Steps & Recent Activity */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Left Column: Onboarding Banner & Steps */}
         <div className="xl:col-span-7 space-y-5">
-          {/* Launch Hero Banner with Illustration */}
-          <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs overflow-hidden relative">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="space-y-3 flex-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-[#FF7277] border border-red-500/20">
-                  Быстрый старт
-                </span>
-                <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                  Запустите первого ИИ-сотрудника
-                </h2>
-                <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
-                  Обучите ассистента на прайсе компании, подключите канал связи и принимайте заявки круглосуточно.
-                </p>
-                <div className="pt-1 flex items-center gap-3">
-                  <Link
-                    href={agents.length ? '/dashboard/agents' : '/dashboard/agents/new'}
-                    className="px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs shadow-xs transition-all inline-flex items-center gap-1.5"
-                  >
-                    <span>{agents.length ? 'Настроить агента' : 'Создать сотрудника'}</span>
-                    <ArrowRight size={14} />
-                  </Link>
+          {(isQuickStartDone || isDismissed) && !forceShowQuickStart ? (
+            /* Compact Collapsed Quick Start Card */
+            <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 dark:bg-emerald-950/20 p-5 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <Check size={20} strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      Быстрый старт завершён · gapcha AI готов к работе
+                    </h3>
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                      Сотрудник обучен, канал связи активен и протестирован. Входящие заявки принимаются круглосуточно.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => openSandbox()}
-                    className="text-xs"
+                    onClick={() => setForceShowQuickStart(true)}
+                    className="text-xs font-medium"
                   >
-                    Тест диалога
+                    Показать этапы
                   </Button>
                 </div>
               </div>
-
-              {/* Decorative Image */}
-              <div className="shrink-0 w-44 sm:w-56 h-36 relative flex items-center justify-center">
-                <Image
-                  src="/illustrations/gapchi-ai/onboarding-conversations.png"
-                  alt=""
-                  width={220}
-                  height={150}
-                  className="object-contain max-h-36 drop-shadow-md"
-                  priority
-                />
-              </div>
             </div>
-          </div>
-
-          {/* Stepper Checklist */}
-          <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs">
-            <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB] mb-4">
-              Этапы настройки продаж
-            </h3>
-            <DataState loading={agentsLoading} error={agentsError} retry={refreshAgents} />
-            {!agentsLoading && !agentsError && (
-              <ol className="space-y-4">
-                {[
-                  {
-                    title: '1. Создайте ИИ-сотрудника',
-                    note: agents.length
-                      ? 'Инструкции и база знаний сохранены'
-                      : 'Добавьте имя, услуги, цены и вопросы клиентам',
-                    done: agents.length > 0,
-                    href: '/dashboard/agents/new',
-                    action: 'Создать',
-                  },
-                  {
-                    title: '2. Подключите канал общения',
-                    note: connected
-                      ? 'Канал успешно привязан'
-                      : 'Чат на сайте, Telegram или Instagram',
-                    done: connected,
-                    href: '/dashboard/integrations',
-                    action: 'Подключить',
-                  },
-                  {
-                    title: '3. Проверьте качество ответов',
-                    note: 'Отправьте тестовое сообщение в песочнице',
-                    done: false,
-                    action: 'Тест-драйв',
-                  },
-                ].map((step, idx) => (
-                  <li
-                    key={step.title}
-                    className="flex items-start gap-3.5 p-3.5 rounded-xl bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]"
-                  >
-                    <span
-                      className={`size-7 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs mt-0.5 ${
-                        step.done
-                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
-                          : 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-secondary)] dark:text-[#AABAD0] border border-[var(--border)] dark:border-[#29374C]'
-                      }`}
-                    >
-                      {step.done ? <Check size={16} strokeWidth={2.5} /> : idx + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-xs text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                        {step.title}
-                      </p>
-                      <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                        {step.note}
-                      </p>
+          ) : (
+            <>
+              {/* Launch Hero Banner with Illustration */}
+              <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs overflow-hidden relative">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                  <div className="space-y-3 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-[#FF7277] border border-red-500/20">
+                        Быстрый старт
+                      </span>
+                      <button
+                        type="button"
+                        disabled={dismissing}
+                        onClick={() => void handleToggleQuickStart(true)}
+                        className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[#AABAD0] dark:hover:text-[#F4F7FB] transition-colors cursor-pointer"
+                        title="Скрыть блок быстрого старта"
+                      >
+                        Скрыть инструкцию
+                      </button>
                     </div>
-                    {!step.done && (
-                      <div className="shrink-0">
-                        {step.href ? (
-                          <Link
-                            href={step.href}
-                            className="text-xs font-semibold text-[#FF7277] hover:underline inline-flex items-center gap-1"
-                          >
-                            <span>{step.action}</span>
-                            <ArrowRight size={12} />
-                          </Link>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => openSandbox()}
-                            className="text-xs font-semibold text-[#FF7277] hover:underline cursor-pointer"
-                          >
-                            {step.action}
-                          </button>
+                    <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      Запустите первого ИИ-сотрудника
+                    </h2>
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                      Обучите ассистента на прайсе компании, подключите канал связи и принимайте заявки круглосуточно.
+                    </p>
+                    <div className="pt-1 flex items-center gap-3">
+                      <Link
+                        href={agents.length ? '/dashboard/agents' : '/dashboard/agents/new'}
+                        className="px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs shadow-xs transition-all inline-flex items-center gap-1.5"
+                      >
+                        <span>{agents.length ? 'Настроить агента' : 'Создать сотрудника'}</span>
+                        <ArrowRight size={14} />
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openSandbox()}
+                        className="text-xs"
+                      >
+                        Тест диалога
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Decorative Image */}
+                  <div className="shrink-0 w-44 sm:w-56 h-36 relative flex items-center justify-center">
+                    <Image
+                      src="/illustrations/gapchi-ai/onboarding-conversations.png"
+                      alt=""
+                      width={220}
+                      height={150}
+                      className="object-contain max-h-36 drop-shadow-md"
+                      priority
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Stepper Checklist */}
+              <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs">
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    Этапы настройки продаж
+                  </h3>
+                  {forceShowQuickStart && (
+                    <button
+                      type="button"
+                      onClick={() => setForceShowQuickStart(false)}
+                      className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    >
+                      Свернуть
+                    </button>
+                  )}
+                </div>
+                <DataState loading={agentsLoading} error={agentsError} retry={refreshAgents} />
+                {!agentsLoading && !agentsError && (
+                  <ol className="space-y-4">
+                    {[
+                      {
+                        title: '1. Создайте ИИ-сотрудника',
+                        note: agents.length
+                          ? 'Инструкции и база знаний сохранены'
+                          : 'Добавьте имя, услуги, цены и вопросы клиентам',
+                        done: agents.length > 0,
+                        href: '/dashboard/agents/new',
+                        action: 'Создать',
+                      },
+                      {
+                        title: '2. Подключите канал общения',
+                        note: connected
+                          ? 'Канал успешно привязан и активен'
+                          : 'Чат на сайте, Telegram или Instagram',
+                        done: connected,
+                        href: '/dashboard/integrations',
+                        action: 'Подключить',
+                      },
+                      {
+                        title: '3. Проверьте качество ответов',
+                        note: testDriveDone
+                          ? 'Тестовый диалог проверен'
+                          : 'Отправьте тестовое сообщение в песочнице',
+                        done: testDriveDone,
+                        action: 'Тест-драйв',
+                      },
+                    ].map((step, idx) => (
+                      <li
+                        key={step.title}
+                        className="flex items-start gap-3.5 p-3.5 rounded-xl bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]"
+                      >
+                        <span
+                          className={`size-7 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs mt-0.5 ${
+                            step.done
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
+                              : 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-secondary)] dark:text-[#AABAD0] border border-[var(--border)] dark:border-[#29374C]'
+                          }`}
+                        >
+                          {step.done ? <Check size={16} strokeWidth={2.5} /> : idx + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-xs text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                            {step.title}
+                          </p>
+                          <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                            {step.note}
+                          </p>
+                        </div>
+                        {!step.done && (
+                          <div className="shrink-0">
+                            {step.href ? (
+                              <Link
+                                href={step.href}
+                                className="text-xs font-semibold text-[#FF7277] hover:underline inline-flex items-center gap-1"
+                              >
+                                <span>{step.action}</span>
+                                <ArrowRight size={12} />
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => openSandbox()}
+                                className="text-xs font-semibold text-[#FF7277] hover:underline cursor-pointer"
+                              >
+                                {step.action}
+                              </button>
+                            )}
+                          </div>
                         )}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right Column: Active Agent & Recent Leads */}

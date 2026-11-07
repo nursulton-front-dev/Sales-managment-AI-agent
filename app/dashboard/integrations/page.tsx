@@ -256,10 +256,10 @@ export default function IntegrationsPage() {
   const selectedAgent = agents.find((agent) => agent.id === agentId);
   const isSelectedConnected = Boolean(selectedAgent?.telegramConnected);
 
-  const activeCount =
+  const activeMessagingCount =
     (connectedAgents.length > 0 || tgBusinessStatus?.connected ? 1 : 0) +
-    (calendar?.connected ? 1 : 0) +
     (instagram?.connected ? 1 : 0);
+  const activeCount = activeMessagingCount + (calendar?.connected ? 1 : 0);
 
   if (view === 'widget_settings') {
     return (
@@ -294,11 +294,12 @@ export default function IntegrationsPage() {
         <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] shadow-2xs self-start sm:self-auto">
           <span
             className={`inline-block size-2 rounded-full ${
-              activeCount > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400 dark:bg-slate-500'
+              activeMessagingCount > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400 dark:bg-slate-500'
             }`}
           />
           <span>
-            Активно: <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] font-semibold">{activeCount}</strong> из 4 каналов
+            Каналы связи: <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] font-semibold">{activeMessagingCount}</strong> подключено
+            {calendar?.connected ? ' · Расписание: Google Календарь подключён' : ''}
           </span>
         </div>
       </div>
@@ -440,158 +441,11 @@ export default function IntegrationsPage() {
       />
 
       {/* ========================================================================= */}
-      {/* 4. MAIN INTEGRATIONS CATALOG */}
+      {/* 4. MAIN INTEGRATIONS CATALOG (UNIFIED 4-CARD COMPACT GRID) */}
       {/* ========================================================================= */}
       {tab !== 'events' ? (
         <div className="space-y-5">
-          {/* 4.1 FEATURED HERO CARD: ЧАТ НА САЙТЕ (gapcha-integrations-v2) */}
-          {['all', 'websites'].includes(tab) && (
-            <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 sm:p-7 shadow-xs">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
-                {/* Left Description & Specs */}
-                <div className="lg:col-span-7 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="size-11 rounded-2xl bg-[#DC2626]/10 flex items-center justify-center text-[#DC2626] shrink-0 border border-[#DC2626]/20 shadow-2xs">
-                      <Globe size={22} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                          Чат на сайте
-                        </h2>
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          ● Готов к установке
-                        </span>
-                      </div>
-                      <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                        Интерактивный виджет для общения с посетителями сайта в реальном времени
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* 3 Concise Specs */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                    <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs">
-                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block font-medium">
-                        Ваш сотрудник
-                      </span>
-                      <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block mt-0.5">
-                        {agents.find((a) => a.isActive)?.name || agents[0]?.name || 'Не выбран'}
-                      </span>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs">
-                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block font-medium">
-                        Ваши цвета
-                      </span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="size-3 rounded-full bg-[#DC2626] shrink-0" />
-                        <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] truncate">
-                          gapcha Red
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs">
-                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block font-medium">
-                        Код установки
-                      </span>
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 truncate block mt-0.5">
-                        Готов к размещению
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap items-center gap-3 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setView('widget_settings')}
-                      className="px-5 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#b91c1c] text-white font-semibold text-xs sm:text-sm shadow-xs transition-all cursor-pointer flex items-center gap-2"
-                    >
-                      <span>Настроить виджет</span>
-                      <ArrowRight size={15} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setWidgetGuideOpen(true)}
-                      className="px-4 py-2.5 rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#101B2E] hover:border-[var(--border-strong)] text-xs sm:text-sm font-medium text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] transition-colors cursor-pointer flex items-center gap-1.5"
-                    >
-                      <CircleHelp size={15} />
-                      <span>Инструкция</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Right Preview Card */}
-                <div className="lg:col-span-5 flex flex-col items-center">
-                  <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] p-3 shadow-sm">
-                    {/* Mock Chat Header */}
-                    <div className="rounded-xl bg-[#DC2626] p-3 text-white flex items-center justify-between shadow-2xs">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="size-7 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                          <Globe size={14} className="text-white" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-xs leading-none truncate">Поможем с вопросом</p>
-                          <p className="text-[10px] text-white/80 mt-0.5 leading-none">ИИ-консультант</p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-white/15 text-white shrink-0">
-                        Пример
-                      </span>
-                    </div>
-
-                    {/* Chat Conversation Body */}
-                    <div className="py-2.5 px-1 space-y-2 text-xs">
-                      <div className="flex items-start gap-1.5 max-w-[88%]">
-                        <div className="size-5 rounded-full bg-[#DC2626] text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-[9px]">
-                          AI
-                        </div>
-                        <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] text-[11px] leading-relaxed">
-                          Здравствуйте! Чем могу помочь вам сегодня?
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end">
-                        <div className="rounded-xl rounded-tr-xs p-2 bg-[#DC2626] text-white text-[11px] font-medium max-w-[85%] leading-relaxed">
-                          Хочу узнать цены на услуги
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-1.5 max-w-[88%]">
-                        <div className="size-5 rounded-full bg-[#DC2626] text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-[9px]">
-                          AI
-                        </div>
-                        <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] text-[11px] leading-relaxed">
-                          С удовольствием подскажу! Вас интересует базовый тариф или персональное решение?
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Input Bar */}
-                    <div className="pt-1">
-                      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C]">
-                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 pl-2 flex-1">
-                          Напишите сообщение…
-                        </span>
-                        <div className="size-6 rounded-lg bg-[#DC2626] text-white flex items-center justify-center shrink-0">
-                          <Send size={11} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-2 text-center">
-                    Пример виджета на сайте
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 4.2 COMPACT CHANNELS (3-COLUMN GRID) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-5">
             {/* CARD 1: Telegram */}
             {['all', 'messages'].includes(tab) && (
               <div
@@ -714,7 +568,55 @@ export default function IntegrationsPage() {
               </div>
             )}
 
-            {/* CARD 3: Google Calendar */}
+            {/* CARD 3: Чат на сайте (Compact matching other cards) */}
+            {['all', 'websites'].includes(tab) && (
+              <div
+                className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
+                onClick={() => setView('widget_settings')}
+              >
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="size-12 rounded-2xl bg-[#DC2626]/10 flex items-center justify-center shrink-0 border border-[#DC2626]/20 group-hover:scale-105 transition-transform text-[#DC2626]">
+                      <Globe size={28} />
+                    </div>
+                    <Badge variant="success">
+                      ● Готов к установке
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                        Чат на сайте
+                      </h3>
+                      <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                        Виджет
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                      Интерактивный виджет для общения с посетителями сайта в реальном времени, сбора контактов и консультирования.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-[var(--border)] dark:border-[#29374C]">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs font-semibold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setView('widget_settings');
+                    }}
+                  >
+                    Настроить виджет
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* CARD 4: Google Calendar */}
             {['all', 'calendar'].includes(tab) && (
               <div
                 className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
@@ -765,52 +667,6 @@ export default function IntegrationsPage() {
                     }}
                   >
                     {calendar?.connected ? 'Настроить расписание' : 'Подключить'}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* CARD 4: WhatsApp Business */}
-            {['all', 'messages'].includes(tab) && (
-              <div
-                className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer opacity-90"
-                onClick={() => setWhatsappOpen(true)}
-              >
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="size-12 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/15 flex items-center justify-center shrink-0 border border-emerald-500/25 group-hover:scale-105 transition-transform">
-                      <Image src="/integrations/whatsapp.svg" width={28} height={28} alt="WhatsApp" />
-                    </div>
-                    <Badge variant="neutral">Скоро</Badge>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                        WhatsApp Business
-                      </h3>
-                      <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                        Мессенджер
-                      </span>
-                    </div>
-                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
-                      Прямая интеграция через официальный WhatsApp Cloud API находится на стадии закрытого тестирования.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-4 mt-4 border-t border-[var(--border)] dark:border-[#29374C]">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs font-semibold"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setWhatsappOpen(true);
-                    }}
-                  >
-                    Подробнее
                   </Button>
                 </div>
               </div>

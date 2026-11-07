@@ -67,7 +67,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { companyName, ownerName, ownerPhone, niche, googleCalendarWorkingHours, googleCalendarSlotDuration } = body;
+    const { companyName, ownerName, ownerPhone, niche, googleCalendarWorkingHours, googleCalendarSlotDuration, quickStartDismissed, settings } = body;
 
     const updates: Parameters<typeof updateWorkspace>[1] = {};
     if (companyName !== undefined) {
@@ -85,6 +85,17 @@ export async function PATCH(req: NextRequest) {
     if (googleCalendarSlotDuration !== undefined) {
       if (![15, 30, 45, 60, 90, 120].includes(Number(googleCalendarSlotDuration))) return NextResponse.json({ success: false, error: 'Некорректная длительность записи' }, { status: 400 });
       updates.googleCalendarSlotDuration = Number(googleCalendarSlotDuration);
+    }
+    if (quickStartDismissed !== undefined || settings !== undefined) {
+      const currentSettings = ((session.workspace as any).settings as Record<string, any>) || {};
+      const newSettings = { ...currentSettings };
+      if (quickStartDismissed !== undefined) {
+        newSettings.quickStartDismissed = Boolean(quickStartDismissed);
+      }
+      if (settings && typeof settings === 'object') {
+        Object.assign(newSettings, settings);
+      }
+      updates.settings = newSettings;
     }
 
     const updated = await updateWorkspace(session.workspace.id, updates);

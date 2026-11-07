@@ -17,7 +17,42 @@ export interface Lead {
   appointmentDate: string | null; tokensSpent: number; contact: string; notes?: string; createdAt: string;
 }
 export interface ToastMessage { id: string; title: string; description?: string; type: 'success' | 'info' | 'warning' | 'error'; }
-interface WorkspaceData { subscriptionActive?: boolean; trialDaysLeft?: number; id: string; companyName: string; ownerName: string; ownerEmail: string; plan: string; tokenBalance: number; emailVerified?: boolean; googleCalendarConnected?: boolean; subExpiresAt?: string | null; status?: string; instagramConnected?: boolean; instagramAgentId?: string | null; }
+interface WorkspaceData {
+  subscriptionActive?: boolean;
+  trialDaysLeft?: number;
+  id: string;
+  companyName: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerPhone?: string;
+  niche?: string;
+  plan: string;
+  tokenBalance: number;
+  emailVerified?: boolean;
+  googleCalendarConnected?: boolean;
+  googleCalendarEmail?: string | null;
+  googleCalendarWorkingHours?: string | null;
+  googleCalendarSlotDuration?: number | null;
+  subExpiresAt?: string | null;
+  status?: string;
+  instagramConnected?: boolean;
+  instagramAgentId?: string | null;
+  instagramStatus?: string;
+  instagramAutoReply?: boolean;
+  instagramUsername?: string | null;
+  telegramBusinessConnected?: boolean;
+  telegramBusinessEnabled?: boolean;
+  telegramBusinessCanReply?: boolean;
+  telegramBusinessAgentId?: string | null;
+  telegramBusinessUsername?: string | null;
+  telegramBusinessConnectedAt?: string | null;
+  settings?: {
+    quickStartDismissed?: boolean;
+    timezone?: string;
+    [key: string]: any;
+  };
+  createdAt?: string;
+}
 interface AgentData { id: string; name: string; nicheTemplate: string; systemPrompt: string; knowledgeBase?: string; qualificationQuestions?: string[]; telegramConnected?: boolean; telegramUsername?: string | null; googleCalendarConnected?: boolean; isActive?: boolean; createdAt: string; }
 interface LeadData { id: string; clientName: string; channel: Lead['channel']; status: string; appointmentTime?: string; tokensSpent?: number; clientPhone?: string; createdAt: string; }
 type NewAgent = Omit<Agent, 'id' | 'createdAt' | 'tokensUsed' | 'conversionRate'>;
