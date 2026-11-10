@@ -19,6 +19,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { AssistantMessage, AssistantLanguage, AssistantPendingAction } from '@/lib/assistant/types';
+import { BrandMascot } from '@/components/ui/BrandMascot';
 
 interface PlatformAssistantDrawerProps {
   className?: string;
@@ -201,9 +202,9 @@ export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDra
         <button
           onClick={() => setIsOpen(true)}
           aria-label={lang === 'uz' ? 'Yordam' : 'Помощь'}
-          className="group flex items-center gap-2 px-4 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          className="group flex items-center gap-2 px-3.5 py-2 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
         >
-          <Sparkles className="w-4 h-4 text-white group-hover:rotate-12 transition-transform duration-300" />
+          <BrandMascot pose="avatar" size={20} className="shrink-0" />
           <span className="font-semibold text-xs sm:text-sm tracking-wide">
             {lang === 'uz' ? 'Yordam' : 'Помощь'}
           </span>
@@ -229,9 +230,7 @@ export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDra
             {/* Header */}
             <div className="shrink-0 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/60">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-950/40 text-red-600 flex items-center justify-center">
-                  <Bot className="w-4 h-4" />
-                </div>
+                <BrandMascot pose="avatar" size={32} className="shrink-0" />
                 <div>
                   <h3 id="assistant-drawer-title" className="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                     {lang === 'uz' ? 'gapcha AI Yordamchisi' : 'Помощник gapcha AI'}
@@ -274,8 +273,8 @@ export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDra
             <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs sm:text-sm">
               {messages.length === 0 ? (
                 <div className="py-6 flex flex-col items-center text-center space-y-4">
-                  <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-600 flex items-center justify-center shadow-inner">
-                    <Sparkles className="w-6 h-6" />
+                  <div className="flex justify-center">
+                    <BrandMascot pose="help" size={56} className="mb-1" />
                   </div>
                   <div>
                     <h4 className="font-semibold text-base text-zinc-900 dark:text-zinc-100">
@@ -327,8 +326,11 @@ export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDra
                 messages.map(msg => (
                   <div
                     key={msg.id}
-                    className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start items-start gap-2'}`}
                   >
+                    {msg.role === 'assistant' && (
+                      <BrandMascot pose="avatar" size={24} className="mt-1 shrink-0" />
+                    )}
                     <div
                       className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
                         msg.role === 'user'
@@ -424,7 +426,8 @@ export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDra
 
               {isLoading && (
                 <div className="flex items-center gap-2 text-zinc-500 text-xs p-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                  <BrandMascot pose="thinking" size={20} className="shrink-0" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
                   <span>{lang === 'uz' ? 'gapcha AI javob tayyorlamoqda...' : 'Помощник анализирует статус...'}</span>
                 </div>
               )}

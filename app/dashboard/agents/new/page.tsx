@@ -30,6 +30,7 @@ import {
   Edit3,
 } from 'lucide-react';
 import { AgentSetupWizard } from '@/components/wizard/AgentSetupWizard';
+import { BrandMascot } from '@/components/ui/BrandMascot';
 
 interface NicheTemplate {
   id: string;
@@ -433,9 +434,7 @@ ${
               : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-secondary)] text-[var(--text-secondary)]'
           }`}
         >
-          <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-950/40 text-red-600 flex items-center justify-center shrink-0">
-            <Bot className="w-5 h-5" />
-          </div>
+          <BrandMascot pose="hello" size={40} className="shrink-0" />
           <div>
             <div className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
               <span>Настроить с ИИ</span>
@@ -983,8 +982,8 @@ ${
             ) : (
               /* Success confirmation */
               <div className="py-6 text-center space-y-4">
-                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-6 h-6" />
+                <div className="flex justify-center mb-1">
+                  <BrandMascot pose="success" size={72} />
                 </div>
 
                 <div>

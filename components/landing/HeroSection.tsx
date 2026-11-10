@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { LandingContent } from '@/lib/landing/content';
+import { BrandMascot } from '@/components/ui/BrandMascot';
 import { ArrowRight, CheckCircle2, MessageSquare, Sparkles } from 'lucide-react';
 
 interface HeroSectionProps {
@@ -25,8 +26,8 @@ export function HeroSection({ content }: HeroSectionProps) {
           {/* Left Column: Value Proposition & CTAs */}
           <div className="lg:col-span-7 space-y-6 sm:space-y-8 text-center lg:text-left">
             {/* Pill Tag */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-50 border border-red-200/80 text-[#DC2626] text-xs font-semibold shadow-xs">
-              <span className="size-2 rounded-full bg-[#DC2626] animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200/80 text-[#DC2626] text-xs font-semibold shadow-xs">
+              <BrandMascot pose="flying" size={18} className="shrink-0" />
               <span>{hero.badge}</span>
             </div>
 

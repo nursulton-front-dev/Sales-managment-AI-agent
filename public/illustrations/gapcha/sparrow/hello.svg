@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="100%" height="100%" fill="none" role="img" aria-label="Воробей gapcha AI: приветствие">
+  <!-- Tail -->
+  <path fill="#C91E26" d="M102 186 L40 160 L59 193 L36 214 L108 220 Z"/>
+  <path fill="#A81720" d="M84 188 L48 171 L60 193 L46 207 L90 210 Z"/>
+
+  <!-- Feet -->
+  <g stroke="#151515" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M138 244 v22 h-16"/>
+    <path d="M182 244 v22 h16"/>
+  </g>
+
+  <!-- Left Wing (Back stabilizer) -->
+  <path fill="#A81720" d="M96 178 C80 168 68 182 58 204 L76 200 L70 212 C98 210 106 182 96 178 Z"/>
+
+  <!-- Main Body (gapcha red) -->
+  <path fill="#ED262A" d="M100 220 C74 190 82 140 114 110 L106 80 L136 94 L145 72 L163 100 C206 95 238 128 239 172 C241 220 210 252 166 252 C138 252 116 240 100 220 Z"/>
+
+  <!-- Ivory Breast / Belly Patch -->
+  <path fill="#F8F6F1" d="M128 244 C122 212 142 192 168 196 C198 200 208 224 204 244 C178 256 150 256 128 244 Z"/>
+
+  <!-- Cheerful Cheek Blush -->
+  <ellipse cx="150" cy="170" rx="15" ry="11" fill="#FCE4E1" opacity="0.9"/>
+
+  <!-- Friendly Welcoming Eyes with Bright Highlights -->
+  <g class="eyes">
+    <ellipse cx="166" cy="144" rx="17" ry="23" fill="#FFFFFF"/>
+    <ellipse cx="208" cy="140" rx="15" ry="21" fill="#FFFFFF"/>
+    <ellipse cx="173" cy="144" rx="8.5" ry="13.5" fill="#151515"/>
+    <ellipse cx="214" cy="140" rx="7.5" ry="12.5" fill="#151515"/>
+    <circle cx="177" cy="138" r="3.5" fill="#FFFFFF"/>
+    <circle cx="217" cy="135" r="3" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Small Sharp Beak (friendly open smile curve) -->
+  <path fill="#151515" d="M186 163 L218 161 L200 183 Z"/>
+
+  <!-- Raised Waving Wing (Greeting Gesture) -->
+  <g class="waving-wing">
+    <path fill="#BF1C27" d="M142 166 C158 132 186 100 216 84 L204 108 L224 104 L202 134 C178 152 156 164 142 166 Z"/>
+    <path fill="#A81720" d="M152 160 C166 134 188 108 212 94 L204 110 L218 108 L200 132 C180 148 162 158 152 160 Z"/>
+    <!-- Small greeting sparkle -->
+    <path fill="#ED262A" d="M228 72 L231 82 L241 85 L231 88 L228 98 L225 88 L215 85 L225 82 Z" opacity="0.85"/>
+  </g>
+</svg>

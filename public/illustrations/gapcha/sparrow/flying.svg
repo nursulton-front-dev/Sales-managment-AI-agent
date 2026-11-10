@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="100%" height="100%" fill="none" role="img" aria-label="Воробей gapcha AI: в полёте">
+  <!-- Motion / Speed Chevrons (clean minimalist vector lines) -->
+  <path stroke="#ED262A" stroke-width="3" stroke-linecap="round" d="M38 160 L62 160" opacity="0.6"/>
+  <path stroke="#ED262A" stroke-width="3" stroke-linecap="round" d="M24 176 L52 176" opacity="0.4"/>
+  <path stroke="#ED262A" stroke-width="3" stroke-linecap="round" d="M48 192 L76 192" opacity="0.5"/>
+
+  <!-- Streamlined Tail (Straight Back) -->
+  <path fill="#C91E26" d="M104 174 L32 162 L56 182 L26 194 L108 198 Z"/>
+  <path fill="#A81720" d="M84 174 L42 168 L58 184 L40 192 L92 194 Z"/>
+
+  <!-- Tucked Feet -->
+  <g stroke="#151515" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M142 208 L130 216"/>
+    <path d="M168 208 L156 216"/>
+  </g>
+
+  <!-- Far Wing (Upper Left Wing in Flight) -->
+  <path fill="#A81720" d="M142 126 L126 58 L148 76 L144 48 L176 86 L182 78 L188 116 Z"/>
+
+  <!-- Main Body (Aerodynamic Flight Silhouette) -->
+  <path fill="#ED262A" d="M102 188 C84 154 102 122 134 108 L130 84 L154 94 L162 76 L178 98 C216 98 248 122 254 152 C260 186 236 214 192 216 C152 218 118 208 102 188 Z"/>
+
+  <!-- Ivory Breast / Belly Streak -->
+  <path fill="#F8F6F1" d="M136 208 C130 184 148 170 178 174 C212 178 226 194 220 208 C194 216 162 216 136 208 Z"/>
+
+  <!-- Cheerful Flight Blush -->
+  <ellipse cx="178" cy="166" rx="14" ry="9" fill="#FCE4E1" opacity="0.85"/>
+
+  <!-- Sharp Focused Forward Eyes -->
+  <g class="eyes">
+    <ellipse cx="196" cy="142" rx="16" ry="20" fill="#FFFFFF"/>
+    <ellipse cx="232" cy="140" rx="14" ry="18" fill="#FFFFFF"/>
+    <ellipse cx="204" cy="142" rx="8" ry="11" fill="#151515"/>
+    <ellipse cx="238" cy="140" rx="7" ry="10" fill="#151515"/>
+    <circle cx="207" cy="138" r="3" fill="#FFFFFF"/>
+    <circle cx="240" cy="137" r="2.5" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Sharp Leading Beak -->
+  <path fill="#151515" d="M214 156 L248 152 L228 170 Z"/>
+
+  <!-- Near Wing (Dynamic Angular Swept-Back Wing) -->
+  <g class="flight-wing">
+    <path fill="#BF1C27" d="M162 144 L138 66 L164 88 L158 56 L196 100 L204 90 L208 136 Z"/>
+    <path fill="#C91E26" d="M168 140 L152 84 L170 100 L168 76 L194 108 L200 134 Z"/>
+  </g>
+</svg>

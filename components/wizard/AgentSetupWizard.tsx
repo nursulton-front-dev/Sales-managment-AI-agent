@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { BrandMascot } from '@/components/ui/BrandMascot';
 import {
   Sparkles,
   Bot,
@@ -374,7 +375,7 @@ export function AgentSetupWizard({ onCancelManual }: AgentSetupWizardProps) {
                     : 'text-zinc-500 hover:text-zinc-800'
                 }`}
               >
-                <Bot className="w-3.5 h-3.5" />
+                <BrandMascot pose="avatar" size={16} className="shrink-0" />
                 <span>{lang === 'uz' ? 'Sozlash muloqoti' : 'Диалог с мастером'}</span>
               </button>
 
@@ -404,8 +405,15 @@ export function AgentSetupWizard({ onCancelManual }: AgentSetupWizardProps) {
                 {messages.map((m) => (
                   <div
                     key={m.id}
-                    className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
+                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start items-start gap-2.5'}`}
                   >
+                    {m.role === 'assistant' && (
+                      <BrandMascot
+                        pose={m.id === 'init_msg' ? 'hello' : 'hint'}
+                        size={28}
+                        className="mt-0.5 shrink-0"
+                      />
+                    )}
                     <div
                       className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
                         m.role === 'user'
@@ -420,7 +428,8 @@ export function AgentSetupWizard({ onCancelManual }: AgentSetupWizardProps) {
 
                 {isSending && (
                   <div className="flex items-center gap-2 text-zinc-500 text-xs p-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                    <BrandMascot pose="thinking" size={22} className="shrink-0" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
                     <span>{lang === 'uz' ? 'Usta qoralamani tahlil qilmoqda...' : 'Мастер обновляет параметры...'}</span>
                   </div>
                 )}

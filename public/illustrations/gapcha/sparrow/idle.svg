@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="100%" height="100%" fill="none" role="img" aria-label="Воробей gapcha AI: спокойная поза">
+  <!-- Tail -->
+  <path fill="#C91E26" d="M102 184 L40 156 L59 190 L36 211 L108 218 Z"/>
+  <path fill="#A81720" d="M84 186 L48 168 L60 190 L46 204 L90 208 Z"/>
+
+  <!-- Feet -->
+  <g stroke="#151515" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M138 242 v22 h-16"/>
+    <path d="M182 242 v22 h16"/>
+  </g>
+
+  <!-- Main Body (gapcha red) -->
+  <path fill="#ED262A" d="M100 218 C74 188 82 138 114 108 L106 78 L136 92 L145 70 L163 98 C206 93 238 126 239 170 C241 218 210 250 166 250 C138 250 116 238 100 218 Z"/>
+
+  <!-- Ivory Breast / Belly Patch -->
+  <path fill="#F8F6F1" d="M128 242 C122 210 142 190 168 194 C198 198 208 222 204 242 C178 254 150 254 128 242 Z"/>
+
+  <!-- Cheek Accent -->
+  <ellipse cx="152" cy="168" rx="14" ry="10" fill="#FCE4E1" opacity="0.85"/>
+
+  <!-- Expressive Friendly Eyes (No heavy brows) -->
+  <g class="eyes">
+    <ellipse cx="166" cy="144" rx="17" ry="23" fill="#FFFFFF"/>
+    <ellipse cx="208" cy="140" rx="15" ry="21" fill="#FFFFFF"/>
+    <ellipse cx="173" cy="145" rx="8" ry="13" fill="#151515"/>
+    <ellipse cx="214" cy="141" rx="7" ry="12" fill="#151515"/>
+    <circle cx="176" cy="139" r="3.2" fill="#FFFFFF"/>
+    <circle cx="216" cy="136" r="2.8" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Small Sharp Beak -->
+  <path fill="#151515" d="M186 163 L216 160 L200 182 Z"/>
+
+  <!-- Folded Angular Wing -->
+  <g class="wing">
+    <path fill="#BF1C27" d="M138 172 C108 160 88 178 70 210 L94 204 L86 220 C128 218 138 172 138 172 Z"/>
+    <path fill="#A81720" d="M130 178 C108 172 94 186 82 208 L98 204 L92 216 C124 214 130 178 130 178 Z"/>
+  </g>
+</svg>
