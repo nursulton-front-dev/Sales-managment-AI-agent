@@ -6,15 +6,16 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
   Headphones,
-  ArrowLeft,
+  Home,
+  LayoutDashboard,
   X,
   CheckCircle2,
   AlertCircle,
   Loader2,
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
-import { NotFoundIllustration } from '@/components/ui/NotFoundIllustration';
 import { BrandLogo } from '@/components/ui/BrandLogo';
+import { SparrowMascot } from '@/components/ui/SparrowMascot';
 
 export default function NotFound() {
   const router = useRouter();
@@ -49,22 +50,6 @@ export default function NotFound() {
       setIsModalOpen(true);
       setSubmitError(null);
       setSubmitSuccess(null);
-    }
-  };
-
-  const handleGoBack = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (typeof window !== 'undefined') {
-      // Safe internal referrer check
-      if (
-        window.history.length > 2 &&
-        document.referrer &&
-        document.referrer.includes(window.location.host)
-      ) {
-        window.history.back();
-      } else {
-        router.push(isAuthenticated ? '/dashboard' : '/login');
-      }
     }
   };
 
@@ -108,106 +93,79 @@ export default function NotFound() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between bg-[#F8FAFC] dark:bg-[#0B1220] text-[#171A21] dark:text-[#F1F5F9] transition-colors duration-150 overflow-x-hidden">
-      {/* 1. Header: BrandLogo left, compact Theme icon button right */}
-      <header className="w-full max-w-[1360px] mx-auto px-6 sm:px-10 lg:px-12 pt-6 sm:pt-8 flex items-center justify-between shrink-0">
-        <BrandLogo
-          variant="full"
-          width={150}
-          href="/"
-          ariaLabel="gapcha AI"
-        />
-
-        <div className="flex items-center">
-          <ThemeSwitcher compact={true} />
-        </div>
+    <div className="min-h-screen w-full flex flex-col justify-between bg-[var(--background)] text-[var(--text-primary)] transition-colors duration-150 overflow-x-hidden">
+      {/* 1. Header: BrandLogo left, compact Theme icon right */}
+      <header className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between shrink-0">
+        <BrandLogo variant="full" width={140} href="/" ariaLabel="gapcha AI" />
+        <ThemeSwitcher compact={true} />
       </header>
 
-      {/* 2. Main Open Composition: 
-          On Desktop: Two balanced columns (left text, right huge 404 illustration)
-          On Mobile: Stacked vertically (illustration first, then text, buttons, back link)
-      */}
-      <main className="w-full max-w-[1360px] mx-auto px-6 sm:px-10 lg:px-12 py-8 sm:py-12 my-auto flex-1 flex items-center">
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 xl:gap-16 items-center">
-          
-          {/* Mobile Illustration (placed above text on screens < lg) */}
-          <div className="block lg:hidden w-full max-w-[440px] mx-auto pt-2 pb-2">
-            <NotFoundIllustration className="w-full" />
-          </div>
-
-          {/* Left Column: Eyebrow, Two-line Headline, Description, Buttons, Back link */}
-          <div className="lg:col-span-6 xl:col-span-6 flex flex-col items-start text-left">
-            {/* Eyebrow: Slate-blue text (#526079), 13px, uppercase, increased tracking */}
-            <div className="text-[12px] sm:text-[13px] font-bold tracking-[0.14em] text-[#526079] dark:text-[#94A3B8] uppercase mb-4 select-none">
-              СТРАНИЦА НЕ НАЙДЕНА
-            </div>
-
-            {/* Headline: Exactly two lines "Кажется, вы / заблудились" */}
-            <h1 className="text-[36px] sm:text-[46px] md:text-[54px] lg:text-[62px] xl:text-[70px] font-extrabold text-[#171A21] dark:text-[#F1F5F9] tracking-[-0.035em] leading-[1.05] mb-5 sm:mb-6">
-              Кажется, вы <br />
-              заблудились
-            </h1>
-
-            {/* Description: 18-20px comfortable reading length */}
-            <p className="text-[16px] sm:text-[18px] lg:text-[19px] text-[#526079] dark:text-[#94A3B8] font-normal leading-[1.5] max-w-[490px] mb-8 sm:mb-9">
-              Возможно, ссылка устарела или в адресе есть опечатка. Давайте вернёмся к работе.
-            </p>
-
-            {/* Action Buttons: Red Primary with Arrow, Secondary Support with Headset */}
-            <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-6">
-              {/* Primary Button (Width 220-250px on desktop, full on mobile, height 52-56px, rounded 6-8px) */}
-              {isAuthenticated === null ? (
-                <div className="w-full sm:w-[235px] h-[52px] sm:h-[54px] bg-slate-200 dark:bg-slate-800 rounded-[6px] animate-pulse" />
-              ) : isAuthenticated ? (
-                <Link
-                  href="/dashboard"
-                  className="w-full sm:w-[235px] h-[52px] sm:h-[54px] px-6 inline-flex items-center justify-center gap-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-semibold text-[15px] rounded-[6px] transition-all duration-150 shadow-xs cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2"
-                >
-                  <span>В кабинет</span>
-                  <ArrowRight className="w-4 h-4 stroke-[2.4]" />
-                </Link>
-              ) : (
-                <Link
-                  href="/login"
-                  className="w-full sm:w-[235px] h-[52px] sm:h-[54px] px-6 inline-flex items-center justify-center gap-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-[0.99] text-white font-semibold text-[15px] rounded-[6px] transition-all duration-150 shadow-xs cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2"
-                >
-                  <span>Войти</span>
-                  <ArrowRight className="w-4 h-4 stroke-[2.4]" />
-                </Link>
-              )}
-
-              {/* Secondary Support Button */}
-              <button
-                type="button"
-                onClick={handleSupportClick}
-                className="w-full sm:w-[235px] h-[52px] sm:h-[54px] px-6 inline-flex items-center justify-center gap-2.5 bg-transparent hover:bg-slate-100/70 dark:hover:bg-slate-800/60 active:scale-[0.99] border border-[#D8DFE8] dark:border-slate-700 text-[#171A21] dark:text-[#F1F5F9] font-semibold text-[15px] rounded-[6px] transition-all duration-150 cursor-pointer whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-              >
-                <Headphones className="w-4 h-4 text-[#526079] dark:text-[#A5B4C8] stroke-[2.2]" />
-                <span>Поддержка</span>
-              </button>
-            </div>
-
-            {/* Separate quiet Back link placed underneath */}
-            <button
-              type="button"
-              onClick={handleGoBack}
-              className="inline-flex items-center gap-2 text-[14px] font-medium text-[#526079] dark:text-[#94A3B8] hover:text-[#171A21] dark:hover:text-white transition-colors duration-150 cursor-pointer py-1 group focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-400 rounded"
-            >
-              <ArrowLeft className="w-4 h-4 stroke-[2] transition-transform duration-150 group-hover:-translate-x-0.5" />
-              <span>Вернуться назад</span>
-            </button>
-          </div>
-
-          {/* Right Column: Desktop 404 Illustration occupying full column width */}
-          <div className="hidden lg:flex lg:col-span-6 xl:col-span-6 items-center justify-center w-full pl-2 xl:pl-6">
-            <NotFoundIllustration className="w-full max-w-[620px]" />
-          </div>
-
+      {/* 2. Compact Composition: "404", Sparrow near pointer, and "Такой страницы нет" */}
+      <main className="w-full max-w-lg mx-auto px-4 py-8 sm:py-12 my-auto flex-1 flex flex-col items-center justify-center text-center">
+        {/* Large Crisp 404 Accent Badge */}
+        <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-[#ED262A] dark:text-[#FF7277] font-mono text-sm sm:text-base font-bold tracking-widest uppercase mb-4">
+          Ошибка 404
         </div>
+
+        {/* Mascot with signpost: one short head-tilt gesture, then calm */}
+        <div className="w-36 h-36 sm:w-40 sm:h-40 flex items-center justify-center mb-4">
+          <SparrowMascot variant="look" size={140} priority />
+        </div>
+
+        {/* Headline */}
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight mb-2">
+          Такой страницы нет
+        </h1>
+
+        {/* Subhead */}
+        <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed max-w-sm mb-6">
+          Возможно, ссылка устарела или в адресе есть опечатка. Давайте вернёмся к работе.
+        </p>
+
+        {/* Action Buttons: На главную + В кабинет / Войти */}
+        <div className="w-full max-w-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 mb-4">
+          <Link
+            href="/"
+            className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-[var(--surface-secondary)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text-primary)] transition-colors inline-flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+          >
+            <Home className="w-4 h-4 text-[var(--text-muted)]" />
+            <span>На главную</span>
+          </Link>
+
+          {isAuthenticated ? (
+            <Link
+              href="/dashboard"
+              className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-[#ED262A] hover:bg-[#d91e22] text-white transition-colors inline-flex items-center justify-center gap-2 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span>В кабинет</span>
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-[#ED262A] hover:bg-[#d91e22] text-white transition-colors inline-flex items-center justify-center gap-2 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+            >
+              <span>Войти</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
+        </div>
+
+        {/* Support Link */}
+        <button
+          type="button"
+          onClick={handleSupportClick}
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors py-1 cursor-pointer focus:outline-none focus:underline"
+        >
+          <Headphones className="w-3.5 h-3.5" />
+          <span>Написать в поддержку</span>
+        </button>
       </main>
 
-      {/* 3. Bottom spacing */}
-      <div className="w-full max-w-[1360px] mx-auto px-6 sm:px-10 lg:px-12 py-4 shrink-0" />
+      {/* 3. Footer */}
+      <footer className="w-full max-w-5xl mx-auto px-4 py-4 text-center text-[11px] text-[var(--text-muted)] shrink-0">
+        gapcha AI · Платформа ИИ-сотрудников
+      </footer>
 
       {/* Public Support Modal for Guests */}
       {isModalOpen && (
@@ -216,105 +174,91 @@ export default function NotFound() {
           style={{ animationDuration: '180ms' }}
         >
           <div
-            className="w-full max-w-[460px] bg-white dark:bg-[#111C2E] border border-slate-200 dark:border-slate-800 rounded-[8px] p-6 shadow-xl relative text-left"
+            className="w-full max-w-[460px] bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 shadow-xl relative text-left"
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
           >
-            {/* Close button */}
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-[4px] cursor-pointer"
+              className="absolute right-4 top-4 p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg cursor-pointer"
               aria-label="Закрыть"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-8 h-8 rounded-[6px] bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300">
+              <div className="w-8 h-8 rounded-lg bg-red-500/10 text-[#ED262A] flex items-center justify-center">
                 <Headphones className="w-4 h-4" />
               </div>
-              <h2 id="modal-title" className="text-lg font-bold text-slate-900 dark:text-white">
-                Служба поддержки
+              <h2 id="modal-title" className="text-base font-bold text-[var(--text-primary)]">
+                Служба поддержки gapcha AI
               </h2>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">
-              Опишите возникшую проблему или вопрос. Команда поддержки свяжется с вами по указанному email.
+            <p className="text-xs text-[var(--text-secondary)] mb-4">
+              Опишите, какую страницу вы искали, и мы поможем сориентироваться.
             </p>
 
             {submitSuccess ? (
-              <div className="py-4 text-center space-y-3">
-                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
-                  {submitSuccess}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="mt-2 w-full h-[42px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-medium text-sm rounded-[6px] hover:opacity-90 transition-opacity cursor-pointer"
-                >
-                  Закрыть
-                </button>
+              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2.5">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>{submitSuccess}</span>
               </div>
             ) : (
-              <form onSubmit={handlePublicSupportSubmit} className="space-y-4">
+              <form onSubmit={handlePublicSupportSubmit} className="space-y-3.5">
                 {submitError && (
-                  <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-[6px] flex items-center gap-2.5 text-xs text-red-600 dark:text-red-400">
+                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{submitError}</span>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label htmlFor="support-email" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                     Ваш Email
                   </label>
                   <input
+                    id="support-email"
                     type="email"
                     required
                     value={supportEmail}
                     onChange={(e) => setSupportEmail(e.target.value)}
                     placeholder="name@company.com"
-                    className="w-full h-[42px] px-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors"
+                    className="w-full px-3.5 py-2 text-xs bg-[var(--surface-secondary)] border border-[var(--border)] rounded-xl text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label htmlFor="support-message" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                     Сообщение
                   </label>
                   <textarea
+                    id="support-message"
+                    rows={3}
                     required
-                    rows={4}
                     value={supportMessage}
                     onChange={(e) => setSupportMessage(e.target.value)}
-                    placeholder="Опишите, какую страницу вы искали или какая ошибка возникла"
-                    className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-[6px] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors resize-none"
+                    placeholder="Какую страницу или раздел вы искали?"
+                    className="w-full px-3.5 py-2 text-xs bg-[var(--surface-secondary)] border border-[var(--border)] rounded-xl text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] resize-none"
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-2.5 pt-2">
+                <div className="flex items-center justify-end gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 h-[42px] text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-[6px] cursor-pointer"
+                    className="px-4 py-2 rounded-xl text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]"
                   >
                     Отмена
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-5 h-[42px] bg-[#DC2626] hover:bg-[#B91C1C] text-white font-medium text-xs rounded-[6px] flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-60"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#ED262A] hover:bg-[#d91e22] disabled:opacity-50 inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Отправка…</span>
-                      </>
-                    ) : (
-                      <span>Отправить обращение</span>
-                    )}
+                    {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Отправить</span>
                   </button>
                 </div>
               </form>

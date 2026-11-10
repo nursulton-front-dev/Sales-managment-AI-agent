@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { LandingContent } from '@/lib/landing/content';
+import { SparrowMascot } from '@/components/ui/SparrowMascot';
 import { MessageSquare, ShieldCheck, UserCheck, Sparkles, AlertCircle } from 'lucide-react';
 
 interface ProductDemoSectionProps {
@@ -135,6 +136,21 @@ export function ProductDemoSection({ content }: ProductDemoSectionProps) {
 
           {/* Side Explanation & Controls */}
           <div className="lg:col-span-4 space-y-6">
+            {/* Mascot Accent: Invitation to configure with AI Wizard */}
+            <div className="rounded-2xl bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent border border-red-200/70 p-5 space-y-2.5 shadow-xs flex items-start gap-3.5">
+              <SparrowMascot variant="hello" size={48} className="shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="font-bold text-slate-900 text-sm">
+                  {content.lang === 'uz' ? 'AI-Usta bilan tez sozlash' : 'Настройка с ИИ-мастером'}
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                  {content.lang === 'uz'
+                    ? 'Yordamchi har qadamda bittadan savol beradi va tayyor ish ssenariysini shakllantiradi.'
+                    : 'Интерактивный помощник задаст 1 вопрос за шаг и сформирует готовый сценарий.'}
+                </p>
+              </div>
+            </div>
+
             <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-4 shadow-xs">
               <div className="flex items-center gap-2.5">
                 <div className="size-9 rounded-xl bg-red-50 text-[#DC2626] flex items-center justify-center font-bold text-sm">

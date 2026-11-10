@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" class="idle" role="img" aria-label="Воробей gapcha AI: спокойная поза"><style>svg{overflow:visible}.bird,.wing,.eyes{animation:none!important}</style><g class="bird">
+<path fill="#C91E26" d="M100 184 L43 158 L61 191 L39 211 L107 218 Z"/>
+<g class="feet" fill="none" stroke="#151515" stroke-width="7" stroke-linecap="round"><path d="M140 242v22h-15M183 242v22h14"/></g>
+<path fill="#ED262A" d="M100 218C76 190 84 141 114 111L106 80 136 94 145 72 163 99C205 94 237 127 238 171 240 219 210 251 165 251 138 251 116 239 100 218Z"/>
+<path fill="#F8F6F1" d="M130 241C124 211 142 192 167 195 198 199 207 223 203 240 178 254 151 254 130 241Z"/>
+<ellipse cx="152" cy="168" rx="14" ry="10" fill="#FCE4E1" opacity="0.85"/>
+<g class="eyes"><ellipse fill="#fff" cx="166" cy="146" rx="17" ry="23"/><ellipse fill="#fff" cx="208" cy="142" rx="15" ry="21"/><ellipse fill="#151515" cx="173" cy="147" rx="8" ry="13"/><ellipse fill="#151515" cx="214" cy="143" rx="7" ry="12"/><circle fill="white" cx="176" cy="141" r="3"/><circle fill="white" cx="216" cy="138" r="2.5"/></g>
+<path fill="#151515" d="m186 165 27-3-14 20Z"/>
+<g class="wing"><path fill="#BF1C27" d="M137 174Q108 163 89 180L71 211 96 206 88 221Q127 218 137 174Z"/><path fill="#A81720" d="M130 178Q108 172 94 186L82 208L98 204L92 216Q124 214 130 178Z"/></g>
+</g></svg>

@@ -6,6 +6,7 @@ import { useApp } from '@/context/AppContext';
 import { DataState } from '@/components/ui/DataState';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { SparrowMascot } from '@/components/ui/SparrowMascot';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Dialog } from '@/components/ui/Dialog';
@@ -34,6 +35,7 @@ export default function LeadsCalendarPage() {
     openSandbox,
     addLead,
     showToast,
+    workspace,
   } = useApp();
   const [isSavingLead, setIsSavingLead] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'kanban' | 'calendar'>('table');
@@ -303,31 +305,66 @@ export default function LeadsCalendarPage() {
               {filteredLeads.length === 0 ? (
                 <tbody>
                   <tr>
-                    <td colSpan={6} className="py-14 px-4 text-center">
-                      <div className="w-44 h-32 mx-auto mb-3 flex items-center justify-center">
-                        <Image
-                          src="/illustrations/gapchi-ai/empty-leads.png"
-                          alt=""
-                          width={180}
-                          height={130}
-                          className="object-contain max-h-32 drop-shadow-sm"
-                        />
-                      </div>
-                      <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                        Список лидов пуст
-                      </h4>
-                      <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
-                        Здесь будут отображаться входящие заявки клиентов, результаты квалификации и слоты Google Календаря.
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
-                        onClick={() => setIsAddModalOpen(true)}
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Добавить лид вручную</span>
-                      </Button>
+                    <td colSpan={6} className="py-12 px-4 text-center">
+                      {searchQuery || statusFilter !== 'ALL' ? (
+                        <>
+                          <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
+                            <SparrowMascot variant="look" size={88} animate={false} />
+                          </div>
+                          <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                            Лиды не найдены
+                          </h4>
+                          <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
+                            По заданным параметрам поиска или фильтрам заявок не обнаружено.
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs font-semibold"
+                            onClick={() => {
+                              setSearchQuery('');
+                              setStatusFilter('ALL');
+                            }}
+                          >
+                            Сбросить фильтры
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
+                            <SparrowMascot
+                              variant={
+                                workspace?.telegramBusinessConnected || workspace?.instagramConnected
+                                  ? 'idle'
+                                  : 'hello'
+                              }
+                              size={88}
+                              animate={false}
+                            />
+                          </div>
+                          <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                            {workspace?.telegramBusinessConnected || workspace?.instagramConnected
+                              ? 'Каналы подключены · Ожидаем заявки'
+                              : 'Список лидов пуст'}
+                          </h4>
+                          <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
+                            {workspace?.telegramBusinessConnected || workspace?.instagramConnected
+                              ? 'ИИ-сотрудник автоматически внесёт клиента в список лидов после первой квалификации в диалоге.'
+                              : 'Здесь будут отображаться входящие заявки клиентов, результаты квалификации и слоты Google Календаря.'}
+                          </p>
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
+                              onClick={() => setIsAddModalOpen(true)}
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Добавить лид вручную</span>
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </td>
                   </tr>
                 </tbody>

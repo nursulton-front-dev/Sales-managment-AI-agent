@@ -172,7 +172,7 @@ const STEP_TITLES = [
 
 export default function NewAgentWizardPage() {
   const router = useRouter();
-  const { createAgent, openSandbox, showToast } = useApp();
+  const { createAgent, openSandbox, showToast, workspace } = useApp();
   const [creationMode, setCreationMode] = useState<'ai' | 'manual'>('ai');
   const [isSavingAgent, setIsSavingAgent] = useState(false);
 
@@ -991,7 +991,9 @@ ${
                     ИИ-сотрудник успешно создан!
                   </h3>
                   <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto mt-1 leading-relaxed">
-                    «{agentName}» сохранен в базе и готов к работе. Вы можете проверить диалог в песочнице прямо сейчас.
+                    {(workspace?.telegramBusinessConnected || (tgVariant === 'custom_bot' && botToken.trim()))
+                      ? `«${agentName}» сохранен в базе и готов к работе в подключённом Telegram-канале.`
+                      : `«${agentName}» сохранен в базе данных. Для запуска ответов клиентам подключите канал связи в Интеграциях.`}
                   </p>
                 </div>
 

@@ -1,11 +1,299 @@
-<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>gapcha — воробей в движении</title><style>*{box-sizing:border-box}body{margin:0;background:#f8f6f1;color:#202020;font-family:Arial,sans-serif}main{max-width:1180px;margin:auto;padding:40px 28px}header{display:flex;justify-content:space-between;border-bottom:1px solid #d8d4cc;padding-bottom:24px}.logo{font-weight:800;font-size:26px}.logo b{color:#ed262a}.tag{font-size:13px;color:#62605b}h1{font-size:clamp(36px,6vw,66px);letter-spacing:-2px;max-width:750px;margin:55px 0 16px}p{line-height:1.6;color:#62605b}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}article{border-top:1px solid #ccc7bd;padding:20px 0}.number{font-size:12px;color:#777}img{display:block;width:100%;max-width:320px;margin:auto}h2{font-size:24px;margin:0}article p{font-size:14px;max-width:280px}button{font:inherit;background:#202020;color:white;border:0;border-radius:8px;padding:14px 22px;cursor:pointer}button:focus-visible{outline:3px solid #ed262a;outline-offset:4px}footer{border-top:1px solid #d8d4cc;padding-top:26px;margin-top:25px;display:flex;align-items:center;gap:24px}footer p{font-size:13px;max-width:600px}@media(max-width:700px){.grid{grid-template-columns:1fr}header{gap:20px}footer{align-items:flex-start;flex-direction:column}h1{letter-spacing:-1px}}@media(prefers-color-scheme:dark){body{background:#191919;color:#f8f6f1}p,.tag{color:#bbb6ad}button{background:#f8f6f1;color:#191919}}</style><main><header><div class="logo">gapcha <b>AI</b></div><span class="tag">МАСКОТ / ПРОБА ДВИЖЕНИЯ</span></header><h1>Маленький помощник.<br>Живой характер.</h1><p>Три движения для мастера настройки и интерфейса платформы.</p><section class="grid"><article><span class="number">01</span><img src="sparrow-loading.svg" alt="Воробей: Загрузка"><h2>Загрузка</h2><p>Мягкий взмах крыльями, пока идёт загрузка.</p></article><article><span class="number">02</span><img src="sparrow-hello.svg" alt="Воробей: Приветствие"><h2>Приветствие</h2><p>Два коротких приветствия — затем спокойная поза.</p></article><article><span class="number">03</span><img src="sparrow-success.svg" alt="Воробей: Готово"><h2>Готово</h2><p>Один прыжок после успешного действия.</p></article></section><footer><button id="pause" type="button" aria-pressed="false">Остановить движение</button><button type="button" onclick="location.reload()">Повторить анимации ↗</button><p>При включённом уменьшении движения в настройках устройства персонажи остаются статичными. Это демонстрация, а не состояние подключений платформы.</p></footer></main><script>
-const pause = document.getElementById('pause');
-const birds = [...document.querySelectorAll('article img')];
-birds.forEach(img => { img.dataset.animated = img.getAttribute('src'); });
-pause.addEventListener('click', () => {
- const stopped = pause.getAttribute('aria-pressed') !== 'true';
- pause.setAttribute('aria-pressed', String(stopped));
- pause.textContent = stopped ? 'Включить движение' : 'Остановить движение';
- birds.forEach(img => { img.src = stopped ? 'sparrow-idle.svg' : img.dataset.animated; });
-});
-</script></html>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>gapcha AI — анимированный воробей-маскот</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f8f6f1;
+      color: #202020;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.5;
+    }
+    main {
+      max-width: 1200px;
+      margin: auto;
+      padding: 40px 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #d8d4cc;
+      padding-bottom: 24px;
+    }
+    .logo {
+      font-weight: 800;
+      font-size: 24px;
+      letter-spacing: -0.5px;
+    }
+    .logo b { color: #ed262a; }
+    .tag {
+      font-size: 12px;
+      font-weight: 600;
+      color: #62605b;
+      letter-spacing: 0.05em;
+    }
+    h1 {
+      font-size: clamp(32px, 5vw, 56px);
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      max-width: 800px;
+      margin: 48px 0 16px;
+    }
+    .lead {
+      font-size: 16px;
+      color: #62605b;
+      max-width: 700px;
+      line-height: 1.6;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      margin: 40px 0;
+    }
+    article {
+      border: 1px solid #d8d4cc;
+      border-radius: 16px;
+      background: #ffffff;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: box-shadow 0.2s ease;
+    }
+    article:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .number {
+      font-size: 11px;
+      font-weight: 700;
+      color: #ed262a;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: #f8f6f1;
+      border-radius: 12px;
+      color: #62605b;
+    }
+    .img-wrap {
+      width: 100%;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #faf9f6;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    img {
+      display: block;
+      width: 160px;
+      height: 160px;
+      object-fit: contain;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+    article p {
+      font-size: 13px;
+      color: #62605b;
+      line-height: 1.5;
+    }
+    .timing {
+      margin-top: auto;
+      padding-top: 12px;
+      font-size: 11px;
+      color: #8c887e;
+      border-top: 1px dashed #e8e4dc;
+    }
+    footer {
+      border-top: 1px solid #d8d4cc;
+      padding-top: 28px;
+      margin-top: 32px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    button {
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      background: #202020;
+      color: white;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 20px;
+      cursor: pointer;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    button:hover { background: #333333; }
+    button.secondary {
+      background: transparent;
+      color: #202020;
+      border: 1px solid #ccc7bd;
+    }
+    button.secondary:hover { background: #efece5; }
+    button:focus-visible {
+      outline: 3px solid #ed262a;
+      outline-offset: 3px;
+    }
+    footer p {
+      font-size: 12px;
+      color: #777;
+      max-width: 540px;
+      line-height: 1.5;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #151515; color: #f8f6f1; }
+      header { border-bottom-color: #2e2e2e; }
+      .lead, .tag { color: #a8a49c; }
+      article { background: #1c1c1c; border-color: #2a2a2a; }
+      .img-wrap { background: #242424; }
+      .badge { background: #2a2a2a; color: #a8a49c; }
+      article p { color: #a8a49c; }
+      .timing { border-top-color: #2e2e2e; color: #777; }
+      footer { border-top-color: #2a2a2a; }
+      button { background: #f8f6f1; color: #151515; }
+      button:hover { background: #e5e2dc; }
+      button.secondary { color: #f8f6f1; border-color: #444; }
+      button.secondary:hover { background: #262626; }
+      footer p { color: #888; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="logo">gapcha <b>AI</b></div>
+      <span class="tag">ВЕКТОРНЫЙ МАСКОТ / СИСТЕМА ДВИЖЕНИЯ</span>
+    </header>
+
+    <h1>Маленький помощник.<br>Живой, сдержанный характер.</h1>
+    <p class="lead">
+      Четыре целевых состояния для мастера настройки, кабинета и навигации платформы. 
+      Анимации завершаются за 1–2 цикла и переходят в статичную позу, чтобы не отвлекать от чтения и работы.
+    </p>
+
+    <section class="grid">
+      <!-- 01 Loading -->
+      <article>
+        <div class="card-header">
+          <span class="number">01 • Загрузка</span>
+          <span class="badge">Кабинет / Инференс</span>
+        </div>
+        <div class="img-wrap">
+          <img src="sparrow-loading.svg" alt="Воробей: Загрузка" class="mascot-img">
+        </div>
+        <h2>Загрузка раздела</h2>
+        <p>Мягкий взмах крыльями при переходе в крупный раздел или ожидании генерации промпта в ИИ-мастере.</p>
+        <div class="timing">Пока идёт сетевой запрос • задержка 220ms от мерцания</div>
+      </article>
+
+      <!-- 02 Hello -->
+      <article>
+        <div class="card-header">
+          <span class="number">02 • Приветствие</span>
+          <span class="badge">Шаг 1 Мастера / Демо</span>
+        </div>
+        <div class="img-wrap">
+          <img src="sparrow-hello.svg" alt="Воробей: Приветствие" class="mascot-img">
+        </div>
+        <h2>Приветствие</h2>
+        <p>Кратко машет крылом и подмигивает ровно два раза при открытии первого шага настройки, затем спокойно замирает.</p>
+        <div class="timing">Ровно 2 цикла (3.6 сек) → статичная поза</div>
+      </article>
+
+      <!-- 03 Success -->
+      <article>
+        <div class="card-header">
+          <span class="number">03 • Успех</span>
+          <span class="badge">Сохранение / Запуск</span>
+        </div>
+        <div class="img-wrap">
+          <img src="sparrow-success.svg" alt="Воробей: Готово" class="mascot-img">
+        </div>
+        <h2>Готово</h2>
+        <p>Один радостный прыжок и дружелюбный жест после подтверждённого сервером создания сценария.</p>
+        <div class="timing">Ровно 1 цикл (1.1 сек) → статичная поза</div>
+      </article>
+
+      <!-- 04 Look / 404 -->
+      <article>
+        <div class="card-header">
+          <span class="number">04 • Поиск / 404</span>
+          <span class="badge">Навигация / Пусто</span>
+        </div>
+        <div class="img-wrap">
+          <img src="sparrow-look.svg" alt="Воробей: Поиск / 404" class="mascot-img">
+        </div>
+        <h2>Страница не найдена</h2>
+        <p>Воробей у деревянного указателя с любопытством оглядывается один раз, помогая сориентироваться без раздражения.</p>
+        <div class="timing">Ровно 1 наклон головы (1.8 сек) → спокойная поза</div>
+      </article>
+
+      <!-- 05 Idle Reference -->
+      <article>
+        <div class="card-header">
+          <span class="number">05 • Покой</span>
+          <span class="badge">Рабочие экраны</span>
+        </div>
+        <div class="img-wrap">
+          <img src="sparrow-idle.svg" alt="Воробей: Покой" class="mascot-img">
+        </div>
+        <h2>Покой (Idle)</h2>
+        <p>Полное отсутствие движения, мигания и прыжков. Безопасная нейтральная форма для таблиц, настроек и ошибок.</p>
+        <div class="timing">Статичный вектор • 0% CPU • 0 отвлечения</div>
+      </article>
+    </section>
+
+    <footer>
+      <div class="controls">
+        <button id="pause" type="button" aria-pressed="false">Остановить движение</button>
+        <button type="button" class="secondary" onclick="location.reload()">Повторить анимации ↗</button>
+      </div>
+      <p>
+        При включённом системном режиме <code>prefers-reduced-motion: reduce</code> все персонажи автоматически отображаются в статичной позе без движения. Декоративные иконки имеют <code>alt=""</code> и <code>aria-hidden="true"</code>.
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    const pause = document.getElementById('pause');
+    const birds = Array.from(document.querySelectorAll('.mascot-img'));
+    birds.forEach(img => { img.dataset.animated = img.getAttribute('src'); });
+
+    pause.addEventListener('click', () => {
+      const isStopped = pause.getAttribute('aria-pressed') !== 'true';
+      pause.setAttribute('aria-pressed', String(isStopped));
+      pause.textContent = isStopped ? 'Включить движение' : 'Остановить движение';
+      birds.forEach(img => {
+        img.src = isStopped ? 'sparrow-idle.svg' : img.dataset.animated;
+      });
+    });
+  </script>
+</body>
+</html>

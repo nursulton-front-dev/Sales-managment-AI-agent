@@ -9,6 +9,7 @@ import { PLANS, TRIAL_PLAN } from '@/lib/pricing';
 export type LandingLocale = 'ru' | 'uz';
 
 export interface LandingContent {
+  lang: LandingLocale;
   meta: {
     title: string;
     description: string;
@@ -169,6 +170,7 @@ export interface LandingContent {
 
 export const LANDING_CONTENT: Record<LandingLocale, LandingContent> = {
   ru: {
+    lang: 'ru',
     meta: {
       title: 'gapcha AI — ИИ-сотрудники для продаж и клиентского сервиса',
       description: 'Отвечайте клиентам вовремя — даже когда вы заняты. Автоответы в Telegram, Instagram Direct и на сайте, квалификация обращений и сбор лидов из одного кабинета.',
@@ -574,6 +576,7 @@ export const LANDING_CONTENT: Record<LandingLocale, LandingContent> = {
   },
 
   uz: {
+    lang: 'uz',
     meta: {
       title: "gapcha AI — Savdo va mijozlarga xizmat ko'rsatish uchun AI-xodimlar",
       description: "Mijozlarga o'z vaqtida javob bering — hatto band bo'lsangiz ham. Telegram, Instagram Direct va saytda tezkor javoblar, mijozlarni saralash va yagona kabinetda boshqaruv.",

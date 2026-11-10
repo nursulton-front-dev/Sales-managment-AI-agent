@@ -43,6 +43,7 @@ next-env.d.ts
 
 # local persistent data
 /.data/
+/scripts/backups/
 .neon
 .secrets/
 .system_backup/

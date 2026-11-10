@@ -9,6 +9,7 @@ import { messageText } from '@/lib/message-text';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { SparrowMascot } from '@/components/ui/SparrowMascot';
 import {
   MessageSquare,
   Search,
@@ -49,7 +50,11 @@ interface Message {
 }
 
 export default function ConversationsPage() {
-  const { user, showToast } = useApp();
+  const { user, workspace, openSandbox, showToast } = useApp();
+  const hasConnectedChannels = Boolean(
+    workspace?.telegramBusinessConnected ||
+    workspace?.instagramConnected
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [messageError, setMessageError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -313,17 +318,19 @@ export default function ConversationsPage() {
               {filteredConversations.length === 0 ? (
                 <div className="p-8 text-center text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/70 space-y-3">
                   <div className="w-16 h-14 mx-auto flex items-center justify-center">
-                    <Image
-                      src="/illustrations/gapchi-ai/empty-inbox.png"
-                      alt=""
-                      width={64}
-                      height={50}
-                      className="object-contain max-h-14 opacity-80"
+                    <SparrowMascot
+                      variant={searchQuery ? 'look' : 'idle'}
+                      size={52}
+                      animate={false}
                     />
                   </div>
                   <p>
-                    {conversations.length
+                    {searchQuery
+                      ? `По запросу «${searchQuery}» диалогов не найдено.`
+                      : conversations.length
                       ? 'Диалогов по заданным фильтрам не найдено.'
+                      : hasConnectedChannels
+                      ? 'Диалогов пока нет. Ожидаем входящие сообщения.'
                       : 'Диалогов пока нет. Подключите канал общения в интеграциях.'}
                   </p>
                 </div>
@@ -545,33 +552,80 @@ export default function ConversationsPage() {
                 </form>
               </>
             ) : (
-              /* Empty state with empty-conversations illustration */
+              /* Empty state with SparrowMascot distinguishing search, connected channel, and initial setup */
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-xs">
-                <div className="w-48 h-36 mx-auto mb-4 flex items-center justify-center">
-                  <Image
-                    src="/illustrations/gapchi-ai/empty-conversations.png"
-                    alt=""
-                    width={220}
-                    height={150}
-                    className="object-contain max-h-36 drop-shadow-md"
-                  />
-                </div>
-                <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                  Здесь будут сообщения клиентов
-                </h3>
-                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
-                  {conversations.length
-                    ? 'Выберите диалог из списка слева, чтобы просмотреть переписку и ответить.'
-                    : 'Подключите канал связи, чтобы бот начал отвечать клиентам.'}
-                </p>
-                {!conversations.length && (
-                  <Link
-                    href="/dashboard/integrations"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs mt-4 shadow-2xs"
-                  >
-                    <span>Подключить канал</span>
-                    <ArrowRight size={14} />
-                  </Link>
+                {searchQuery ? (
+                  <>
+                    <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
+                      <SparrowMascot variant="look" size={96} animate={false} />
+                    </div>
+                    <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      Ничего не найдено
+                    </h3>
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
+                      По поисковому запросу «{searchQuery}» диалогов не найдено.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="mt-4 px-3.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors cursor-pointer"
+                    >
+                      Сбросить поиск
+                    </button>
+                  </>
+                ) : conversations.length === 0 ? (
+                  hasConnectedChannels ? (
+                    <>
+                      <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
+                        <SparrowMascot variant="idle" size={96} animate={false} />
+                      </div>
+                      <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                        Каналы связи подключены
+                      </h3>
+                      <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
+                        Ожидаем входящие сообщения клиентов. Вы можете проверить ответы прямо сейчас в интерактивной песочнице.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => openSandbox()}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs mt-4 shadow-2xs cursor-pointer"
+                      >
+                        <PlayCircle size={14} />
+                        <span>Открыть тест-драйв</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
+                        <SparrowMascot variant="hello" size={96} animate={false} />
+                      </div>
+                      <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                        Здесь будут сообщения клиентов
+                      </h3>
+                      <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
+                        Подключите канал связи, чтобы бот начал отвечать клиентам.
+                      </p>
+                      <Link
+                        href="/dashboard/integrations"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs mt-4 shadow-2xs"
+                      >
+                        <span>Подключить канал</span>
+                        <ArrowRight size={14} />
+                      </Link>
+                    </>
+                  )
+                ) : (
+                  <>
+                    <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
+                      <SparrowMascot variant="hint" size={88} animate={false} />
+                    </div>
+                    <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      Диалог не выбран
+                    </h3>
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
+                      Выберите диалог из списка слева, чтобы просмотреть переписку и ответить клиенту.
+                    </p>
+                  </>
                 )}
               </div>
             )}
