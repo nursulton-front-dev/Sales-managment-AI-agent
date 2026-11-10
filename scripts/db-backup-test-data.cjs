@@ -9,6 +9,8 @@
  * - Never outputs raw backup contents or secret tokens to stdout.
  * - Non-zero exit code (1) on any failure.
  */
+const dns = require('dns');
+if (dns.setDefaultResultOrder) dns.setDefaultResultOrder('ipv4first');
 const { neon } = require('@neondatabase/serverless');
 const fs = require('fs');
 const path = require('path');

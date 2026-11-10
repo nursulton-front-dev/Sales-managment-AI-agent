@@ -13,12 +13,25 @@
  * 7. Non-zero exit code (1) on any failure or invariant breach.
  * 8. Never deletes unless explicitly confirmed.
  */
+const dns = require('dns');
+if (dns.setDefaultResultOrder) dns.setDefaultResultOrder('ipv4first');
 const { neon } = require('@neondatabase/serverless');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { ensureSecureDir, writeSecureFile } = require('./db-backup-test-data.cjs');
 const { verifyChecksum } = require('./db-restore-test-data.cjs');
+
+async function retryQuery(fn, retries = 3) {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === retries) throw err;
+      await new Promise(r => setTimeout(r, 400 * i));
+    }
+  }
+}
 
 function getDatabaseUrl() {
   const envPath = path.join(__dirname, '..', '.env.local');
@@ -58,7 +71,7 @@ async function main() {
   // Validate workspace if provided
   let workspace = null;
   if (targetWorkspaceId) {
-    const wsList = await sql`SELECT id, company_name, owner_email, token_balance, status FROM workspaces WHERE id = ${targetWorkspaceId}`;
+    const wsList = await retryQuery(() => sql`SELECT id, company_name, owner_email, token_balance, status FROM workspaces WHERE id = ${targetWorkspaceId}`);
     if (wsList.length === 0) {
       console.error(`❌ FATAL ERROR: Workspace ID '${targetWorkspaceId}' does not exist in database.`);
       process.exit(1);
@@ -199,7 +212,7 @@ async function main() {
   const backupApptIds = new Set((backupData.appointments || []).map((a) => a.id));
   const backupOrderIds = new Set((backupData.orders || []).map((o) => o.id));
   const backupEventIds = new Set((backupData.channelEvents || []).map((e) => e.id));
-  const backupBindingIds = new Set((backupData.telegramBusinessBindings || []).map((b) => b.id));
+  const backupBindingIds = new Set(((backupData.telegramBindings || backupData.telegramBusinessBindings) || []).map((b) => b.id));
 
   for (const cId of manifestData.recordIds.conversationIds || []) {
     if (!backupConvIds.has(cId)) {
@@ -247,23 +260,23 @@ async function main() {
 
   // Gate 3: Concurrency protection & preserve original workspace status
   console.log('🔒 Gate 3: Preserving workspace status, pausing workspace and stopping queue events...');
-  const wsRows = await sql`SELECT status FROM workspaces WHERE id = ${targetWorkspaceId}`;
+  const wsRows = await retryQuery(() => sql`SELECT status FROM workspaces WHERE id = ${targetWorkspaceId}`);
   if (wsRows.length === 0) {
     console.error(`❌ FATAL ERROR: Workspace ${targetWorkspaceId} not found!`);
     process.exit(1);
   }
   const originalStatus = wsRows[0].status;
-  await sql`UPDATE workspaces SET status = 'maintenance' WHERE id = ${targetWorkspaceId}`;
+  await retryQuery(() => sql`UPDATE workspaces SET status = 'maintenance' WHERE id = ${targetWorkspaceId}`);
 
   try {
     // Cancel any active channel queue events for these conversations
     if (manifestData.recordIds.conversationIds.length > 0) {
-      await sql`
+      await retryQuery(() => sql`
         UPDATE channel_events
         SET status = 'ignored', locked_until = NULL, error_code = 'maintenance_cleanup'
         WHERE conversation_id = ANY(${manifestData.recordIds.conversationIds})
           AND workspace_id = ${targetWorkspaceId}
-      `;
+      `);
     }
 
     // Gate 4: Transactional deletion by exact frozen ID list bounded by workspace_id
@@ -307,19 +320,19 @@ async function main() {
     }
 
     if (txQueries.length > 0) {
-      await sql.transaction(txQueries);
+      await retryQuery(() => sql.transaction(txQueries));
     }
 
     console.log('✅ Transactional deletion committed successfully.');
   } catch (err) {
     console.error('❌ Deletion failed in transaction:', err);
     // Restore original workspace status on failure
-    await sql`UPDATE workspaces SET status = ${originalStatus} WHERE id = ${targetWorkspaceId}`.catch(() => {});
+    await retryQuery(() => sql`UPDATE workspaces SET status = ${originalStatus} WHERE id = ${targetWorkspaceId}`).catch(() => {});
     process.exit(1);
   } finally {
     // Restore original workspace status
     console.log(`🔓 Restoring workspace back to original status (${originalStatus})...`);
-    await sql`UPDATE workspaces SET status = ${originalStatus} WHERE id = ${targetWorkspaceId}`.catch(() => {});
+    await retryQuery(() => sql`UPDATE workspaces SET status = ${originalStatus} WHERE id = ${targetWorkspaceId}`).catch(() => {});
   }
 
   console.log('\n🎉 Cleanup of frozen candidate records finished successfully.');

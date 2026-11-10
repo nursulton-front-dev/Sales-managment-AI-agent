@@ -9,6 +9,8 @@
  * - Idempotent via ON CONFLICT DO NOTHING.
  * - Exits with code 1 on any error.
  */
+const dns = require('dns');
+if (dns.setDefaultResultOrder) dns.setDefaultResultOrder('ipv4first');
 const { neon } = require('@neondatabase/serverless');
 const fs = require('fs');
 const path = require('path');

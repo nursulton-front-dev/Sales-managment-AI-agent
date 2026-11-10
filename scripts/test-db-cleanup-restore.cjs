@@ -9,6 +9,8 @@
  * 5. Full restoration from backup with checksum validation.
  * 6. Isolated workspace cleanup after test completion.
  */
+const dns = require('dns');
+if (dns.setDefaultResultOrder) dns.setDefaultResultOrder('ipv4first');
 const { neon } = require('@neondatabase/serverless');
 const fs = require('fs');
 const path = require('path');
@@ -65,7 +67,8 @@ async function run() {
 
     // 3. Run targeted backup for this isolated workspace
     console.log('2️⃣ Running targeted backup for isolated workspace...');
-    const backupOutput = execSync(`node scripts/db-backup-test-data.cjs --workspace=${testWsId}`, { encoding: 'utf8' });
+    const execEnv = { ...process.env, NODE_OPTIONS: '--dns-result-order=ipv4first' };
+    const backupOutput = execSync(`node scripts/db-backup-test-data.cjs --workspace=${testWsId}`, { encoding: 'utf8', env: execEnv });
     const backupFileMatch = backupOutput.match(/Backup saved to: (.+)/);
     assert(backupFileMatch, 'Backup output should provide saved file path');
     const backupRelPath = backupFileMatch[1].trim();
@@ -81,7 +84,7 @@ async function run() {
 
     // 4. Generate frozen candidate manifest
     console.log('3️⃣ Generating frozen candidate manifest...');
-    const dryRunOutput = execSync(`node scripts/db-cleanup-dry-run.cjs --workspace=${testWsId}`, { encoding: 'utf8' });
+    const dryRunOutput = execSync(`node scripts/db-cleanup-dry-run.cjs --workspace=${testWsId}`, { encoding: 'utf8', env: execEnv });
     const manifestMatch = dryRunOutput.match(/Path: (.+)/);
     assert(manifestMatch, 'Dry-run must output generated manifest path');
     const manifestRelPath = manifestMatch[1].trim();
@@ -107,7 +110,7 @@ async function run() {
     console.log('5️⃣ Executing targeted cleanup with frozen manifest and verified backup...');
     execSync(
       `node scripts/db-cleanup-dry-run.cjs --execute --workspace=${testWsId} --manifest=${manifestRelPath} --backup=${backupRelPath}`,
-      { encoding: 'utf8' }
+      { encoding: 'utf8', env: execEnv }
     );
 
     // 7. Check database state: Old records deleted, post-freeze records PRESERVED
@@ -125,7 +128,7 @@ async function run() {
 
     // 8. Restore from backup
     console.log('7️⃣ Restoring deleted records from backup...');
-    execSync(`node scripts/db-restore-test-data.cjs --backup=${backupRelPath} --execute`, { encoding: 'utf8' });
+    execSync(`node scripts/db-restore-test-data.cjs --backup=${backupRelPath} --execute`, { encoding: 'utf8', env: execEnv });
 
     // 9. Check restored state
     const [cRestored] = await sql`SELECT count(*)::int as count FROM conversations WHERE id IN (${conv1Id}, ${conv2Id})`;
