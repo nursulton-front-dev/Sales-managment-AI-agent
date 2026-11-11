@@ -219,75 +219,102 @@ ${tuningInstruction ? `\nДОПОЛНИТЕЛЬНАЯ ИНСТРУКЦИЯ ПО�
 
       const lowerMsg = (message || '').toLowerCase();
 
-      // Niche detection from message if still in step 1
+      // Niche detection & 1-question-per-step progression
       if (step === 1) {
-        if (lowerMsg.includes('курс') || lowerMsg.includes('учеб') || lowerMsg.includes('repetitor') || lowerMsg.includes('maktab') || lowerMsg.includes('dars')) {
-          updatedDraft.nicheTemplate = 'courses';
-        } else if (lowerMsg.includes('маркетинг') || lowerMsg.includes('реклам') || lowerMsg.includes('smm') || lowerMsg.includes('target')) {
-          updatedDraft.nicheTemplate = 'marketing';
-        } else if (lowerMsg.includes('салон') || lowerMsg.includes('клиник') || lowerMsg.includes('услуг') || lowerMsg.includes('remont') || lowerMsg.includes('xizmat')) {
-          updatedDraft.nicheTemplate = 'services';
-        }
-
-        // Check if user specified a name
-        if (lowerMsg.includes('зовут') || lowerMsg.includes('имя') || lowerMsg.includes('nomi')) {
-          const nameMatch = message.match(/(?:зовут|имя|назови|nomi)\s+["«]?([A-Za-zА-Яа-яЁё0-9\s]+)["»]?/i);
-          if (nameMatch && nameMatch[1]) {
-            updatedDraft.name = nameMatch[1].trim();
+        if (!updatedDraft.subStep || updatedDraft.subStep === 'niche') {
+          // Detect niche
+          if (lowerMsg.includes('курс') || lowerMsg.includes('учеб') || lowerMsg.includes('repetitor') || lowerMsg.includes('maktab') || lowerMsg.includes('dars') || lowerMsg.includes('ingliz')) {
+            updatedDraft.nicheTemplate = 'courses';
+          } else if (lowerMsg.includes('маркетинг') || lowerMsg.includes('реклам') || lowerMsg.includes('smm') || lowerMsg.includes('target')) {
+            updatedDraft.nicheTemplate = 'marketing';
+          } else if (lowerMsg.includes('салон') || lowerMsg.includes('клиник') || lowerMsg.includes('услуг') || lowerMsg.includes('remont') || lowerMsg.includes('xizmat') || lowerMsg.includes('go\'zallik') || lowerMsg.includes('shifoxona')) {
+            updatedDraft.nicheTemplate = 'services';
+          } else if (lowerMsg.includes('магазин') || lowerMsg.includes('do\'kon') || lowerMsg.includes('kiyim') || lowerMsg.includes('savdo')) {
+            updatedDraft.nicheTemplate = 'other';
           }
+
+          if (lowerMsg.includes('зовут') || lowerMsg.includes('имя') || lowerMsg.includes('nomi')) {
+            const nameMatch = message.match(/(?:зовут|имя|назови|nomi)\s+["«]?([A-Za-zА-Яа-яЁё0-9\s]+)["»]?/i);
+            if (nameMatch && nameMatch[1]) {
+              updatedDraft.name = nameMatch[1].trim();
+            }
+          }
+
+          updatedDraft.subStep = 'goal';
+          const arch = ARCHETYPES[updatedDraft.nicheTemplate] || ARCHETYPES.courses;
+
+          reply = isUz
+            ? `Tushunarli! Sizning yo‘nalishingiz: «${arch.titleUz}». Endi xodimning asosiy vazifasini aniqlaymiz: u nima qilishi kerak — narxlar bo‘yicha maslahat berish, qabulga yozish yoki arizalarni saralashmi?`
+            : `Отлично! Сфера бизнеса зафиксирована: «${arch.titleRu}». Какая главная задача будет у сотрудника — консультация по ценам, запись на приём или сбор и квалификация заявок?`;
+
+          suggestedAnswers = isUz
+            ? ['Narxlar bo‘yicha maslahat berish', 'Qabulga yoki sinov darsiga yozish', 'Mijozlarni saralash va kontaktlarni yig‘ish']
+            : ['Консультация по ценам и прайсу', 'Запись на приём или пробный урок', 'Квалификация и сбор контактов'];
+        } else if (updatedDraft.subStep === 'goal') {
+          // Record goal
+          updatedDraft.targetGoal = message.trim();
+          updatedDraft.goalConfirmed = true;
+          updatedDraft.subStep = 'knowledge';
+          nextStep = 2;
+          updatedDraft.currentStep = nextStep;
+
+          const arch = ARCHETYPES[updatedDraft.nicheTemplate] || ARCHETYPES.courses;
+          reply = isUz
+            ? `Qabul qilindi! Xodimning asosiy vazifasi belgilandi. Endi u bilishi kerak bo‘lgan asosiy xizmatlar va narxlar qanday? Namunadagi narxlarni tasdiqlashingiz, o‘z narxlaringizni yozishingiz yoki fayl yuklashingiz mumkin.`
+            : `Принято! Главная задача сотрудника сохранена в резюме. Какие ключевые услуги и цены он должен знать? Вы можете подтвердить базовый прайс-лист, ввести свои цены или прикрепить файл.`;
+
+          suggestedAnswers = isUz
+            ? ['Namunadagi narxlarni tasdiqlash', 'O‘z narxlarimni yozaman', 'Fayl biriktiraman']
+            : ['Подтвердить цены из образца', 'Напишу цены своими словами', 'Прикреплю файл с прайсом'];
         }
-
-        // Advance to step 2 after first exchange
-        nextStep = 2;
-        updatedDraft.currentStep = nextStep;
-
-        const arch = ARCHETYPES[updatedDraft.nicheTemplate];
-        reply = isUz
-          ? `Tushunarli! Sizning yo'nalishingiz: «${arch.titleUz}». Xodimning maqsadi: mijozlarga to'g'ri maslahat berish va qabulga yozish.\n\nKeling, xizmatlar va narxlarni aniqlaymiz: ${arch.interviewQuestionsUz[0]}`
-          : `Отлично! Выбрано направление «${arch.titleRu}». Главная цель сотрудника — быстро отвечать клиентам и вести запись.\n\nДавайте определим ключевые услуги и стоимость: ${arch.interviewQuestionsRu[0]}`;
-
-        suggestedAnswers = isUz
-          ? ['Narxlarimiz namunadagi kabi', 'Fayl yoki matn yuboraman', 'Hozircha aniq emas']
-          : ['Цены как в образце', 'Вставлю наш прайс-лист', 'Пока не знаю'];
       } else if (step === 2) {
         // Step 2: Knowledge & Pricing & Rules
-        if (lowerMsg.includes('запрет') || lowerMsg.includes('нельзя') || lowerMsg.includes('mumkin emas')) {
-          updatedDraft.restrictions.push(message.slice(0, 200));
-        } else if (message.length > 10 && !lowerMsg.includes('дальше') && !lowerMsg.includes('keyingi')) {
-          // Append user's answer into servicesAndPricing or restrictions
+        if (lowerMsg.includes('образц') || lowerMsg.includes('намун') || lowerMsg.includes('подтвержд') || lowerMsg.includes('tasdiq')) {
+          updatedDraft.pricingConfirmed = true;
+        } else if (message.length > 5) {
           if (!updatedDraft.servicesAndPricing.includes(message)) {
             updatedDraft.servicesAndPricing = `${updatedDraft.servicesAndPricing}\n- ${message.slice(0, 500)}`;
           }
+          updatedDraft.pricingConfirmed = true;
+        }
+
+        if (lowerMsg.includes('запрет') || lowerMsg.includes('нельзя') || lowerMsg.includes('mumkin emas')) {
+          updatedDraft.restrictions.push(message.slice(0, 200));
         }
 
         nextStep = 3;
         updatedDraft.currentStep = nextStep;
+        updatedDraft.subStep = 'review';
 
         reply = isUz
-          ? `Ma'lumotlar saqlandi! Xodimning dastlabki bilimlari shakllantirildi. Endi o'ng tomondagi qoralamani tekshirishingiz yoki pastdagi «Test-drayv» orqali xodim bilan sinov tariqasida yozishib ko'rishingiz mumkin.\n\nAgar hammasi ma'qul bo'lsa, «Ishga tushirish» bosqichiga o'tamiz.`
-          : `Отлично! Знания и прайс-лист зафиксированы в черновике. Теперь вы можете проверить карточку сотрудника справа или протестировать его ответы во вкладке «Тестовый диалог».\n\nХотите что-то скорректировать (например, тон или ограничения) или переходим к запуску?`;
+          ? `Bilimlar va narxlar o‘ng tomondagi qoralamada saqlandi! Endi xodimning javoblarini test-drayvda sinab ko‘rishingiz yoki ishga tushirish bosqichiga o‘tishingiz mumkin.`
+          : `Знания и прайс-лист зафиксированы в резюме справа! Теперь вы можете проверить ответы сотрудника в тест-драйве или сразу перейти к запуску.`;
 
         suggestedAnswers = isUz
-          ? ['Javoblarni sinab ko\'rish', 'Qisqaroq javob ber', 'Hammasi tayyor, ishga tushirish']
-          : ['Протестировать ответы', 'Отвечай короче', 'Всё готово, к запуску'];
+          ? ['Javoblarni test-drayvda sinash', 'Hammasi tayyor, ishga tushirish']
+          : ['Проверить в тест-драйве', 'Всё готово, к запуску'];
       } else if (step === 3) {
         // Step 3: Review & Tuning
         if (lowerMsg.includes('короче') || lowerMsg.includes('qisqa')) {
           updatedDraft.tone = 'consultative';
-          reply = isUz ? `Qabul qilindi! Xodim maksimal darajada qisqa va lo'nda javob beradi.` : `Принято! Ответы сотрудника сделаны более краткими и емкими.`;
+          reply = isUz ? `Qabul qilindi! Xodim maksimal darajada qisqa va lo‘nda javob beradi.` : `Принято! Ответы сотрудника сделаны более краткими и ёмкими.`;
+          suggestedAnswers = isUz
+            ? ['Ishga tushirish', 'Test-drayvni davom ettirish']
+            : ['Перейти к запуску', 'Продолжить тест'];
         } else if (lowerMsg.includes('готов') || lowerMsg.includes('запуск') || lowerMsg.includes('tayyor')) {
           nextStep = 4;
           updatedDraft.currentStep = nextStep;
+          updatedDraft.subStep = 'launch';
           reply = isUz
-            ? `Ajoyib! Xodim to'liq sozlangan va ishga tushirishga tayyor. O'ng tomondan kerakli aloqa kanallarini (Telegram, Instagram, Sayt vidjeti) tanlang va «Xodimni yaratish» tugmasini bosing.`
-            : `Замечательно! Сотрудник полностью настроен и готов к работе. Выберите каналы связи (Telegram, Instagram, Виджет сайта) и нажмите «Создать сотрудника».`;
+            ? `Ajoyib! Xodim to‘liq sozlangan va ishga tushirishga tayyor. O‘ng tomondan aloqa kanalini tekshiring va «Saqlash va ishga tushirish» tugmasini bosing.`
+            : `Замечательно! Сотрудник полностью настроен и готов к работе. Проверьте каналы связи и нажмите «Сохранить и запустить».`;
           suggestedAnswers = isUz
-            ? ['Xodimni yaratish', 'Orqaga qaytish']
-            : ['Создать сотрудника', 'Вернуться назад'];
+            ? ['Saqlash va ishga tushirish', 'Orqaga qaytish']
+            : ['Сохранить и запустить', 'Вернуться назад'];
         } else {
           reply = isUz
-            ? `Qoralama yangilandi. Sinov muloqotida yangi javoblarni ko'rishingiz mumkin. Agar yakunlashga tayyor bo'lsangiz, «Ishga tushirish» tugmasini bosing.`
-            : `Черновик обновлен. Вы можете продолжить тестовый диалог или перейти к запуску сотрудника.`;
+            ? `Qoralama yangilandi. Sinov muloqotida yangi javoblarni ko‘rishingiz mumkin. Agar yakunlashga tayyor bo‘lsangiz, «Ishga tushirish» tugmasini bosing.`
+            : `Резюме обновлено. Вы можете протестировать ответы или перейти к запуску сотрудника.`;
           suggestedAnswers = isUz
             ? ['Ishga tushirish', 'Test-drayvni davom ettirish']
             : ['Перейти к запуску', 'Продолжить тест'];
@@ -295,8 +322,11 @@ ${tuningInstruction ? `\nДОПОЛНИТЕЛЬНАЯ ИНСТРУКЦИЯ ПО�
       } else {
         // Step 4: Final checks
         reply = isUz
-          ? `Xodim yaratilishga tayyor. «Xodimni yaratish» tugmasini bosing.`
-          : `Сотрудник готов к сохранению. Нажмите кнопку «Создать сотрудника» для фиксации.`;
+          ? `Xodim saqlanishga tayyor. «Saqlash va ishga tushirish» tugmasini bosing.`
+          : `Сотрудник готов к сохранению. Нажмите кнопку «Сохранить и запустить».`;
+        suggestedAnswers = isUz
+          ? ['Saqlash va ishga tushirish']
+          : ['Сохранить и запустить'];
       }
 
       updatedDraft.updatedAt = new Date().toISOString();

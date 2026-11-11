@@ -50,7 +50,7 @@ interface Message {
 }
 
 export default function ConversationsPage() {
-  const { user, workspace, openSandbox, showToast } = useApp();
+  const { user, workspace, openSandbox, showToast, locale, t } = useApp();
   const hasConnectedChannels = Boolean(
     workspace?.telegramBusinessConnected ||
     workspace?.instagramConnected
@@ -188,15 +188,15 @@ export default function ConversationsPage() {
         );
         showToast(
           newStatus === 'human_takeover'
-            ? 'Режим ручного ответа включен'
-            : 'ИИ вернулся к ответам клиенту',
+            ? (locale === 'uz' ? 'Qo‘lda javob berish rejimi yoqildi' : 'Режим ручного ответа включен')
+            : (locale === 'uz' ? 'AI mijozga javob berishga qaytdi' : 'ИИ вернулся к ответам клиенту'),
           '',
           'info'
         );
       }
     } catch (err) {
       showToast(
-        'Не удалось изменить режим ответа',
+        locale === 'uz' ? 'Javob berish rejimini o‘zgartirib bo‘lmadi' : 'Не удалось изменить режим ответа',
         err instanceof Error ? err.message : 'Ошибка сети',
         'error'
       );
@@ -257,8 +257,8 @@ export default function ConversationsPage() {
     <div className="space-y-6 w-full pb-8 text-left">
       {/* Top Header */}
       <PageHeader
-        title="Диалоги"
-        description="Входящие сообщения клиентов из Telegram, Instagram и виджета сайта."
+        title={t.conversations.title}
+        description={t.conversations.subtitle}
       />
 
       <DataState loading={isLoading} error={loadError} retry={loadConversations} />
@@ -281,7 +281,7 @@ export default function ConversationsPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Поиск по диалогам..."
+                  placeholder={t.conversations.searchPlaceholder}
                   className="w-full pl-8 pr-3 py-1.5 text-xs bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] rounded-xl text-[var(--text-primary)] dark:text-[#F4F7FB] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
                 />
               </div>
@@ -289,9 +289,9 @@ export default function ConversationsPage() {
               {/* Status Tabs */}
               <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-xs">
                 {[
-                  { id: 'ALL', label: `Все (${conversations.length})` },
-                  { id: 'active', label: 'Авто-ИИ' },
-                  { id: 'human_takeover', label: 'Ручной' },
+                  { id: 'ALL', label: locale === 'uz' ? `Barchasi (${conversations.length})` : `Все (${conversations.length})` },
+                  { id: 'active', label: locale === 'uz' ? 'Avto-AI' : 'Авто-ИИ' },
+                  { id: 'human_takeover', label: locale === 'uz' ? 'Qo‘lda' : 'Ручной' },
                 ].map((tabItem) => (
                   <button
                     key={tabItem.id}
@@ -326,12 +326,16 @@ export default function ConversationsPage() {
                   </div>
                   <p>
                     {searchQuery
-                      ? `По запросу «${searchQuery}» диалогов не найдено.`
+                      ? (locale === 'uz'
+                          ? `«${searchQuery}» so‘rovi bo‘yicha suhbatlar topilmadi.`
+                          : `По запросу «${searchQuery}» диалогов не найдено.`)
                       : conversations.length
-                      ? 'Диалогов по заданным фильтрам не найдено.'
+                      ? (locale === 'uz'
+                          ? 'Belgilangan filtrlar bo‘yicha suhbatlar topilmadi.'
+                          : 'Диалогов по заданным фильтрам не найдено.')
                       : hasConnectedChannels
-                      ? 'Диалогов пока нет. Ожидаем входящие сообщения.'
-                      : 'Диалогов пока нет. Подключите канал общения в интеграциях.'}
+                      ? t.conversations.emptyInboxConnected
+                      : t.conversations.emptyInboxDisconnected}
                   </p>
                 </div>
               ) : (
@@ -367,23 +371,23 @@ export default function ConversationsPage() {
                       </div>
 
                       <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] truncate mb-1.5">
-                        {messageText(conv.lastMessageText || 'Нет сообщений')}
+                        {messageText(conv.lastMessageText || (locale === 'uz' ? 'Xabarlar yo‘q' : 'Нет сообщений'))}
                       </p>
 
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0] px-2 py-0.5 rounded-full border border-[var(--border)] dark:border-[#29374C] font-medium">
-                          {conv.channel === 'WebWidget' ? 'Сайт' : conv.channel}
+                          {conv.channel === 'WebWidget' ? (locale === 'uz' ? 'Sayt' : 'Сайт') : conv.channel}
                         </span>
 
                         {isTakeover ? (
                           <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                             <span className="size-1.5 rounded-full bg-amber-500" />
-                            Ручной ответ
+                            {locale === 'uz' ? 'Qo‘lda javob' : 'Ручной ответ'}
                           </span>
                         ) : (
                           <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                             <span className="size-1.5 rounded-full bg-emerald-500" />
-                            ИИ на связи
+                            {locale === 'uz' ? 'AI aloqada' : 'ИИ на связи'}
                           </span>
                         )}
                       </div>
@@ -409,7 +413,7 @@ export default function ConversationsPage() {
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      aria-label="Вернуться к списку диалогов"
+                      aria-label={locale === 'uz' ? 'Suhbatlar ro‘yxatiga qaytish' : 'Вернуться к списку диалогов'}
                       onClick={() => setMobileView('list')}
                       className="md:hidden size-8 rounded-xl flex items-center justify-center text-[var(--text-secondary)] dark:text-[#AABAD0] hover:bg-[var(--border)] cursor-pointer"
                     >
@@ -425,7 +429,7 @@ export default function ConversationsPage() {
                         {activeConversation.clientName}
                       </h3>
                       <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] font-mono mt-0.5">
-                        {activeConversation.clientPhone} · {activeConversation.channel === 'WebWidget' ? 'Чат на сайте' : activeConversation.channel}
+                        {activeConversation.clientPhone} · {activeConversation.channel === 'WebWidget' ? (locale === 'uz' ? 'Sayt chati' : 'Чат на сайте') : activeConversation.channel}
                       </p>
                     </div>
                   </div>
@@ -446,12 +450,12 @@ export default function ConversationsPage() {
                       {activeConversation.status === 'human_takeover' ? (
                         <>
                           <PlayCircle className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Вернуть ИИ</span>
+                          <span>{t.conversations.returnToAi}</span>
                         </>
                       ) : (
                         <>
                           <PauseCircle className="w-3.5 h-3.5 text-amber-500" />
-                          <span>Ответить вручную</span>
+                          <span>{locale === 'uz' ? 'Qo‘lda javob berish' : 'Ответить вручную'}</span>
                         </>
                       )}
                     </Button>
@@ -462,11 +466,11 @@ export default function ConversationsPage() {
                 <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
                   {messagesLoading ? (
                     <div className="py-12 text-center text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                      Загрузка сообщений…
+                      {locale === 'uz' ? 'Xabarlar yuklanmoqda…' : 'Загрузка сообщений…'}
                     </div>
                   ) : messages.length === 0 ? (
                     <div className="py-12 text-center text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                      В этой беседе пока нет сохранённых реплик.
+                      {locale === 'uz' ? 'Ushbu suhbatda hali xabarlar yo‘q.' : 'В этой беседе пока нет сохранённых реплик.'}
                     </div>
                   ) : (
                     messages.map((m) => {
@@ -485,8 +489,8 @@ export default function ConversationsPage() {
                               {isClient
                                 ? activeConversation.clientName
                                 : isHuman
-                                ? 'Оператор'
-                                : 'ИИ-агент gapcha'}
+                                ? (locale === 'uz' ? 'Operator' : 'Оператор')
+                                : 'gapcha AI'}
                             </span>
                             <span>·</span>
                             <span>
@@ -523,14 +527,14 @@ export default function ConversationsPage() {
                 >
                   <input
                     type="text"
-                    aria-label="Ответ клиенту"
+                    aria-label={locale === 'uz' ? 'Mijozga javob' : 'Ответ клиенту'}
                     maxLength={4000}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder={
                       activeConversation.status === 'human_takeover'
-                        ? 'Напишите ответ клиенту как оператор...'
-                        : 'Ответить вручную (автоматически включит ручной режим)...'
+                        ? (locale === 'uz' ? 'Operator sifatida javob yozing…' : 'Напишите ответ клиенту как оператор...')
+                        : (locale === 'uz' ? 'Qo‘lda javob berish (avtomatik qo‘l rejimini yoqadi)…' : 'Ответить вручную (автоматически включит ручной режим)...')
                     }
                     className="min-w-0 flex-1 px-3.5 py-2 text-xs bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] placeholder:text-[var(--text-muted)] text-[var(--text-primary)] dark:text-[#F4F7FB]"
                   />
@@ -547,7 +551,7 @@ export default function ConversationsPage() {
                     className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>Отправить</span>
+                    <span>{t.conversations.send}</span>
                   </Button>
                 </form>
               </>
@@ -560,17 +564,19 @@ export default function ConversationsPage() {
                       <SparrowMascot variant="look" size={96} animate={false} />
                     </div>
                     <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                      Ничего не найдено
+                      {locale === 'uz' ? 'Hech narsa topilmadi' : 'Ничего не найдено'}
                     </h3>
                     <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
-                      По поисковому запросу «{searchQuery}» диалогов не найдено.
+                      {locale === 'uz'
+                        ? `«${searchQuery}» so‘rovi bo‘yicha suhbatlar topilmadi.`
+                        : `По поисковому запросу «${searchQuery}» диалогов не найдено.`}
                     </p>
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
                       className="mt-4 px-3.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors cursor-pointer"
                     >
-                      Сбросить поиск
+                      {locale === 'uz' ? 'Qidiruvni tozalash' : 'Сбросить поиск'}
                     </button>
                   </>
                 ) : conversations.length === 0 ? (
@@ -580,10 +586,12 @@ export default function ConversationsPage() {
                         <SparrowMascot variant="idle" size={96} animate={false} />
                       </div>
                       <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                        Каналы связи подключены
+                        {locale === 'uz' ? 'Aloqa kanallari ulangan' : 'Каналы связи подключены'}
                       </h3>
                       <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
-                        Ожидаем входящие сообщения клиентов. Вы можете проверить ответы прямо сейчас в интерактивной песочнице.
+                        {locale === 'uz'
+                          ? 'Mijozlarning kiruvchi xabarlarini kutmoqdamiz. Javoblarni hoziroq interaktiv test-drayvda tekshirib ko‘rishingiz mumkin.'
+                          : 'Ожидаем входящие сообщения клиентов. Вы можете проверить ответы прямо сейчас в интерактивной песочнице.'}
                       </p>
                       <button
                         type="button"
@@ -591,7 +599,7 @@ export default function ConversationsPage() {
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs mt-4 shadow-2xs cursor-pointer"
                       >
                         <PlayCircle size={14} />
-                        <span>Открыть тест-драйв</span>
+                        <span>{t.common.testDrive}</span>
                       </button>
                     </>
                   ) : (
@@ -600,16 +608,18 @@ export default function ConversationsPage() {
                         <SparrowMascot variant="hello" size={96} animate={false} />
                       </div>
                       <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                        Здесь будут сообщения клиентов
+                        {locale === 'uz' ? 'Bu yerda mijozlar xabarlari bo‘ladi' : 'Здесь будут сообщения клиентов'}
                       </h3>
                       <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
-                        Подключите канал связи, чтобы бот начал отвечать клиентам.
+                        {locale === 'uz'
+                          ? 'Bot mijozlarga javob berishni boshlashi uchun aloqa kanalini ulang.'
+                          : 'Подключите канал связи, чтобы бот начал отвечать клиентам.'}
                       </p>
                       <Link
                         href="/dashboard/integrations"
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs mt-4 shadow-2xs"
                       >
-                        <span>Подключить канал</span>
+                        <span>{locale === 'uz' ? 'Kanalni ulash' : 'Подключить канал'}</span>
                         <ArrowRight size={14} />
                       </Link>
                     </>
@@ -620,10 +630,10 @@ export default function ConversationsPage() {
                       <SparrowMascot variant="hint" size={88} animate={false} />
                     </div>
                     <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                      Диалог не выбран
+                      {locale === 'uz' ? 'Suhbat tanlanmagan' : 'Диалог не выбран'}
                     </h3>
                     <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
-                      Выберите диалог из списка слева, чтобы просмотреть переписку и ответить клиенту.
+                      {t.conversations.selectConversation}
                     </p>
                   </>
                 )}

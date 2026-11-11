@@ -36,6 +36,8 @@ export default function LeadsCalendarPage() {
     addLead,
     showToast,
     workspace,
+    locale,
+    t,
   } = useApp();
   const [isSavingLead, setIsSavingLead] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'kanban' | 'calendar'>('table');
@@ -92,23 +94,34 @@ export default function LeadsCalendarPage() {
     const monday = new Date(today);
     monday.setDate(today.getDate() + mondayOffset);
 
-    const days = [
-      { name: 'Понедельник', short: 'Пн' },
-      { name: 'Вторник', short: 'Вт' },
-      { name: 'Среда', short: 'Ср' },
-      { name: 'Четверг', short: 'Чт' },
-      { name: 'Пятница', short: 'Пт' },
-      { name: 'Суббота', short: 'Сб' },
-      { name: 'Воскресенье', short: 'Вс' },
-    ].map((item, idx) => {
+    const isUz = locale === 'uz';
+    const dayNames = isUz
+      ? [
+          { name: 'Dushanba', short: 'Du' },
+          { name: 'Seshanba', short: 'Se' },
+          { name: 'Chorshanba', short: 'Chor' },
+          { name: 'Payshanba', short: 'Pay' },
+          { name: 'Juma', short: 'Ju' },
+          { name: 'Shanba', short: 'Sha' },
+          { name: 'Yakshanba', short: 'Ya' },
+        ]
+      : [
+          { name: 'Понедельник', short: 'Пн' },
+          { name: 'Вторник', short: 'Вт' },
+          { name: 'Среда', short: 'Ср' },
+          { name: 'Четверг', short: 'Чт' },
+          { name: 'Пятница', short: 'Пт' },
+          { name: 'Суббота', short: 'Сб' },
+          { name: 'Воскресенье', short: 'Вс' },
+        ];
+
+    return dayNames.map((item, idx) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + idx);
-      const dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+      const dateStr = d.toLocaleDateString(isUz ? 'uz-UZ' : 'ru-RU', { day: 'numeric', month: 'short' });
       const isoDate = d.toLocaleDateString('en-CA');
       return { name: item.name, short: item.short, date: dateStr, isoDate };
     });
-
-    return days;
   });
 
   const handleCreateManualLead = async (e: React.FormEvent) => {
@@ -128,8 +141,10 @@ export default function LeadsCalendarPage() {
       });
 
       showToast(
-        'Лид добавлен в воронку',
-        `${newClientName} успешно сохранен в базе`,
+        locale === 'uz' ? 'Lid voronkaga qo‘shildi' : 'Лид добавлен в воронку',
+        locale === 'uz'
+          ? `${newClientName} bazada saqlandi`
+          : `${newClientName} успешно сохранен в базе`,
         'success'
       );
       setIsAddModalOpen(false);
@@ -138,7 +153,7 @@ export default function LeadsCalendarPage() {
       setNewAppointmentDate('');
     } catch (error) {
       showToast(
-        'Не удалось сохранить лида',
+        locale === 'uz' ? 'Lidni saqlab bo‘lmadi' : 'Не удалось сохранить лида',
         error instanceof Error ? error.message : 'Ошибка сети',
         'error'
       );
@@ -155,20 +170,20 @@ export default function LeadsCalendarPage() {
     if (status === 'Записан в календарь' || status === 'booked') {
       return (
         <Badge variant="success" dot>
-          Записан в календарь
+          {t.leads.statuses.booked}
         </Badge>
       );
     }
     if (status === 'Квалифицирован' || status === 'qualified') {
       return (
         <Badge variant="info" dot>
-          Квалифицирован
+          {t.leads.statuses.qualified}
         </Badge>
       );
     }
     return (
       <Badge variant="warning" dot>
-        Новое обращение
+        {t.leads.statuses.new}
       </Badge>
     );
   };
@@ -179,10 +194,10 @@ export default function LeadsCalendarPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)] dark:border-[#29374C]">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] dark:text-[#F4F7FB] leading-tight">
-            Лиды и записи
+            {t.leads.title}
           </h1>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-            Квалифицированные обращения клиентов, контакты и расписание визитов.
+            {t.leads.subtitle}
           </p>
         </div>
 
@@ -193,7 +208,7 @@ export default function LeadsCalendarPage() {
             className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs flex items-center gap-1.5 shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Новый лид</span>
+            <span>{t.leads.addLead}</span>
           </Button>
 
           {/* View Mode Toggle */}
@@ -208,7 +223,9 @@ export default function LeadsCalendarPage() {
               }`}
             >
               <TableIcon className="w-3.5 h-3.5" />
-              <span>Таблица ({leads.length})</span>
+              <span>
+                {locale === 'uz' ? 'Jadval' : 'Таблица'} ({leads.length})
+              </span>
             </button>
             <button
               type="button"
@@ -220,7 +237,7 @@ export default function LeadsCalendarPage() {
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Канбан</span>
+              <span>Kanban</span>
             </button>
             <button
               type="button"
@@ -232,7 +249,7 @@ export default function LeadsCalendarPage() {
               }`}
             >
               <CalendarDays className="w-3.5 h-3.5 text-[#FF7277]" />
-              <span>Календарь</span>
+              <span>{locale === 'uz' ? 'Taqvim' : 'Календарь'}</span>
             </button>
           </div>
         </div>
@@ -248,8 +265,8 @@ export default function LeadsCalendarPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Поиск лидов"
-              placeholder="Поиск по имени или номеру..."
+              aria-label={locale === 'uz' ? 'Lidlarni qidirish' : 'Поиск лидов'}
+              placeholder={t.leads.searchPlaceholder}
               className="w-full pl-8 pr-3 py-1.5 min-h-[36px] bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-xl text-xs text-[var(--text-primary)] dark:text-[#F4F7FB] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] font-medium"
             />
           </div>
@@ -257,18 +274,23 @@ export default function LeadsCalendarPage() {
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
             <div className="flex flex-wrap items-center gap-1 bg-[var(--surface-secondary)] dark:bg-[#101B2E] p-1 rounded-xl text-xs">
-              {['ALL', 'Новый', 'Квалифицирован', 'Записан в календарь'].map((s) => (
+              {[
+                { id: 'ALL', label: t.leads.allStatuses },
+                { id: 'Новый', label: t.leads.statuses.new },
+                { id: 'Квалифицирован', label: t.leads.statuses.qualified },
+                { id: 'Записан в календарь', label: t.leads.statuses.booked },
+              ].map((s) => (
                 <button
-                  key={s}
+                  key={s.id}
                   type="button"
-                  onClick={() => setStatusFilter(s)}
+                  onClick={() => setStatusFilter(s.id)}
                   className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-                    statusFilter === s
+                    statusFilter === s.id
                       ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-bold'
                       : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  {s === 'ALL' ? 'Все статусы' : s}
+                  {s.label}
                 </button>
               ))}
             </div>
@@ -278,10 +300,10 @@ export default function LeadsCalendarPage() {
               onChange={(e) => setChannelFilter(e.target.value)}
               className="bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-xl px-3 py-1.5 min-h-[36px] text-xs text-[var(--text-primary)] dark:text-[#F4F7FB] font-medium focus:outline-none cursor-pointer"
             >
-              <option value="ALL">Все каналы</option>
+              <option value="ALL">{t.leads.allChannels}</option>
               <option value="Telegram">Telegram</option>
               <option value="Instagram">Instagram</option>
-              <option value="WebWidget">Сайт</option>
+              <option value="WebWidget">{locale === 'uz' ? 'Sayt vidjeti' : 'Сайт'}</option>
             </select>
           </div>
         </div>
@@ -294,12 +316,12 @@ export default function LeadsCalendarPage() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-[var(--surface-secondary)] dark:bg-[#101B2E] border-b border-[var(--border)] dark:border-[#29374C] text-[var(--text-secondary)] dark:text-[#AABAD0] font-semibold uppercase tracking-wider text-[10px]">
-                  <th className="py-3.5 px-4">Клиент</th>
-                  <th className="py-3.5 px-3">Канал</th>
-                  <th className="py-3.5 px-3">Статус воронки</th>
-                  <th className="py-3.5 px-3">Слот в Google Календаре</th>
-                  <th className="py-3.5 px-3">Квалификация и заметки</th>
-                  <th className="py-3.5 px-3 text-right">ИИ-ответы</th>
+                  <th className="py-3.5 px-4">{t.leads.client}</th>
+                  <th className="py-3.5 px-3">{t.leads.channel}</th>
+                  <th className="py-3.5 px-3">{locale === 'uz' ? 'Voronka holati' : 'Статус воронки'}</th>
+                  <th className="py-3.5 px-3">{locale === 'uz' ? 'Taqvimdagi vaqti' : 'Слот в Google Календаре'}</th>
+                  <th className="py-3.5 px-3">{locale === 'uz' ? 'Saralash va eslatmalar' : 'Квалификация и заметки'}</th>
+                  <th className="py-3.5 px-3 text-right">{locale === 'uz' ? 'AI javoblari' : 'ИИ-ответы'}</th>
                 </tr>
               </thead>
               {filteredLeads.length === 0 ? (
@@ -312,10 +334,10 @@ export default function LeadsCalendarPage() {
                             <SparrowMascot variant="look" size={88} animate={false} />
                           </div>
                           <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                            Лиды не найдены
+                            {locale === 'uz' ? 'Lidlar topilmadi' : 'Лиды не найдены'}
                           </h4>
                           <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
-                            По заданным параметрам поиска или фильтрам заявок не обнаружено.
+                            {t.leads.noLeadsFound}
                           </p>
                           <Button
                             size="sm"
@@ -326,7 +348,7 @@ export default function LeadsCalendarPage() {
                               setStatusFilter('ALL');
                             }}
                           >
-                            Сбросить фильтры
+                            {t.leads.resetFilters}
                           </Button>
                         </>
                       ) : (
@@ -344,13 +366,17 @@ export default function LeadsCalendarPage() {
                           </div>
                           <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
                             {workspace?.telegramBusinessConnected || workspace?.instagramConnected
-                              ? 'Каналы подключены · Ожидаем заявки'
-                              : 'Список лидов пуст'}
+                              ? (locale === 'uz' ? 'Kanallar ulangan · Arizalarni kutmoqdamiz' : 'Каналы подключены · Ожидаем заявки')
+                              : (locale === 'uz' ? 'Lidlar ro‘yxati bo‘sh' : 'Список лидов пуст')}
                           </h4>
                           <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
                             {workspace?.telegramBusinessConnected || workspace?.instagramConnected
-                              ? 'ИИ-сотрудник автоматически внесёт клиента в список лидов после первой квалификации в диалоге.'
-                              : 'Здесь будут отображаться входящие заявки клиентов, результаты квалификации и слоты Google Календаря.'}
+                              ? (locale === 'uz'
+                                  ? 'AI-xodim mijoz bilan birinchi muloqot va saralashdan so‘ng uni avtomatik tarzda lidlar ro‘yxatiga qo‘shadi.'
+                                  : 'ИИ-сотрудник автоматически внесёт клиента в список лидов после первой квалификации в диалоге.')
+                              : (locale === 'uz'
+                                  ? 'Bu yerda mijozlarning kiruvchi arizalari, saralash natijalari va Google Taqvim bandliklari ko‘rinadi.'
+                                  : 'Здесь будут отображаться входящие заявки клиентов, результаты квалификации и слоты Google Календаря.')}
                           </p>
                           <div className="flex items-center justify-center gap-2">
                             <Button
@@ -360,7 +386,7 @@ export default function LeadsCalendarPage() {
                               onClick={() => setIsAddModalOpen(true)}
                             >
                               <Plus className="w-3.5 h-3.5" />
-                              <span>Добавить лид вручную</span>
+                              <span>{t.leads.addLead}</span>
                             </Button>
                           </div>
                         </>
@@ -432,9 +458,18 @@ export default function LeadsCalendarPage() {
       {viewMode === 'kanban' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
-            { id: 'Новый', title: '1. Новые обращения' },
-            { id: 'Квалифицирован', title: '2. Квалифицированы ИИ' },
-            { id: 'Записан в календарь', title: '3. Записаны в календарь' },
+            {
+              id: 'Новый',
+              title: locale === 'uz' ? '1. Yangi murojaatlar' : '1. Новые обращения',
+            },
+            {
+              id: 'Квалифицирован',
+              title: locale === 'uz' ? '2. AI tomonidan saralangan' : '2. Квалифицированы ИИ',
+            },
+            {
+              id: 'Записан в календарь',
+              title: locale === 'uz' ? '3. Taqvimga yozilgan' : '3. Записаны в календарь',
+            },
           ].map((col) => {
             const colLeads = filteredLeads.filter((l) => l.status === col.id);
 
@@ -457,7 +492,7 @@ export default function LeadsCalendarPage() {
                 <div className="space-y-2.5 flex-1 overflow-y-auto">
                   {colLeads.length === 0 ? (
                     <div className="p-8 text-center text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/60 border border-dashed border-[var(--border)] dark:border-[#29374C] rounded-xl">
-                      Нет лидов на этом этапе
+                      {locale === 'uz' ? 'Ushbu bosqichda lidlar yo‘q' : 'Нет лидов на этом этапе'}
                     </div>
                   ) : (
                     colLeads.map((l) => (
@@ -470,7 +505,7 @@ export default function LeadsCalendarPage() {
                             {l.clientName}
                           </span>
                           <span className="text-[10px] bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0] px-1.5 py-0.5 rounded border border-[var(--border)] dark:border-[#29374C]">
-                            {l.channel === 'WebWidget' ? 'Сайт' : l.channel}
+                            {l.channel === 'WebWidget' ? (locale === 'uz' ? 'Sayt' : 'Сайт') : l.channel}
                           </span>
                         </div>
 
@@ -482,7 +517,7 @@ export default function LeadsCalendarPage() {
                           <div className="p-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5" />
                             <span suppressHydrationWarning>
-                              {new Date(l.appointmentDate).toLocaleString('ru-RU', {
+                              {new Date(l.appointmentDate).toLocaleString(locale === 'uz' ? 'uz-UZ' : 'ru-RU', {
                                 day: 'numeric',
                                 month: 'short',
                                 hour: '2-digit',
@@ -506,7 +541,7 @@ export default function LeadsCalendarPage() {
                               onClick={() => updateLeadStatus(l.id, 'Квалифицирован')}
                               className="text-[10px] font-semibold text-[#FF7277] hover:underline cursor-pointer"
                             >
-                              Квалифицировать →
+                              {locale === 'uz' ? 'Saralash →' : 'Квалифицировать →'}
                             </button>
                           )}
                           {col.id === 'Квалифицирован' && (
@@ -515,7 +550,7 @@ export default function LeadsCalendarPage() {
                               onClick={() => updateLeadStatus(l.id, 'Записан в календарь')}
                               className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
                             >
-                              Записать в слот →
+                              {locale === 'uz' ? 'Taqvimga kiritish →' : 'Записать в слот →'}
                             </button>
                           )}
                         </div>
@@ -539,10 +574,14 @@ export default function LeadsCalendarPage() {
               </div>
               <div>
                 <h3 className="font-bold text-[var(--text-primary)] dark:text-[#F4F7FB] text-sm">
-                  Сетка Google Календаря — Рабочие часы
+                  {locale === 'uz'
+                    ? 'Google Taqvim kataklari — Ish vaqtlari'
+                    : 'Сетка Google Календаря — Рабочие часы'}
                 </h3>
                 <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                  Автоматическая проверка пересечения слотов и бронирование через ИИ-сотрудников
+                  {locale === 'uz'
+                    ? 'Vaqtlarni avtomatik tekshirish va AI-xodimlar orqali band qilish'
+                    : 'Автоматическая проверка пересечения слотов и бронирование через ИИ-сотрудников'}
                 </p>
               </div>
             </div>
@@ -554,7 +593,7 @@ export default function LeadsCalendarPage() {
               className="text-xs font-semibold"
             >
               <Terminal className="w-3.5 h-3.5 text-[#FF7277]" />
-              <span>Проверить через песочницу</span>
+              <span>{locale === 'uz' ? 'Test-drayvda sinash' : 'Проверить через песочницу'}</span>
             </Button>
           </div>
 
@@ -589,7 +628,7 @@ export default function LeadsCalendarPage() {
                         className="p-3 rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-xs space-y-1"
                       >
                         <time className="font-bold text-emerald-600 dark:text-emerald-400 block">
-                          {new Date(lead.appointmentDate!).toLocaleTimeString('ru-RU', {
+                          {new Date(lead.appointmentDate!).toLocaleTimeString(locale === 'uz' ? 'uz-UZ' : 'ru-RU', {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
@@ -608,7 +647,7 @@ export default function LeadsCalendarPage() {
                       day.isoDate
                   ) && (
                     <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 p-3 text-center">
-                      Нет записей
+                      {locale === 'uz' ? 'Yozuvlar yo‘q' : 'Нет записей'}
                     </p>
                   )}
                 </div>
@@ -622,18 +661,18 @@ export default function LeadsCalendarPage() {
       <Dialog
         open={isAddModalOpen}
         onClose={closeLeadForm}
-        label="Добавить обращение клиента"
+        label={locale === 'uz' ? 'Mijoz murojaatini qo‘shish' : 'Добавить обращение клиента'}
         className="w-[calc(100vw-32px)] sm:w-[460px] max-w-[460px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
       >
         <form onSubmit={handleCreateManualLead} className="p-5 sm:p-6 space-y-4">
           <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3">
             <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-              Новое обращение клиента
+              {locale === 'uz' ? 'Yangi mijoz murojaati' : 'Новое обращение клиента'}
             </h3>
             <button
               type="button"
               onClick={closeLeadForm}
-              aria-label="Закрыть форму лида"
+              aria-label={locale === 'uz' ? 'Lid formasini yopish' : 'Закрыть форму лида'}
               className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1.5 cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -642,8 +681,8 @@ export default function LeadsCalendarPage() {
 
           <div className="space-y-3.5">
             <Input
-              label="Имя клиента"
-              placeholder="Например, Азиз Рахимов"
+              label={locale === 'uz' ? 'Mijoz ismi' : 'Имя клиента'}
+              placeholder={locale === 'uz' ? 'Masalan, Aziz Rahimov' : 'Например, Азиз Рахимов'}
               value={newClientName}
               onChange={(e) => setNewClientName(e.target.value)}
               required
@@ -651,7 +690,7 @@ export default function LeadsCalendarPage() {
 
             <div>
               <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] mb-1.5">
-                Номер телефона
+                {locale === 'uz' ? 'Telefon raqami' : 'Номер телефона'}
               </label>
               <PhoneInput
                 value={newClientPhone}
@@ -662,7 +701,7 @@ export default function LeadsCalendarPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <Select
-                label="Канал"
+                label={t.leads.channel}
                 value={newChannel}
                 onChange={(e) =>
                   setNewChannel(e.target.value as 'Telegram' | 'Instagram')
@@ -674,7 +713,7 @@ export default function LeadsCalendarPage() {
               />
 
               <Select
-                label="Статус воронки"
+                label={locale === 'uz' ? 'Voronka holati' : 'Статус воронки'}
                 value={newStatus}
                 onChange={(e) =>
                   setNewStatus(
@@ -685,9 +724,9 @@ export default function LeadsCalendarPage() {
                   )
                 }
                 options={[
-                  { value: 'Новый', label: 'Новый' },
-                  { value: 'Квалифицирован', label: 'Квалифицирован' },
-                  { value: 'Записан в календарь', label: 'Записан' },
+                  { value: 'Новый', label: t.leads.statuses.new },
+                  { value: 'Квалифицирован', label: t.leads.statuses.qualified },
+                  { value: 'Записан в календарь', label: t.leads.statuses.booked },
                 ]}
               />
             </div>
@@ -695,7 +734,7 @@ export default function LeadsCalendarPage() {
             {newStatus === 'Записан в календарь' && (
               <div>
                 <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] mb-1.5">
-                  Дата и время слота встречи
+                  {locale === 'uz' ? 'Uchrashuv vaqti va sanasi' : 'Дата и время слота встречи'}
                 </label>
                 <input
                   type="datetime-local"
@@ -715,7 +754,7 @@ export default function LeadsCalendarPage() {
               onClick={closeLeadForm}
               disabled={isSavingLead}
             >
-              Отмена
+              {t.common.cancel}
             </Button>
             <Button
               type="submit"
@@ -723,7 +762,7 @@ export default function LeadsCalendarPage() {
               isLoading={isSavingLead}
               className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
             >
-              Сохранить лид
+              {t.common.save}
             </Button>
           </div>
         </form>

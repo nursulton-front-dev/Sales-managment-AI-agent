@@ -20,6 +20,9 @@ import { SparrowMascot } from '@/components/ui/SparrowMascot';
 export default function NotFound() {
   const router = useRouter();
 
+  // Language state
+  const [locale, setLocale] = useState<'ru' | 'uz'>('ru');
+
   // Authentication state: null = checking, true = authenticated, false = guest
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
@@ -33,6 +36,13 @@ export default function NotFound() {
 
   useEffect(() => {
     try {
+      const match = document.cookie.match(/(?:^|;\s*)gapcha_locale=(ru|uz)(?:;|$)/);
+      if (match && (match[1] === 'ru' || match[1] === 'uz')) {
+        setLocale(match[1]);
+      } else {
+        const local = localStorage.getItem('gapcha_locale');
+        if (local === 'ru' || local === 'uz') setLocale(local);
+      }
       const hasCookie = document.cookie
         .split('; ')
         .some((row) => row.startsWith('ai_os_workspace_id=') && row.split('=')[1]?.length > 0);
@@ -42,6 +52,15 @@ export default function NotFound() {
       setIsAuthenticated(false);
     }
   }, []);
+
+  const handleLocaleChange = (newLocale: 'ru' | 'uz') => {
+    setLocale(newLocale);
+    try {
+      document.cookie = `gapcha_locale=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
+      localStorage.setItem('gapcha_locale', newLocale);
+      document.documentElement.lang = newLocale;
+    } catch {}
+  };
 
   const handleSupportClick = () => {
     if (isAuthenticated) {
@@ -94,17 +113,49 @@ export default function NotFound() {
 
   return (
     <div className="min-h-screen w-full flex flex-col justify-between bg-[var(--background)] text-[var(--text-primary)] transition-colors duration-150 overflow-x-hidden">
-      {/* 1. Header: BrandLogo left, compact Theme icon right */}
+      {/* 1. Header: BrandLogo left, Language toggle + Theme right */}
       <header className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-6 flex items-center justify-between shrink-0">
         <BrandLogo variant="full" width={140} href="/" ariaLabel="gapcha AI" />
-        <ThemeSwitcher compact={true} />
+        <div className="flex items-center gap-2.5">
+          <div
+            role="group"
+            aria-label="Tilni tanlash / Выбор языка"
+            className="inline-flex items-center p-0.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)]"
+          >
+            <button
+              type="button"
+              onClick={() => handleLocaleChange('ru')}
+              aria-pressed={locale === 'ru'}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                locale === 'ru'
+                  ? 'bg-[#ED262A] text-white shadow-2xs'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              RU
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLocaleChange('uz')}
+              aria-pressed={locale === 'uz'}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                locale === 'uz'
+                  ? 'bg-[#ED262A] text-white shadow-2xs'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              UZ
+            </button>
+          </div>
+          <ThemeSwitcher compact={true} />
+        </div>
       </header>
 
       {/* 2. Compact Composition: "404", Sparrow near pointer, and "Такой страницы нет" */}
       <main className="w-full max-w-lg mx-auto px-4 py-8 sm:py-12 my-auto flex-1 flex flex-col items-center justify-center text-center">
         {/* Large Crisp 404 Accent Badge */}
         <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-[#ED262A] dark:text-[#FF7277] font-mono text-sm sm:text-base font-bold tracking-widest uppercase mb-4">
-          Ошибка 404
+          {locale === 'uz' ? '404-xatolik' : 'Ошибка 404'}
         </div>
 
         {/* Mascot with signpost: one short head-tilt gesture, then calm */}
@@ -114,12 +165,14 @@ export default function NotFound() {
 
         {/* Headline */}
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight mb-2">
-          Такой страницы нет
+          {locale === 'uz' ? 'Bunday sahifa mavjud emas' : 'Такой страницы нет'}
         </h1>
 
         {/* Subhead */}
         <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed max-w-sm mb-6">
-          Возможно, ссылка устарела или в адресе есть опечатка. Давайте вернёмся к работе.
+          {locale === 'uz'
+            ? 'Ehtimol, havola eskirgan yoki manzilda xatolik bor. Keling, ishga qaytamiz.'
+            : 'Возможно, ссылка устарела или в адресе есть опечатка. Давайте вернёмся к работе.'}
         </p>
 
         {/* Action Buttons: На главную + В кабинет / Войти */}
@@ -129,7 +182,7 @@ export default function NotFound() {
             className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-[var(--surface-secondary)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text-primary)] transition-colors inline-flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
           >
             <Home className="w-4 h-4 text-[var(--text-muted)]" />
-            <span>На главную</span>
+            <span>{locale === 'uz' ? 'Bosh sahifaga' : 'На главную'}</span>
           </Link>
 
           {isAuthenticated ? (
@@ -138,14 +191,14 @@ export default function NotFound() {
               className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-[#ED262A] hover:bg-[#d91e22] text-white transition-colors inline-flex items-center justify-center gap-2 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
             >
               <LayoutDashboard className="w-4 h-4" />
-              <span>В кабинет</span>
+              <span>{locale === 'uz' ? 'Kabinetga' : 'В кабинет'}</span>
             </Link>
           ) : (
             <Link
               href="/login"
               className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-[#ED262A] hover:bg-[#d91e22] text-white transition-colors inline-flex items-center justify-center gap-2 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
             >
-              <span>Войти</span>
+              <span>{locale === 'uz' ? 'Kirish' : 'Войти'}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           )}
@@ -158,13 +211,13 @@ export default function NotFound() {
           className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors py-1 cursor-pointer focus:outline-none focus:underline"
         >
           <Headphones className="w-3.5 h-3.5" />
-          <span>Написать в поддержку</span>
+          <span>{locale === 'uz' ? 'Qo‘llab-quvvatlash xizmati' : 'Написать в поддержку'}</span>
         </button>
       </main>
 
       {/* 3. Footer */}
       <footer className="w-full max-w-5xl mx-auto px-4 py-4 text-center text-[11px] text-[var(--text-muted)] shrink-0">
-        gapcha AI · Платформа ИИ-сотрудников
+        gapcha AI · {locale === 'uz' ? 'Savdo va xizmatlar uchun AI-xodimlar platformasi' : 'Платформа ИИ-сотрудников'}
       </footer>
 
       {/* Public Support Modal for Guests */}

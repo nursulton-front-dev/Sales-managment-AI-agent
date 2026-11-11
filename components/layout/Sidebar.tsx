@@ -21,19 +21,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-const work = [
-  ['Обзор', '/dashboard', House],
-  ['Лиды и записи', '/dashboard/leads', CalendarDays],
-  ['Диалоги', '/dashboard/conversations', MessageSquare],
-  ['ИИ-сотрудники', '/dashboard/agents', Users],
-  ['Интеграции', '/dashboard/integrations', Plug],
-] as const;
-
-const company = [
-  ['Тарифы и баланс', '/dashboard/billing', CreditCard],
-  ['Компания и команда', '/dashboard/company', Building2],
-] as const;
-
 export function Sidebar({
   mobileOpen = false,
   onMobileClose = () => {},
@@ -42,7 +29,20 @@ export function Sidebar({
   onMobileClose?: () => void;
 }) {
   const path = usePathname();
-  const { openSandbox, isSuperAdmin } = useApp();
+  const { openSandbox, isSuperAdmin, t } = useApp();
+
+  const work = [
+    [t.nav.overview, '/dashboard', House],
+    [t.nav.leads, '/dashboard/leads', CalendarDays],
+    [t.nav.conversations, '/dashboard/conversations', MessageSquare],
+    [t.nav.agents, '/dashboard/agents', Users],
+    [t.nav.integrations, '/dashboard/integrations', Plug],
+  ] as const;
+
+  const company = [
+    [t.nav.billing, '/dashboard/billing', CreditCard],
+    [t.nav.team, '/dashboard/company', Building2],
+  ] as const;
 
   const item = (title: string, href: string, Icon: LucideIcon) => {
     const active =
@@ -73,20 +73,20 @@ export function Sidebar({
         <button
           type="button"
           onClick={onMobileClose}
-          aria-label="Закрыть меню"
-          className="lg:hidden p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          aria-label={t.nav.closeMenu}
+          className="lg:hidden p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
         >
           <X size={20} />
         </button>
       </div>
 
       <nav
-        aria-label="Основная навигация"
+        aria-label={t.nav.openMenu}
         className="flex-1 min-h-0 overflow-y-auto px-3 py-5 space-y-6"
       >
         {[
-          ['РАБОТА', work],
-          ['КОМПАНИЯ', company],
+          [t.nav.work, work],
+          [t.nav.company, company],
         ].map(([label, items]) => (
           <div key={label as string} className="space-y-1">
             <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] dark:text-[#AABAD0]/60">
@@ -109,11 +109,11 @@ export function Sidebar({
           className="w-full flex items-center gap-3 min-h-10 px-3.5 text-xs sm:text-sm font-semibold text-[var(--text-secondary)] dark:text-[#AABAD0] hover:bg-[var(--surface-secondary)] dark:hover:bg-[#142137] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] rounded-xl transition-colors cursor-pointer"
         >
           <Play size={17} strokeWidth={1.75} className="text-[#FF7277]" />
-          <span>Тест-драйв</span>
+          <span>{t.nav.testDrive}</span>
         </button>
-        {item('Поддержка', '/dashboard/support', Headphones)}
-        {item('Профиль', '/dashboard/profile', UserRound)}
-        {isSuperAdmin && item('Платформа', '/admin', ShieldCheck)}
+        {item(t.nav.support, '/dashboard/support', Headphones)}
+        {item(t.nav.profile, '/dashboard/profile', UserRound)}
+        {isSuperAdmin && item(t.nav.platform, '/admin', ShieldCheck)}
       </div>
     </div>
   );

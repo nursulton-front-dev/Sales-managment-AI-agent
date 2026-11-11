@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { AssistantMessage, AssistantLanguage, AssistantPendingAction } from '@/lib/assistant/types';
 import { BrandMascot } from '@/components/ui/BrandMascot';
+import { useApp } from '@/context/AppContext';
 
 interface PlatformAssistantDrawerProps {
   className?: string;
@@ -39,15 +40,21 @@ export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDra
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load language preference
+  const { locale } = useApp();
+
+  // Load language preference or sync with app locale
   useEffect(() => {
     try {
       const savedLang = localStorage.getItem('gapcha_assistant_lang');
       if (savedLang === 'uz' || savedLang === 'ru') {
         setLang(savedLang);
+      } else {
+        setLang(locale);
       }
-    } catch {}
-  }, []);
+    } catch {
+      setLang(locale);
+    }
+  }, [locale]);
 
   const handleLangChange = (newLang: AssistantLanguage) => {
     setLang(newLang);

@@ -77,7 +77,7 @@ export function WebsiteWidgetSettingsView({
 }: {
   onBack?: () => void;
 }) {
-  const { agents, showToast } = useApp();
+  const { agents, showToast, t, locale } = useApp();
   const [widget, setWidget] = useState<Widget | null>(null);
   const [form, setForm] = useState<WidgetSettings>(DEFAULT_WIDGET_SETTINGS);
   const [origins, setOrigins] = useState('');
@@ -102,7 +102,7 @@ export function WebsiteWidgetSettingsView({
       const res = await fetch('/api/integrations/widget');
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Не удалось загрузить настройки виджета');
+        throw new Error(data.error || (locale === 'uz' ? 'Vidjet sozlamalarini yuklab bo‘lmadi' : 'Не удалось загрузить настройки виджета'));
       }
       if (data.widget) {
         setWidget(data.widget);
@@ -120,11 +120,11 @@ export function WebsiteWidgetSettingsView({
       setEmbedOrigin(origin);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сети');
+      setError(err instanceof Error ? err.message : (locale === 'uz' ? 'Tarmoq xatosi' : 'Ошибка сети'));
     } finally {
       setLoading(false);
     }
-  }, [agents]);
+  }, [agents, locale]);
 
   useEffect(() => {
     void load();
@@ -179,17 +179,17 @@ export function WebsiteWidgetSettingsView({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Не удалось сохранить настройки');
+        throw new Error(data.error || (locale === 'uz' ? 'Sozlamalarni saqlab bo‘lmadi' : 'Не удалось сохранить настройки'));
       }
 
       setWidget(data.widget);
       setForm(settingsOnly(data.widget));
       setOrigins(data.widget.allowedOrigins?.join('\n') || '');
-      showToast('Настройки виджета сохранены');
+      showToast(locale === 'uz' ? 'Vidjet sozlamalari saqlandi' : 'Настройки виджета сохранены');
     } catch (err) {
       showToast(
-        'Ошибка сохранения',
-        err instanceof Error ? err.message : 'Проверьте соединение',
+        locale === 'uz' ? 'Saqlashda xatolik' : 'Ошибка сохранения',
+        err instanceof Error ? err.message : (locale === 'uz' ? 'Ulanishni tekshiring' : 'Проверьте соединение'),
         'error'
       );
     } finally {
@@ -202,22 +202,26 @@ export function WebsiteWidgetSettingsView({
     try {
       const res = await fetch('/api/integrations/widget');
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Проверка недоступна');
+      if (!res.ok || !data.success) throw new Error(data.error || (locale === 'uz' ? 'Tekshiruv mavjud emas' : 'Проверка недоступна'));
       setWidget(data.widget);
       if (data.widget?.lastSeenAt) {
         showToast(
-          'Установка подтверждена',
-          `Виджет зафиксирован на ${data.widget.lastSeenOrigin || 'сайте'}`
+          locale === 'uz' ? 'O‘rnatish tasdiqlandi' : 'Установка подтверждена',
+          locale === 'uz' ? `Vidjet ${data.widget.lastSeenOrigin || 'sayt'}da qayd etildi` : `Виджет зафиксирован на ${data.widget.lastSeenOrigin || 'сайте'}`
         );
       } else {
         showToast(
-          'Установка пока не обнаружена',
-          'Откройте страницу вашего сайта в браузере и нажмите «Проверить» повторно.',
+          locale === 'uz' ? 'O‘rnatish hali aniqlanmadi' : 'Установка пока не обнаружена',
+          locale === 'uz' ? 'Saytingiz sahifasini brauzerda oching va yana «Tekshirish» tugmasini bosing.' : 'Откройте страницу вашего сайта в браузере и нажмите «Проверить» повторно.',
           'info'
         );
       }
     } catch (err) {
-      showToast('Ошибка проверки', err instanceof Error ? err.message : 'Ошибка сети', 'error');
+      showToast(
+        locale === 'uz' ? 'Tekshirishda xatolik' : 'Ошибка проверки',
+        err instanceof Error ? err.message : (locale === 'uz' ? 'Tarmoq xatosi' : 'Ошибка сети'),
+        'error'
+      );
     } finally {
       setChecking(false);
     }
@@ -228,13 +232,17 @@ export function WebsiteWidgetSettingsView({
     try {
       const res = await fetch('/api/integrations/widget', { method: 'POST' });
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Не удалось отправить заявку');
+      if (!res.ok || !data.success) throw new Error(data.error || (locale === 'uz' ? 'Arizani yuborib bo‘lmadi' : 'Не удалось отправить заявку'));
       showToast(
-        'Заявка отправлена',
-        `Обращение №${data.ticketNumber} создано. Специалист свяжется с вами.`
+        locale === 'uz' ? 'Ariza yuborildi' : 'Заявка отправлена',
+        locale === 'uz' ? `№${data.ticketNumber} murojaat yaratildi. Mutaxassis siz bilan bog‘lanadi.` : `Обращение №${data.ticketNumber} создано. Специалист свяжется с вами.`
       );
     } catch (err) {
-      showToast('Заявка не отправлена', err instanceof Error ? err.message : 'Ошибка сети', 'error');
+      showToast(
+        locale === 'uz' ? 'Ariza yuborilmadi' : 'Заявка не отправлена',
+        err instanceof Error ? err.message : (locale === 'uz' ? 'Tarmoq xatosi' : 'Ошибка сети'),
+        'error'
+      );
     } finally {
       setHelping(false);
     }
@@ -250,10 +258,10 @@ export function WebsiteWidgetSettingsView({
     try {
       await navigator.clipboard.writeText(snippet);
       setCopiedSnippet(true);
-      showToast('Код виджета скопирован в буфер обмена');
+      showToast(locale === 'uz' ? 'Vidjet kodi xotiraga nusxalandi' : 'Код виджета скопирован в буфер обмена');
       setTimeout(() => setCopiedSnippet(false), 2000);
     } catch {
-      showToast('Выделите и скопируйте код вручную', undefined, 'error');
+      showToast(locale === 'uz' ? 'Kodni qo‘lda belgilab nusxalang' : 'Выделите и скопируйте код вручную', undefined, 'error');
     }
   };
 
@@ -270,29 +278,35 @@ export function WebsiteWidgetSettingsView({
                 className="hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <ArrowLeft size={13} />
-                <span>Все интеграции</span>
+                <span>{locale === 'uz' ? 'Barcha integratsiyalar' : 'Все интеграции'}</span>
               </button>
             ) : (
               <Link
                 href="/dashboard/integrations"
                 className="hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] transition-colors"
               >
-                Интеграции
+                {t.integrations.title}
               </Link>
             )}
             <span>/</span>
-            <span className="text-[var(--text-primary)] dark:text-[#F4F7FB] font-medium">Чат на сайте</span>
+            <span className="text-[var(--text-primary)] dark:text-[#F4F7FB] font-medium">
+              {locale === 'uz' ? 'Saytdagi chat' : 'Чат на сайте'}
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-              Чат на сайте
+              {t.integrations.widgetTitle}
             </h1>
             <Badge variant={widget?.enabled ? 'success' : 'neutral'}>
-              {widget?.enabled ? '● Активен' : '○ Не настроен'}
+              {widget?.enabled
+                ? (locale === 'uz' ? '● Faol' : '● Активен')
+                : (locale === 'uz' ? '○ Sozlanmagan' : '○ Не настроен')}
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1">
-            Настройте внешний вид, скопируйте код для сайта и проверьте статус подключения.
+            {locale === 'uz'
+              ? 'Tashqi ko‘rinishni sozlang, sayt uchun kodni nusxalang va ulanish holatini tekshiring.'
+              : 'Настройте внешний вид, скопируйте код для сайта и проверьте статус подключения.'}
           </p>
         </div>
 
@@ -301,7 +315,7 @@ export function WebsiteWidgetSettingsView({
           {isDirty && (
             <span className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
-              Есть несохранённые изменения
+              {locale === 'uz' ? 'Saqlanmagan o‘zgarishlar bor' : 'Есть несохранённые изменения'}
             </span>
           )}
           <Button
@@ -312,7 +326,7 @@ export function WebsiteWidgetSettingsView({
             onClick={() => handleSave()}
             className="bg-[#DC2626] hover:bg-[#b91c1c] text-white font-semibold text-xs px-4 py-2"
           >
-            Сохранить изменения
+            {locale === 'uz' ? 'O‘zgarishlarni saqlash' : 'Сохранить изменения'}
           </Button>
         </div>
       </div>
@@ -337,7 +351,7 @@ export function WebsiteWidgetSettingsView({
                 }`}
               >
                 <Sliders size={14} />
-                <span>Оформление</span>
+                <span>{locale === 'uz' ? 'Ko‘rinish' : 'Оформление'}</span>
               </button>
 
               <button
@@ -350,7 +364,7 @@ export function WebsiteWidgetSettingsView({
                 }`}
               >
                 <Code2 size={14} />
-                <span>Установка</span>
+                <span>{locale === 'uz' ? 'O‘rnatish' : 'Установка'}</span>
               </button>
 
               <button
@@ -363,7 +377,7 @@ export function WebsiteWidgetSettingsView({
                 }`}
               >
                 <CheckCircle2 size={14} />
-                <span>Проверка</span>
+                <span>{locale === 'uz' ? 'Tekshirish' : 'Проверка'}</span>
               </button>
             </div>
 
@@ -373,61 +387,63 @@ export function WebsiteWidgetSettingsView({
                 {/* Agent select */}
                 <div>
                   <Select
-                    label="Ответственный сотрудник"
+                    label={locale === 'uz' ? 'Mas\'ul xodim' : 'Ответственный сотрудник'}
                     value={form.agentId}
                     onChange={(e) => update('agentId', e.target.value)}
                     options={[
-                      { value: '', label: 'Выберите сотрудника' },
+                      { value: '', label: locale === 'uz' ? 'Xodimni tanlang' : 'Выберите сотрудника' },
                       ...agents.map((a) => ({
                         value: a.id,
-                        label: `${a.name}${a.isActive ? '' : ' (неактивен)'}`,
+                        label: `${a.name}${a.isActive ? '' : (locale === 'uz' ? ' (nofaol)' : ' (неактивен)')}`,
                       })),
                     ]}
                     required
                   />
                   <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-1">
-                    ИИ-сотрудник будет отвечать на сообщения посетителей в виджете.
+                    {locale === 'uz'
+                      ? 'AI-xodim vidjetda sayt tashrif buyuruvchilarining savollariga javob beradi.'
+                      : 'ИИ-сотрудник будет отвечать на сообщения посетителей в виджете.'}
                   </p>
                 </div>
 
                 {/* Widget title */}
                 <div>
                   <Input
-                    label="Заголовок виджета"
+                    label={locale === 'uz' ? 'Vidjet sarlavhasi' : 'Заголовок виджета'}
                     value={form.title}
                     onChange={(e) => update('title', e.target.value)}
                     maxLength={80}
-                    placeholder="Поможем с вашим вопросом"
+                    placeholder={locale === 'uz' ? 'Savolingiz bo‘yicha yordam beramiz' : 'Поможем с вашим вопросом'}
                     required
                   />
                   <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-1">
-                    Отображается в шапке окна чата.
+                    {locale === 'uz' ? 'Chat oynasi yuqorisida ko‘rinadi.' : 'Отображается в шапке окна чата.'}
                   </p>
                 </div>
 
                 {/* Greeting text */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                    Приветственное сообщение
+                    {locale === 'uz' ? 'Salomlashuv xabari' : 'Приветственное сообщение'}
                   </label>
                   <textarea
                     rows={3}
                     value={form.greeting}
                     onChange={(e) => update('greeting', e.target.value)}
                     maxLength={500}
-                    placeholder="Здравствуйте! Я ИИ-помощник компании. Чем могу помочь?"
+                    placeholder={locale === 'uz' ? 'Assalomu alaykum! Men AI-maslahatchiman. Sizga qanday yordam bera olaman?' : 'Здравствуйте! Я ИИ-помощник компании. Чем могу помочь?'}
                     className="w-full rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#101B2E] p-3 text-xs sm:text-sm text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-hidden focus:ring-2 focus:ring-[#DC2626]/30 transition-colors resize-none"
                     required
                   />
                   <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                    Первая реплика, которую видит пользователь при открытии чата.
+                    {locale === 'uz' ? 'Foydalanuvchi chatni ochganda ko‘radigan birinchi xabar.' : 'Первая реплика, которую видит пользователь при открытии чата.'}
                   </p>
                 </div>
 
                 {/* Color swatches */}
                 <div className="space-y-2">
                   <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                    Цветовая тема
+                    {locale === 'uz' ? 'Rang mavzusi' : 'Цветовая тема'}
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {COLOR_PRESETS.map((preset) => {
@@ -457,7 +473,7 @@ export function WebsiteWidgetSettingsView({
                 {/* Widget Position */}
                 <div className="space-y-2">
                   <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                    Расположение на сайте
+                    {locale === 'uz' ? 'Saytdagi joylashuvi' : 'Расположение на сайте'}
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -469,9 +485,9 @@ export function WebsiteWidgetSettingsView({
                           : 'border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0]'
                       }`}
                     >
-                      <div className="font-semibold">Справа (Рекомендуется)</div>
+                      <div className="font-semibold">{locale === 'uz' ? 'O‘ngda (Tavsiya etiladi)' : 'Справа (Рекомендуется)'}</div>
                       <div className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-0.5">
-                        Привычный нижний правый угол
+                        {locale === 'uz' ? 'Odatdagi pastki o‘ng burchak' : 'Привычный нижний правый угол'}
                       </div>
                     </button>
 
@@ -484,9 +500,9 @@ export function WebsiteWidgetSettingsView({
                           : 'border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0]'
                       }`}
                     >
-                      <div className="font-semibold">Слева</div>
+                      <div className="font-semibold">{locale === 'uz' ? 'Chapda' : 'Слева'}</div>
                       <div className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-0.5">
-                        Нижний левый угол страницы
+                        {locale === 'uz' ? 'Pastki chap burchak' : 'Нижний левый угол страницы'}
                       </div>
                     </button>
                   </div>
@@ -496,10 +512,12 @@ export function WebsiteWidgetSettingsView({
                 <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
                   <div>
                     <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
-                      Статус виджета
+                      {locale === 'uz' ? 'Vidjet holati' : 'Статус виджета'}
                     </span>
                     <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                      Включите, чтобы виджет отображался и отвечал посетителям
+                      {locale === 'uz'
+                        ? 'Vidjet ko‘rinishi va tashrif buyuruvchilarga javob berishi uchun yoqing'
+                        : 'Включите, чтобы виджет отображался и отвечал посетителям'}
                     </span>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer select-none">
@@ -521,10 +539,14 @@ export function WebsiteWidgetSettingsView({
               <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 sm:p-6 space-y-5 shadow-xs">
                 <div>
                   <h3 className="text-sm font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                    Код для размещения на сайте
+                    {locale === 'uz' ? 'Saytga joylashtirish uchun kod' : 'Код для размещения на сайте'}
                   </h3>
                   <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                    Скопируйте скрипт и вставьте его перед закрывающим тегом <code className="px-1.5 py-0.5 rounded bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[#DC2626] font-mono text-[11px]">&lt;/body&gt;</code> вашего сайта.
+                    {locale === 'uz' ? (
+                      <>Skriptni nusxalang va uni saytingizning <code className="px-1.5 py-0.5 rounded bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[#DC2626] font-mono text-[11px]">&lt;/body&gt;</code> yopuvchi tegidan oldin joylashtiring.</>
+                    ) : (
+                      <>Скопируйте скрипт и вставьте его перед закрывающим тегом <code className="px-1.5 py-0.5 rounded bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[#DC2626] font-mono text-[11px]">&lt;/body&gt;</code> вашего сайта.</>
+                    )}
                   </p>
                 </div>
 
@@ -534,7 +556,7 @@ export function WebsiteWidgetSettingsView({
                   <button
                     type="button"
                     onClick={copySnippet}
-                    aria-label="Копировать код"
+                    aria-label={locale === 'uz' ? 'Kodni nusxalash' : 'Копировать код'}
                     className="absolute top-3 right-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
                   >
                     {copiedSnippet ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
@@ -544,19 +566,19 @@ export function WebsiteWidgetSettingsView({
                 {/* Placement instructions */}
                 <div className="p-4 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] space-y-2 text-xs">
                   <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
-                    Инструкции по установке для популярных платформ:
+                    {locale === 'uz' ? 'Mashhur platformalar uchun o‘rnatish ko‘rsatmalari:' : 'Инструкции по установке для популярных платформ:'}
                   </span>
                   <ul className="list-disc pl-4 space-y-1 text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
-                    <li><strong>Tilda:</strong> Настройки сайта → Еще → HTML-код для вставки внутри HEAD или перед &lt;/body&gt;.</li>
-                    <li><strong>WordPress:</strong> Внешний вид → Редактор тем → footer.php или через плагин «Insert Headers and Footers».</li>
-                    <li><strong>Taplink / Creatium:</strong> Настройки → Вставки кода → Перед закрывающим тегом BODY.</li>
+                    <li><strong>Tilda:</strong> {locale === 'uz' ? 'Sayt sozlamalari → Yana → HEAD yoki </body> oldidan HTML-kod.' : 'Настройки сайта → Еще → HTML-код для вставки внутри HEAD или перед </body>.'}</li>
+                    <li><strong>WordPress:</strong> {locale === 'uz' ? 'Tashqi ko‘rinish → Mavzular muharriri → footer.php yoki «Insert Headers and Footers» plagini orqali.' : 'Внешний вид → Редактор тем → footer.php или через плагин «Insert Headers and Footers».'}</li>
+                    <li><strong>Taplink / Creatium:</strong> {locale === 'uz' ? 'Sozlamalar → Kod qo‘yish → BODY yopilishidan oldin.' : 'Настройки → Вставки кода → Перед закрывающим тегом BODY.'}</li>
                   </ul>
                 </div>
 
                 {/* Allowed domains whitelist */}
                 <div className="space-y-1.5 pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
                   <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                    Разрешённые домены (Allowed Origins)
+                    {locale === 'uz' ? 'Ruxsat berilgan domenlar (Allowed Origins)' : 'Разрешённые домены (Allowed Origins)'}
                   </label>
                   <textarea
                     rows={2}
@@ -566,7 +588,9 @@ export function WebsiteWidgetSettingsView({
                     className="w-full rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#101B2E] p-3 text-xs font-mono text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-hidden focus:ring-2 focus:ring-[#DC2626]/30 transition-colors resize-none"
                   />
                   <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                    Укажите адреса сайтов (по одному на строку), с которых разрешено загружать виджет.
+                    {locale === 'uz'
+                      ? 'Vidjetni yuklashga ruxsat berilgan saytlar manzillarini (har bir qatorda bittadan) kiriting.'
+                      : 'Укажите адреса сайтов (по одному на строку), с которых разрешено загружать виджет.'}
                   </p>
                 </div>
               </div>
@@ -577,10 +601,12 @@ export function WebsiteWidgetSettingsView({
               <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 sm:p-6 space-y-5 shadow-xs">
                 <div>
                   <h3 className="text-sm font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                    Проверка установки виджета
+                    {locale === 'uz' ? 'Vidjet o‘rnatilishini tekshirish' : 'Проверка установки виджета'}
                   </h3>
                   <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                    Сервер проверяет поступление запросов от скрипта виджета с вашего сайта.
+                    {locale === 'uz'
+                      ? 'Server saytingizdagi vidjet skriptidan so‘rovlar kelishini tekshiradi.'
+                      : 'Сервер проверяет поступление запросов от скрипта виджета с вашего сайта.'}
                   </p>
                 </div>
 
@@ -599,14 +625,20 @@ export function WebsiteWidgetSettingsView({
                       }`}
                     />
                     <span className="text-xs font-semibold">
-                      {widget?.lastSeenAt ? 'Виджет успешно активен на сайте' : 'Запрос с сайта пока не зафиксирован'}
+                      {widget?.lastSeenAt
+                        ? (locale === 'uz' ? 'Vidjet saytda muvaffaqiyatli faol' : 'Виджет успешно активен на сайте')
+                        : (locale === 'uz' ? 'Saytdan so‘rov hali qayd etilmadi' : 'Запрос с сайта пока не зафиксирован')}
                     </span>
                   </div>
 
                   <p className="text-xs leading-relaxed text-[var(--text-secondary)] dark:text-[#AABAD0]">
                     {widget?.lastSeenAt
-                      ? `Последний контакт: ${new Date(widget.lastSeenAt).toLocaleString('ru-RU')} с источника: ${widget.lastSeenOrigin || 'сайт'}`
-                      : 'После вставки кода на сайт откройте любую его страницу в новой вкладке. Затем нажмите «Проверить подключение» ниже.'}
+                      ? (locale === 'uz'
+                          ? `So‘nggi aloqa: ${new Date(widget.lastSeenAt).toLocaleString('uz-UZ')} manbadan: ${widget.lastSeenOrigin || 'sayt'}`
+                          : `Последний контакт: ${new Date(widget.lastSeenAt).toLocaleString('ru-RU')} с источника: ${widget.lastSeenOrigin || 'сайт'}`)
+                      : (locale === 'uz'
+                          ? 'Kodni saytga qo‘ygandan so‘ng, istalgan sahifani yangi ilovada oching. So‘ngra quyidagi «Ulanishni tekshirish» tugmasini bosing.'
+                          : 'После вставки кода на сайт откройте любую его страницу в новой вкладке. Затем нажмите «Проверить подключение» ниже.')}
                   </p>
                 </div>
 
@@ -621,7 +653,7 @@ export function WebsiteWidgetSettingsView({
                     className="bg-[#DC2626] hover:bg-[#b91c1c] text-white text-xs font-semibold"
                   >
                     <RefreshCw size={14} className="mr-1.5" />
-                    <span>Проверить подключение</span>
+                    <span>{locale === 'uz' ? 'Ulanishni tekshirish' : 'Проверить подключение'}</span>
                   </Button>
 
                   <Button
@@ -633,7 +665,7 @@ export function WebsiteWidgetSettingsView({
                     className="text-xs font-medium"
                   >
                     <HelpCircle size={14} className="mr-1.5" />
-                    <span>Помощь в установке</span>
+                    <span>{locale === 'uz' ? 'O‘rnatishda yordam' : 'Помощь в установке'}</span>
                   </Button>
                 </div>
               </div>
@@ -647,7 +679,7 @@ export function WebsiteWidgetSettingsView({
             {/* Preview Toolbar */}
             <div className="w-full flex items-center justify-between text-xs px-1">
               <span className="font-semibold text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                Предпросмотр на сайте
+                {locale === 'uz' ? 'Saytda oldindan ko‘rish' : 'Предпросмотр на сайте'}
               </span>
               <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
                 <button
@@ -658,8 +690,8 @@ export function WebsiteWidgetSettingsView({
                       ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-semibold'
                       : 'text-[var(--text-muted)] dark:text-[#AABAD0]/70 hover:text-[var(--text-primary)]'
                   }`}
-                  aria-label="Компьютер"
-                  title="Компьютер"
+                  aria-label={locale === 'uz' ? 'Kompyuter' : 'Компьютер'}
+                  title={locale === 'uz' ? 'Kompyuter' : 'Компьютер'}
                 >
                   <Laptop size={14} />
                 </button>
@@ -671,8 +703,8 @@ export function WebsiteWidgetSettingsView({
                       ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-semibold'
                       : 'text-[var(--text-muted)] dark:text-[#AABAD0]/70 hover:text-[var(--text-primary)]'
                   }`}
-                  aria-label="Телефон"
-                  title="Телефон"
+                  aria-label={locale === 'uz' ? 'Telefon' : 'Телефон'}
+                  title={locale === 'uz' ? 'Telefon' : 'Телефон'}
                 >
                   <Smartphone size={14} />
                 </button>
@@ -724,9 +756,11 @@ export function WebsiteWidgetSettingsView({
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-xs truncate leading-none">
-                          {form.title || 'Поможем с вашим вопросом'}
+                          {form.title || (locale === 'uz' ? 'Savolingiz bo‘yicha yordam beramiz' : 'Поможем с вашим вопросом')}
                         </p>
-                        <p className="text-[10px] text-white/80 mt-0.5 leading-none">ИИ-консультант</p>
+                        <p className="text-[10px] text-white/80 mt-0.5 leading-none">
+                          {locale === 'uz' ? 'AI-maslahatchi' : 'ИИ-консультант'}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -742,7 +776,7 @@ export function WebsiteWidgetSettingsView({
                         AI
                       </div>
                       <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] text-[11px] leading-relaxed">
-                        {form.greeting || 'Здравствуйте! Чем могу помочь?'}
+                        {form.greeting || (locale === 'uz' ? 'Assalomu alaykum! Sizga qanday yordam bera olaman?' : 'Здравствуйте! Чем могу помочь?')}
                       </div>
                     </div>
 
@@ -752,7 +786,7 @@ export function WebsiteWidgetSettingsView({
                         className="rounded-xl rounded-tr-xs p-2 text-white text-[11px] max-w-[85%] font-medium leading-relaxed"
                         style={{ backgroundColor: form.color }}
                       >
-                        Сколько стоит внедрение?
+                        {locale === 'uz' ? 'O‘rnatish qancha turadi?' : 'Сколько стоит внедрение?'}
                       </div>
                     </div>
 
@@ -765,7 +799,7 @@ export function WebsiteWidgetSettingsView({
                         AI
                       </div>
                       <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] text-[11px] leading-relaxed">
-                        Стоимость зависит от ваших задач. Подскажите, какой канал вас интересует?
+                        {locale === 'uz' ? 'Narx sizning vazifalaringizga bog‘liq. Qaysi kanal sizni qiziqtirmoqda?' : 'Стоимость зависит от ваших задач. Подскажите, какой канал вас интересует?'}
                       </div>
                     </div>
                   </div>
@@ -774,7 +808,7 @@ export function WebsiteWidgetSettingsView({
                   <div className="p-2 border-t border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137]">
                     <div className="flex items-center gap-1.5 p-1 rounded-lg bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
                       <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 pl-2 flex-1 truncate">
-                        Напишите сообщение…
+                        {locale === 'uz' ? 'Xabar yozing…' : 'Напишите сообщение…'}
                       </span>
                       <div
                         className="size-6 rounded-md text-white flex items-center justify-center shrink-0"
@@ -803,7 +837,9 @@ export function WebsiteWidgetSettingsView({
             </div>
 
             <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 text-center">
-              Интерактивный виджет адаптируется под тему и устройство пользователя.
+              {locale === 'uz'
+                ? 'Interaktiv vidjet foydalanuvchi mavzusi va qurilmasiga moslashadi.'
+                : 'Интерактивный виджет адаптируется под тему и устройство пользователя.'}
             </p>
           </div>
         </div>
@@ -822,20 +858,21 @@ export function WebsiteWidgetModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { locale } = useApp();
   if (!open) return null;
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      label="Настройки виджета чата на сайте"
+      label={locale === 'uz' ? 'Saytdagi chat vidjeti sozlamalari' : 'Настройки виджета чата на сайте'}
       className="w-[calc(100vw-32px)] lg:w-[1020px] max-w-[1020px] p-6 rounded-2xl overflow-y-auto max-h-[90dvh] border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
     >
       <div className="relative">
         <button
           type="button"
           onClick={onClose}
-          aria-label="Закрыть"
+          aria-label={locale === 'uz' ? 'Yopish' : 'Закрыть'}
           className="absolute -top-2 -right-2 p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-10"
         >
           <X size={20} />

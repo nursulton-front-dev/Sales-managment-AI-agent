@@ -1,124 +1,153 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
-import { BrandMascot } from '@/components/ui/BrandMascot';
+import { SparrowMascot } from '@/components/ui/SparrowMascot';
+import { Button } from '@/components/ui/Button';
 import {
-  Sparkles,
-  Bot,
   Send,
-  Loader2,
+  Paperclip,
+  Check,
+  Edit3,
+  Play,
+  RotateCcw,
   CheckCircle2,
   AlertCircle,
   HelpCircle,
-  Paperclip,
-  ArrowRight,
-  ArrowLeft,
-  RotateCcw,
-  Check,
-  Edit3,
-  MessageSquare,
-  Play,
-  Settings2,
-  Trash2,
-  Plus,
-  ShieldAlert,
-  Calendar,
-  Globe,
+  Sparkles,
+  X,
   Radio,
+  FileText,
 } from 'lucide-react';
-import { AgentDraft, WizardMessage, WizardNiche } from '@/lib/wizard/types';
-import { ARCHETYPES, createInitialDraft } from '@/lib/wizard/archetypes';
+import { AgentDraft, WizardMessage, WizardNiche, WizardTone } from '@/lib/wizard/types';
+import { ARCHETYPES } from '@/lib/wizard/archetypes';
 
 interface AgentSetupWizardProps {
-  onCancelManual: () => void;
+  draft: AgentDraft;
+  onDraftChange: (updated: AgentDraft) => void;
+  onSaveAndLaunch: () => Promise<void>;
+  isSaving: boolean;
+  onOpenSandbox: () => void;
 }
 
-export function AgentSetupWizard({ onCancelManual }: AgentSetupWizardProps) {
-  const router = useRouter();
-  const { workspace, refreshWorkspace, showToast } = useApp();
-  const [lang, setLang] = useState<'ru' | 'uz'>('ru');
-  const [draft, setDraft] = useState<AgentDraft>(() => createInitialDraft('courses', 'ru'));
-  const [activeTab, setActiveTab] = useState<'dialog' | 'sandbox'>('dialog');
-  const [mobileView, setMobileView] = useState<'chat' | 'draft'>('chat');
+export function AgentSetupWizard({
+  draft,
+  onDraftChange,
+  onSaveAndLaunch,
+  isSaving,
+  onOpenSandbox,
+}: AgentSetupWizardProps) {
+  const { locale, t, showToast } = useApp();
+  const isUz = locale === 'uz';
 
-  // Wizard Dialog state
+  // Mobile tab state: 'dialog' | 'resume'
+  const [mobileTab, setMobileTab] = useState<'dialog' | 'resume'>('dialog');
+
+  // Dialogue messages state
   const [messages, setMessages] = useState<WizardMessage[]>([]);
   const [inputVal, setInputVal] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [suggestedAnswers, setSuggestedAnswers] = useState<string[]>([]);
-  const [attachedText, setAttachedText] = useState<string | null>(null);
 
-  // Sandbox state
-  const [sandboxMessages, setSandboxMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; tag?: string }>>([]);
-  const [sandboxInput, setSandboxInput] = useState('');
-  const [isSandboxSending, setIsSandboxSending] = useState(false);
+  // Autosave status state
+  const [autosaveStatus, setAutosaveStatus] = useState<'saving' | 'saved' | 'error'>('saved');
 
-  // Finalization state
-  const [isFinalizing, setIsFinalizing] = useState(false);
-  const [finalError, setFinalError] = useState<string | null>(null);
+  // Edit Modal State for fields
+  const [editingField, setEditingField] = useState<
+    'name' | 'niche' | 'goal' | 'pricing' | 'tone' | null
+  >(null);
+  const [fieldValue, setFieldValue] = useState('');
 
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const sandboxEndRef = useRef<HTMLDivElement>(null);
+  // Refs for auto-scroll and manual edits timestamp protection
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastUserEditTimeRef = useRef<number>(0);
+  const hasInitializedMessages = useRef<boolean>(false);
 
-  // Load existing draft from server on mount
+  // Initialize first greeting question
   useEffect(() => {
-    let mounted = true;
-    async function loadDraft() {
-      try {
-        const res = await fetch('/api/assistant/wizard');
-        const data = await res.json();
-        if (mounted && data.success && data.draft) {
-          setDraft(data.draft);
-          const arch = ARCHETYPES[data.draft.nicheTemplate as WizardNiche] || ARCHETYPES.courses;
-          setMessages([
-            {
-              id: 'init_msg',
-              role: 'assistant',
-              content: lang === 'uz'
-                ? `Assalomu alaykum! Men gapcha AI-sozlash ustasiman. Sizga mijozlarga avtomatik javob beruvchi va qabulga yozuvchi raqamli xodim yaratishga yordam beraman.\n\nBirinchi navbatda: biznesingiz yo'nalishi nima va xodimdan asosiy kutayotgan natijangiz qanday?`
-                : `Здравствуйте! Я интерактивный ИИ-мастер gapcha AI. Помогу настроить вашего цифрового сотрудника для консультаций, работы с возражениями и записи клиентов.\n\nДля начала расскажите: в какой сфере работает ваш бизнес и какая главная задача у сотрудника?`,
-              timestamp: new Date().toISOString(),
-              suggestedAnswers: lang === 'uz'
-                ? ['Oʻquv markazi (kurslar)', 'Marketing agentligi', 'Xizmatlar koʻrsatish', 'Umumiy savdo']
-                : ['Учебный центр (курсы)', 'Маркетинговое агентство', 'Сфера услуг', 'Торговля и B2B'],
-            },
-          ]);
-        }
-      } catch {}
-    }
-    loadDraft();
-    return () => { mounted = false; };
-  }, [lang]);
+    if (hasInitializedMessages.current) return;
+    hasInitializedMessages.current = true;
 
+    setMessages([
+      {
+        id: 'msg_welcome',
+        role: 'assistant',
+        content: t.wizard.firstQuestionGreeting,
+        timestamp: new Date().toISOString(),
+        suggestedAnswers: isUz
+          ? [
+              'O‘quv markazi / Kurslar',
+              'Klinika / Tibbiyot',
+              'Go‘zallik saloni',
+              'Do‘kon / Chakana savdo',
+              'Marketing agentligi',
+              'Boshqa xizmatlar',
+            ]
+          : [
+              'Учебный центр / Курсы',
+              'Клиника / Медицина',
+              'Салон красоты',
+              'Магазин / Ритейл',
+              'Маркетинговое агентство',
+              'Сфера услуг',
+            ],
+      },
+    ]);
+    setSuggestedAnswers(
+      isUz
+        ? [
+            'O‘quv markazi / Kurslar',
+            'Klinika / Tibbiyot',
+            'Go‘zallik saloni',
+            'Do‘kon / Chakana savdo',
+            'Marketing agentligi',
+            'Boshqa xizmatlar',
+          ]
+        : [
+            'Учебный центр / Курсы',
+            'Клиника / Медицина',
+            'Салон красоты',
+            'Магазин / Ритейл',
+            'Маркетинговое агентство',
+            'Сфера услуг',
+          ]
+    );
+  }, [isUz, t]);
+
+  // Smooth scroll to bottom of chat
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isSending]);
 
-  useEffect(() => {
-    sandboxEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [sandboxMessages, isSandboxSending]);
-
-  // Handle Wizard chat send
+  // Send message to wizard chat
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || inputVal).trim();
-    if ((!text && !attachedText) || isSending) return;
+    if (!text || isSending) return;
 
-    const userMessage: WizardMessage = {
-      id: `w_u_${Date.now()}`,
+    setSendError(null);
+    setInputVal('');
+
+    const userMsg: WizardMessage = {
+      id: `usr_${Date.now()}`,
       role: 'user',
-      content: text || (lang === 'uz' ? '[Fayl biriktirildi]' : '[Прикреплен файл с прайсом]'),
+      content: text,
       timestamp: new Date().toISOString(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    if (!textToSend) setInputVal('');
+    setMessages((prev) => [...prev, userMsg]);
     setIsSending(true);
+    setAutosaveStatus('saving');
+
+    const requestTime = Date.now();
 
     try {
-      const historyPayload = messages.slice(-6).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+      const historyPayload = messages.slice(-6).map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
+
       const res = await fetch('/api/assistant/wizard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,733 +156,642 @@ export function AgentSetupWizard({ onCancelManual }: AgentSetupWizardProps) {
           message: text,
           draft,
           history: historyPayload,
-          lang,
-          attachedText,
+          lang: locale,
         }),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Ошибка диалога настройки');
+        throw new Error(data.error || (isUz ? 'Server xatosi' : 'Ошибка сервера'));
       }
 
-      setDraft(data.updatedDraft);
-      setMessages(prev => [
-        ...prev,
-        {
-          id: `w_a_${Date.now()}`,
-          role: 'assistant',
-          content: data.reply,
-          timestamp: new Date().toISOString(),
-          suggestedAnswers: data.suggestedAnswers,
-        },
-      ]);
+      // Safeguard: if user edited a field manually while request was in-flight, preserve user's edits
+      let mergedDraft: AgentDraft = { ...data.updatedDraft };
+      if (lastUserEditTimeRef.current > requestTime) {
+        mergedDraft = {
+          ...data.updatedDraft,
+          name: draft.name,
+          targetGoal: draft.targetGoal,
+          servicesAndPricing: draft.servicesAndPricing,
+          tone: draft.tone,
+        };
+      }
+
+      onDraftChange(mergedDraft);
+      setAutosaveStatus('saved');
+
+      const botMsg: WizardMessage = {
+        id: `ast_${Date.now()}`,
+        role: 'assistant',
+        content: data.reply,
+        timestamp: new Date().toISOString(),
+        suggestedAnswers: data.suggestedAnswers || [],
+      };
+
+      setMessages((prev) => [...prev, botMsg]);
       setSuggestedAnswers(data.suggestedAnswers || []);
-      setAttachedText(null);
     } catch (err: any) {
-      setMessages(prev => [
-        ...prev,
-        {
-          id: `w_err_${Date.now()}`,
-          role: 'assistant',
-          content: lang === 'uz' ? `Xatolik: ${err.message}` : `Ошибка: ${err.message}`,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+      setSendError(err.message || (isUz ? 'Xatolik yuz berdi' : 'Произошла ошибка'));
+      setAutosaveStatus('error');
     } finally {
       setIsSending(false);
     }
   };
 
-  // Handle sandbox send
-  const handleSandboxSend = async (textToSend?: string, instruction?: string) => {
-    const text = (textToSend || sandboxInput).trim();
-    if (!text || isSandboxSending) return;
-
-    setSandboxMessages(prev => [...prev, { role: 'user', content: text }]);
-    if (!textToSend) setSandboxInput('');
-    setIsSandboxSending(true);
-
-    try {
-      const historyPayload = sandboxMessages.slice(-6).map(m => ({ role: m.role, content: m.content }));
-      const res = await fetch('/api/assistant/wizard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'sandbox_chat',
-          message: text,
-          draft,
-          history: historyPayload,
-          tuningInstruction: instruction,
-          lang,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Ошибка тест-драйва');
-
-      setSandboxMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: data.reply,
-          tag: data.simulatedAction?.details,
-        },
-      ]);
-    } catch (err: any) {
-      setSandboxMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: `[Ошибка]: ${err.message}` },
-      ]);
-    } finally {
-      setIsSandboxSending(false);
-    }
-  };
-
-  // Handle Finalize & Create Agent
-  const handleFinalize = async () => {
-    setIsFinalizing(true);
-    setFinalError(null);
-    try {
-      const res = await fetch('/api/assistant/wizard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'finalize',
-          draft,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Не удалось создать сотрудника');
-      }
-
-      await refreshWorkspace();
-      showToast('Сотрудник создан', `«${draft.name}» успешно сохранен и готов к работе.`, 'success');
-      router.push('/dashboard/agents');
-    } catch (err: any) {
-      setFinalError(err.message || 'Ошибка создания');
-    } finally {
-      setIsFinalizing(false);
-    }
-  };
-
-  // Handle manual draft field updates
-  const updateDraftField = <K extends keyof AgentDraft>(field: K, value: AgentDraft[K]) => {
-    const updated = { ...draft, [field]: value, updatedAt: new Date().toISOString() };
-    setDraft(updated);
-    // Silent auto-save to server
-    fetch('/api/assistant/wizard', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_draft', draft: updated }),
-    }).catch(() => {});
-  };
-
-  // Handle text/file upload
+  // Handle file attachment for knowledge/pricing
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      alert(lang === 'uz' ? 'Fayl hajmi 2 MB dan oshmasligi kerak' : 'Размер файла не должен превышать 2 МБ');
+      showToast(
+        isUz ? 'Fayl hajmi juda katta' : 'Файл слишком большой',
+        isUz ? 'Maksimal hajm — 2MB' : 'Максимальный размер — 2МБ',
+        'warning'
+      );
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const content = event.target?.result as string;
       if (content) {
-        setAttachedText(content);
+        lastUserEditTimeRef.current = Date.now();
+        const updatedServices = `${draft.servicesAndPricing}\n\n[${file.name}]:\n${content.slice(0, 5000)}`;
+        const nextDraft: AgentDraft = {
+          ...draft,
+          servicesAndPricing: updatedServices,
+          pricingConfirmed: true,
+          updatedAt: new Date().toISOString(),
+        };
+        onDraftChange(nextDraft);
         showToast(
-          lang === 'uz' ? 'Fayl biriktirildi' : 'Файл прикреплен',
-          lang === 'uz' ? `${file.name} tahlil uchun tayyor` : `${file.name} готов для анализа мастером`,
-          'info'
+          isUz ? 'Fayl qo‘shildi' : 'Файл прикреплен',
+          isUz ? `${file.name} xodim bilimlariga qo‘shildi` : `${file.name} добавлен в базу знаний`,
+          'success'
         );
       }
     };
     reader.readAsText(file);
   };
 
-  const steps = [
-    { num: 1, titleRu: 'Бизнес', titleUz: 'Biznes' },
-    { num: 2, titleRu: 'Знания', titleUz: 'Bilimlar' },
-    { num: 3, titleRu: 'Проверка', titleUz: 'Tekshirish' },
-    { num: 4, titleRu: 'Запуск', titleUz: 'Ishga tushirish' },
-  ];
+  // Open Edit Modal for a resume item
+  const openEditor = (field: 'name' | 'niche' | 'goal' | 'pricing' | 'tone') => {
+    setEditingField(field);
+    if (field === 'name') setFieldValue(draft.name);
+    if (field === 'niche') setFieldValue(draft.nicheTemplate);
+    if (field === 'goal') setFieldValue(draft.targetGoal);
+    if (field === 'pricing') setFieldValue(draft.servicesAndPricing);
+    if (field === 'tone') setFieldValue(draft.tone);
+  };
+
+  // Save manual edit from modal
+  const saveFieldEdit = () => {
+    if (!editingField) return;
+    lastUserEditTimeRef.current = Date.now();
+
+    const nextDraft: AgentDraft = { ...draft, updatedAt: new Date().toISOString() };
+
+    if (editingField === 'name') {
+      nextDraft.name = fieldValue.trim() || draft.name;
+    } else if (editingField === 'niche') {
+      nextDraft.nicheTemplate = (fieldValue as WizardNiche) || draft.nicheTemplate;
+    } else if (editingField === 'goal') {
+      nextDraft.targetGoal = fieldValue.trim() || draft.targetGoal;
+      nextDraft.goalConfirmed = true;
+    } else if (editingField === 'pricing') {
+      nextDraft.servicesAndPricing = fieldValue.trim();
+      nextDraft.pricingConfirmed = true;
+    } else if (editingField === 'tone') {
+      nextDraft.tone = (fieldValue as WizardTone) || draft.tone;
+    }
+
+    onDraftChange(nextDraft);
+    setEditingField(null);
+    showToast(t.common.saved, undefined, 'success');
+  };
+
+  const currentArchetype = ARCHETYPES[draft.nicheTemplate] || ARCHETYPES.courses;
+  const nicheTitle = isUz ? currentArchetype.titleUz : currentArchetype.titleRu;
 
   return (
     <div className="w-full flex flex-col space-y-4">
-      {/* Top Bar: Stepper & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-100 dark:bg-red-950/40 text-red-600">
-              AI WIZARD
+      {/* Mobile Tab Toggle: Dialog vs Resume */}
+      <div className="lg:hidden flex rounded-xl p-1 bg-[var(--surface-secondary)] border border-[var(--border)] text-xs font-semibold">
+        <button
+          type="button"
+          onClick={() => setMobileTab('dialog')}
+          className={`flex-1 py-2 rounded-lg text-center transition-all cursor-pointer ${
+            mobileTab === 'dialog'
+              ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-2xs font-bold'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          {t.wizard.mobileTabs.dialog}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('resume')}
+          className={`flex-1 py-2 rounded-lg text-center transition-all cursor-pointer ${
+            mobileTab === 'resume'
+              ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-2xs font-bold'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          {t.wizard.mobileTabs.resume}
+        </button>
+      </div>
+
+      {/* Main Grid: Left 60% Dialogue + Right 40% Resume */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* ========================================================= */}
+        {/* LEFT COLUMN: Clean Dialogue Area (~60% on desktop)         */}
+        {/* ========================================================= */}
+        <section
+          aria-label={t.wizard.mobileTabs.dialog}
+          className={`lg:col-span-7 flex flex-col h-[640px] rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs overflow-hidden ${
+            mobileTab !== 'dialog' ? 'hidden lg:flex' : 'flex'
+          }`}
+        >
+          {/* Chat Header with Sparrow Avatar */}
+          <div className="px-5 py-3.5 border-b border-[var(--border)] flex items-center justify-between bg-[var(--surface-secondary)]/40 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="size-9 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+                <SparrowMascot
+                  variant={isSending ? 'loading' : 'hello'}
+                  size={36}
+                  animate={isSending}
+                />
+              </div>
+              <div>
+                <h3 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
+                  gapcha AI {isUz ? 'sozlash ustasi' : 'ассистент-мастер'}
+                </h3>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  {isSending
+                    ? (isUz ? 'Javob tayyorlanmoqda…' : 'Формирую ответ…')
+                    : (isUz ? 'Onlayn · 1 savol bitta xabarda' : 'Онлайн · 1 вопрос за сообщение')}
+                </p>
+              </div>
+            </div>
+
+            {/* Step badge */}
+            <span className="text-[11px] font-semibold text-[var(--text-muted)] px-2.5 py-1 rounded-full bg-[var(--surface)] border border-[var(--border)]">
+              {isUz ? `${draft.currentStep}-bosqich` : `Этап ${draft.currentStep}`}
             </span>
-            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-              {lang === 'uz' ? 'AI-sozlash ustasi' : 'ИИ-мастер настройки сотрудника'}
-            </h2>
-          </div>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            {lang === 'uz'
-              ? 'Xodimni dialog orqali yarating — oʻng tomonda qoralama real vaqtda yangilanadi'
-              : 'Создание сценария через интерактивный диалог с живым обновлением карточки'}
-          </p>
-        </div>
-
-        {/* Stepper indicator */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {steps.map((st) => (
-            <div
-              key={st.num}
-              onClick={() => updateDraftField('currentStep', st.num as any)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
-                draft.currentStep === st.num
-                  ? 'bg-red-600 text-white shadow-xs'
-                  : draft.currentStep > st.num
-                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
-              }`}
-            >
-              <span>{st.num}.</span>
-              <span className="hidden sm:inline">{lang === 'uz' ? st.titleUz : st.titleRu}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Cancel / Switch to Manual */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLang(lang === 'ru' ? 'uz' : 'ru')}
-            className="px-2 py-1 text-xs font-semibold rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-          >
-            {lang.toUpperCase()}
-          </button>
-          <button
-            onClick={onCancelManual}
-            className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 underline cursor-pointer"
-          >
-            {lang === 'uz' ? 'Qoʻlda toʻldirish' : 'Заполнить вручную'}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Toggle Bar */}
-      <div className="sm:hidden flex rounded-lg p-1 bg-zinc-100 dark:bg-zinc-800 text-xs font-semibold">
-        <button
-          onClick={() => setMobileView('chat')}
-          className={`flex-1 py-1.5 rounded-md text-center transition-all ${
-            mobileView === 'chat' ? 'bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-zinc-100' : 'text-zinc-500'
-          }`}
-        >
-          {lang === 'uz' ? 'Muloqot / Test' : 'Диалог / Тест'}
-        </button>
-        <button
-          onClick={() => setMobileView('draft')}
-          className={`flex-1 py-1.5 rounded-md text-center transition-all ${
-            mobileView === 'draft' ? 'bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-zinc-100' : 'text-zinc-500'
-          }`}
-        >
-          {lang === 'uz' ? 'Qoralama' : 'Черновик сотрудника'}
-        </button>
-      </div>
-
-      {/* 2-Column Main Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start min-h-[600px]">
-        {/* Left Column: Conversational Assistant & Sandbox (7 cols) */}
-        <div className={`lg:col-span-7 flex flex-col h-[650px] rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden ${mobileView === 'draft' ? 'hidden sm:flex' : 'flex'}`}>
-          {/* Subheader: Mode tabs */}
-          <div className="shrink-0 px-4 py-2.5 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setActiveTab('dialog')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                  activeTab === 'dialog'
-                    ? 'bg-white dark:bg-zinc-800 text-red-600 shadow-xs border border-zinc-200 dark:border-zinc-700'
-                    : 'text-zinc-500 hover:text-zinc-800'
-                }`}
-              >
-                <BrandMascot pose="avatar" size={16} className="shrink-0" />
-                <span>{lang === 'uz' ? 'Sozlash muloqoti' : 'Диалог с мастером'}</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('sandbox')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                  activeTab === 'sandbox'
-                    ? 'bg-white dark:bg-zinc-800 text-red-600 shadow-xs border border-zinc-200 dark:border-zinc-700'
-                    : 'text-zinc-500 hover:text-zinc-800'
-                }`}
-              >
-                <Play className="w-3.5 h-3.5" />
-                <span>{lang === 'uz' ? 'Test-drayv (Sandbox)' : 'Тест-драйв (Sandbox)'}</span>
-              </button>
-            </div>
-
-            <div className="text-[11px] text-zinc-400">
-              {activeTab === 'dialog' ? (lang === 'uz' ? '1 ta savol / qadam' : '1 вопрос за шаг') : (lang === 'uz' ? 'Xavfsiz simulyatsiya' : 'Безопасная симуляция')}
-            </div>
           </div>
 
-          {/* TAB 1: INTERACTIVE DIALOG */}
-          {activeTab === 'dialog' && (
-            <div className="flex-1 flex flex-col min-h-0">
-              {/* Message scroll list */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs sm:text-sm">
-                {messages.map((m) => (
+          {/* Chat Messages Body with Smooth Scroll */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+            {messages.map((m) => {
+              const isAssistant = m.role === 'assistant';
+              return (
+                <div
+                  key={m.id}
+                  className={`flex items-start gap-2.5 ${isAssistant ? 'justify-start' : 'justify-end'}`}
+                >
+                  {isAssistant && (
+                    <div className="size-7 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <SparrowMascot variant="idle" size={24} animate={false} />
+                    </div>
+                  )}
+
                   <div
-                    key={m.id}
-                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start items-start gap-2.5'}`}
+                    className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed shadow-2xs ${
+                      isAssistant
+                        ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)] rounded-tl-sm border border-[var(--border)]'
+                        : 'bg-[#ED262A] text-white rounded-tr-sm font-medium'
+                    }`}
                   >
-                    {m.role === 'assistant' && (
-                      <BrandMascot
-                        pose={m.id === 'init_msg' ? 'hello' : 'hint'}
-                        size={28}
-                        className="mt-0.5 shrink-0"
-                      />
-                    )}
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
-                        m.role === 'user'
-                          ? 'bg-red-600 text-white rounded-br-xs'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-xs'
-                      }`}
-                    >
-                      <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
-                    </div>
+                    <p className="whitespace-pre-line">{m.content}</p>
                   </div>
-                ))}
-
-                {isSending && (
-                  <div className="flex items-center gap-2 text-zinc-500 text-xs p-2">
-                    <BrandMascot pose="thinking" size={22} className="shrink-0" />
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
-                    <span>{lang === 'uz' ? 'Usta qoralamani tahlil qilmoqda...' : 'Мастер обновляет параметры...'}</span>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Suggested quick chips */}
-              {suggestedAnswers.length > 0 && !isSending && (
-                <div className="shrink-0 px-4 py-2 border-t border-zinc-100 dark:border-zinc-800/60 bg-zinc-50/50 dark:bg-zinc-900 flex flex-wrap gap-1.5">
-                  {suggestedAnswers.map((chip, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSendMessage(chip)}
-                      className="px-2.5 py-1 rounded-full text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:border-red-400 hover:text-red-600 transition-colors shadow-2xs"
-                    >
-                      {chip}
-                    </button>
-                  ))}
                 </div>
-              )}
+              );
+            })}
 
-              {/* File Attachment preview */}
-              {attachedText && (
-                <div className="shrink-0 px-4 py-1.5 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between border-t border-amber-200 dark:border-amber-800">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <Paperclip className="w-3.5 h-3.5" />
-                    <span className="truncate">{lang === 'uz' ? 'Fayl matni biriktirildi' : 'Материалы прикреплены для анализа'}</span>
-                  </div>
-                  <button
-                    onClick={() => setAttachedText(null)}
-                    className="text-amber-700 hover:text-amber-900 dark:hover:text-amber-100 font-bold ml-2"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-
-              {/* Chat Input Bar */}
-              <div className="shrink-0 p-3 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept=".txt,.md,.json"
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    title={lang === 'uz' ? 'Fayl biriktirish (.txt, .md)' : 'Прикрепить файл с прайсом (.txt, .md)'}
-                    className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                  >
-                    <Paperclip className="w-4 h-4" />
-                  </button>
-
-                  <input
-                    type="text"
-                    value={inputVal}
-                    onChange={(e) => setInputVal(e.target.value)}
-                    placeholder={lang === 'uz' ? 'Javobingizni yozing...' : 'Опишите ваши услуги, цены или ответьте на вопрос...'}
-                    disabled={isSending}
-                    className="flex-1 px-3 py-2 text-xs sm:text-sm rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-
-                  <button
-                    type="submit"
-                    disabled={(!inputVal.trim() && !attachedText) || isSending}
-                    className="p-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white disabled:opacity-40 transition-colors cursor-pointer"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: SANDBOX TEST-DRIVE */}
-          {activeTab === 'sandbox' && (
-            <div className="flex-1 flex flex-col min-h-0 bg-zinc-50/40 dark:bg-zinc-900/40">
-              <div className="shrink-0 p-3 bg-red-50/60 dark:bg-red-950/20 border-b border-red-100 dark:border-red-900/40 flex items-center justify-between text-xs text-red-900 dark:text-red-300">
-                <div className="flex items-center gap-1.5 font-medium">
-                  <Play className="w-3.5 h-3.5 text-red-600 fill-red-600" />
-                  <span>{lang === 'uz' ? 'Sinov muloqoti (Sandbox)' : 'Тестовый диалог (Sandbox)'}</span>
-                </div>
-                <span className="text-[11px] text-zinc-500">
-                  {lang === 'uz' ? 'Mijozlarga xabar ketmaydi · 0 token' : '0 токенов · Без побочных действий'}
-                </span>
-              </div>
-
-              {/* Sandbox messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 text-xs sm:text-sm">
-                {sandboxMessages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-zinc-400">
-                    <MessageSquare className="w-8 h-8 mb-2 opacity-40 text-red-600" />
-                    <p className="font-semibold text-zinc-700 dark:text-zinc-300">
-                      {lang === 'uz' ? 'Xodim bilan suhbatlashib koʻring' : 'Протестируйте ответы будущего сотрудника'}
-                    </p>
-                    <p className="text-xs text-zinc-500 mt-1 max-w-xs">
-                      {lang === 'uz'
-                        ? 'Masalan: «Qanday kurslar bor?», «Narxi qancha?», «Qabulga yozilish mumkinmi?»'
-                        : 'Например: «Какие курсы у вас есть?», «Сколько стоит обучение?», «Хочу записаться»'}
-                    </p>
-                  </div>
-                ) : (
-                  sandboxMessages.map((sm, i) => (
-                    <div key={i} className={`flex flex-col ${sm.role === 'user' ? 'items-end' : 'items-start'}`}>
-                      <div
-                        className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
-                          sm.role === 'user'
-                            ? 'bg-zinc-800 text-white rounded-br-xs'
-                            : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-bl-xs shadow-2xs'
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap leading-relaxed">{sm.content}</div>
-                        {sm.tag && (
-                          <div className="mt-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-700 text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>{sm.tag}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-                {isSandboxSending && (
-                  <div className="flex items-center gap-2 text-zinc-500 text-xs p-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-red-600" />
-                    <span>{lang === 'uz' ? 'Xodim javob yozmoqda...' : 'Сотрудник формирует ответ...'}</span>
-                  </div>
-                )}
-                <div ref={sandboxEndRef} />
-              </div>
-
-              {/* Quick tuning suggestions */}
-              <div className="shrink-0 px-4 py-2 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center gap-1.5 overflow-x-auto text-[11px]">
-                <span className="text-zinc-400 font-medium whitespace-nowrap">
-                  {lang === 'uz' ? 'Sozlash:' : 'Коррекция:'}
-                </span>
-                <button
-                  onClick={() => handleSandboxSend('Расскажи о ценах', 'Отвечай максимально кратко и структурированно')}
-                  className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 whitespace-nowrap"
-                >
-                  ⚡ {lang === 'uz' ? 'Qisqaroq javob' : 'Отвечай короче'}
-                </button>
-                <button
-                  onClick={() => handleSandboxSend('Хочу записаться', 'Сначала вежливо уточни возраст и уровень подготовки')}
-                  className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 whitespace-nowrap"
-                >
-                  🎯 {lang === 'uz' ? 'Avval yoshini soʻra' : 'Уточни возраст'}
-                </button>
-                <button
-                  onClick={() => handleSandboxSend('Сделайте скидку', 'Вежливо откажи в скидке, объясни ценность программы')}
-                  className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 whitespace-nowrap"
-                >
-                  🛡️ {lang === 'uz' ? 'Chegirma bermaslik' : 'Без скидок'}
-                </button>
-              </div>
-
-              {/* Sandbox Input */}
-              <div className="shrink-0 p-3 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSandboxSend();
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <input
-                    type="text"
-                    value={sandboxInput}
-                    onChange={(e) => setSandboxInput(e.target.value)}
-                    placeholder={lang === 'uz' ? 'Mijoz nomidan xabar yozing...' : 'Напишите реплику от лица клиента...'}
-                    disabled={isSandboxSending}
-                    className="flex-1 px-3 py-2 text-xs sm:text-sm rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!sandboxInput.trim() || isSandboxSending}
-                    className="p-2.5 rounded-lg bg-zinc-900 hover:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white transition-colors cursor-pointer"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Structured Live Draft Inspector (5 cols) */}
-        <div className={`lg:col-span-5 flex flex-col h-[650px] rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden ${mobileView === 'chat' ? 'hidden sm:flex' : 'flex'}`}>
-          <div className="shrink-0 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Settings2 className="w-4 h-4 text-zinc-500" />
-              <h3 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100">
-                {lang === 'uz' ? 'Xodim qoralamasi' : 'Карточка черновика'}
-              </h3>
-            </div>
-            <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-              <Check className="w-3.5 h-3.5" />
-              <span>{lang === 'uz' ? 'Avto-saqlangan' : 'Автосохранение'}</span>
-            </span>
-          </div>
-
-          {/* Draft Form Body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs sm:text-sm">
-            {/* Name */}
-            <div>
-              <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">
-                {lang === 'uz' ? 'Xodim nomi' : 'Имя сотрудника'}
-              </label>
-              <input
-                type="text"
-                value={draft.name}
-                onChange={(e) => updateDraftField('name', e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-
-            {/* Niche & Tone */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">
-                  {lang === 'uz' ? 'Soha' : 'Отрасль'}
-                </label>
-                <select
-                  value={draft.nicheTemplate}
-                  onChange={(e) => updateDraftField('nicheTemplate', e.target.value as WizardNiche)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs focus:outline-none"
-                >
-                  <option value="courses">{lang === 'uz' ? 'Oʻquv markazi' : 'Учебный центр'}</option>
-                  <option value="marketing">{lang === 'uz' ? 'Marketing' : 'Маркетинг'}</option>
-                  <option value="services">{lang === 'uz' ? 'Xizmatlar' : 'Услуги'}</option>
-                  <option value="other">{lang === 'uz' ? 'Umumiy' : 'Универсальный'}</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">
-                  {lang === 'uz' ? 'Muloqot ohangi' : 'Тон общения'}
-                </label>
-                <select
-                  value={draft.tone}
-                  onChange={(e) => updateDraftField('tone', e.target.value as any)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs focus:outline-none"
-                >
-                  <option value="consultative">{lang === 'uz' ? 'Maslahat beruvchi' : 'Консультативный'}</option>
-                  <option value="friendly">{lang === 'uz' ? 'Doʻstona' : 'Дружелюбный'}</option>
-                  <option value="professional">{lang === 'uz' ? 'Rasmiy / Ishbilarmon' : 'Деловой'}</option>
-                  <option value="persuasive">{lang === 'uz' ? 'Ishontiruvchi' : 'Убедительный'}</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Target Goal */}
-            <div>
-              <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">
-                {lang === 'uz' ? 'Asosiy maqsad' : 'Главная цель'}
-              </label>
-              <textarea
-                rows={2}
-                value={draft.targetGoal}
-                onChange={(e) => updateDraftField('targetGoal', e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-
-            {/* Services & Confirmed Pricing */}
-            <div>
-              <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">
-                {lang === 'uz' ? 'Xizmatlar va narxlar (Pravda bazasi)' : 'Услуги и подтвержденные цены'}
-              </label>
-              <textarea
-                rows={4}
-                value={draft.servicesAndPricing}
-                onChange={(e) => updateDraftField('servicesAndPricing', e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-
-            {/* Qualification Questions */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-                  {lang === 'uz' ? 'Saralash savollari (1 tadan)' : 'Вопросы квалификации (по одному)'}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => updateDraftField('qualificationQuestions', [...draft.qualificationQuestions, ''])}
-                  className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-0.5"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>{lang === 'uz' ? 'Qoʻshish' : 'Добавить'}</span>
-                </button>
-              </div>
-              <div className="space-y-1.5">
-                {draft.qualificationQuestions.map((q, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5">
-                    <span className="text-zinc-400 text-xs w-4">{idx + 1}.</span>
-                    <input
-                      type="text"
-                      value={q}
-                      onChange={(e) => {
-                        const next = [...draft.qualificationQuestions];
-                        next[idx] = e.target.value;
-                        updateDraftField('qualificationQuestions', next);
-                      }}
-                      className="flex-1 px-2.5 py-1 text-xs rounded border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = draft.qualificationQuestions.filter((_, i) => i !== idx);
-                        updateDraftField('qualificationQuestions', next);
-                      }}
-                      className="text-zinc-400 hover:text-red-600 p-1"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Channels & Calendar Integration */}
-            <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/60 space-y-2">
-              <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-                {lang === 'uz' ? 'Ulanadigan aloqa kanallari' : 'Каналы связи и запись'}
-              </label>
-
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={draft.channels.includes('telegram')}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? [...draft.channels, 'telegram' as const]
-                        : draft.channels.filter((c) => c !== 'telegram');
-                      updateDraftField('channels', next);
-                    }}
-                    className="rounded text-red-600"
-                  />
-                  <span>Telegram</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={draft.channels.includes('instagram')}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? [...draft.channels, 'instagram' as const]
-                        : draft.channels.filter((c) => c !== 'instagram');
-                      updateDraftField('channels', next);
-                    }}
-                    className="rounded text-red-600"
-                  />
-                  <span>Instagram Direct</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={draft.channels.includes('widget')}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? [...draft.channels, 'widget' as const]
-                        : draft.channels.filter((c) => c !== 'widget');
-                      updateDraftField('channels', next);
-                    }}
-                    className="rounded text-red-600"
-                  />
-                  <span>{lang === 'uz' ? 'Sayt vidjeti' : 'Виджет сайта'}</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={draft.googleCalendarConnected}
-                    onChange={(e) => updateDraftField('googleCalendarConnected', e.target.checked)}
-                    className="rounded text-red-600"
-                  />
-                  <span>Google Calendar</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Footer */}
-          <div className="shrink-0 p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex flex-col gap-2">
-            {finalError && (
-              <div className="p-2 rounded bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{finalError}</span>
+            {/* Waiting/Inference indicator with Sparrow */}
+            {isSending && (
+              <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] pt-1 pl-9">
+                <SparrowMascot variant="loading" size={20} />
+                <span>{isUz ? 'Ma\'lumotlar tahlil qilinmoqda…' : 'Обрабатываю ответ…'}</span>
               </div>
             )}
 
-            <button
-              onClick={handleFinalize}
-              disabled={isFinalizing || !draft.name.trim()}
-              className="w-full py-2.5 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
+            {/* Error & Retry Banner */}
+            {sendError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-600 dark:text-red-400 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{sendError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSendMessage()}
+                  className="px-2.5 py-1 rounded-lg bg-red-600 text-white font-semibold text-[11px] hover:bg-red-700 transition-colors shrink-0 cursor-pointer"
+                >
+                  {t.common.retry}
+                </button>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Quick Suggested Answers */}
+          {suggestedAnswers.length > 0 && !isSending && (
+            <div className="px-4 py-2 border-t border-[var(--border)] bg-[var(--surface-secondary)]/30 flex items-center gap-1.5 overflow-x-auto shrink-0 scrollbar-none">
+              <span className="text-[11px] font-semibold text-[var(--text-muted)] shrink-0 mr-1">
+                {t.wizard.quickAnswers}
+              </span>
+              {suggestedAnswers.map((s, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSendMessage(s)}
+                  className="px-2.5 py-1 rounded-full text-xs bg-[var(--surface)] hover:bg-[var(--surface-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0 transition-colors cursor-pointer"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Chat Input Bar (Always Accessible, No Virtual Keyboard Occlusion) */}
+          <div className="p-3 sm:p-4 border-t border-[var(--border)] bg-[var(--surface)] shrink-0">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="flex items-center gap-2"
             >
-              {isFinalizing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{lang === 'uz' ? 'Xodim yaratilmoqda...' : 'Создание сотрудника...'}</span>
-                </>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".txt,.csv,.json,.doc,.docx"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title={isUz ? 'Fayl biriktirish (narxlar, reja)' : 'Прикрепить файл (прайс, прайс-лист)'}
+                className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] transition-colors cursor-pointer shrink-0"
+              >
+                <Paperclip size={18} />
+              </button>
+
+              <input
+                type="text"
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                placeholder={t.wizard.inputPlaceholder}
+                disabled={isSending}
+                className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#ED262A] transition-all"
+              />
+
+              <button
+                type="submit"
+                disabled={!inputVal.trim() || isSending}
+                className="px-4 py-2.5 rounded-xl bg-[#ED262A] hover:bg-[#d01f23] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold transition-all inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer"
+              >
+                <span>{t.wizard.send}</span>
+                <Send size={14} />
+              </button>
+            </form>
+          </div>
+        </section>
+
+        {/* ========================================================= */}
+        {/* RIGHT COLUMN: Reactive Employee Resume (~40% on desktop)  */}
+        {/* ========================================================= */}
+        <section
+          aria-label={t.wizard.resumeTitle}
+          className={`lg:col-span-5 flex flex-col rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs p-5 space-y-4 ${
+            mobileTab !== 'resume' ? 'hidden lg:flex' : 'flex'
+          }`}
+        >
+          {/* Resume Header & Honest Autosave Indicator */}
+          <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#ED262A]" />
+              <h3 className="font-bold text-sm text-[var(--text-primary)]">
+                {t.wizard.resumeTitle}
+              </h3>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-[11px] font-medium">
+              {autosaveStatus === 'saving' && (
+                <span className="text-amber-500 inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  {t.common.saving}
+                </span>
+              )}
+              {autosaveStatus === 'saved' && (
+                <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" />
+                  {t.common.saved}
+                </span>
+              )}
+              {autosaveStatus === 'error' && (
+                <span className="text-red-500 inline-flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {t.common.saveFailed}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Cards List for Structured Data */}
+          <div className="space-y-3">
+            {/* 1. Name */}
+            <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 border border-[var(--border)] space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                  {t.wizard.resumeAgentName}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openEditor('name')}
+                  className="text-[11px] font-semibold text-[#ED262A] hover:underline cursor-pointer"
+                >
+                  {t.common.edit}
+                </button>
+              </div>
+              <p className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">
+                {draft.name || t.common.notFilled}
+              </p>
+            </div>
+
+            {/* 2. Business Niche */}
+            <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 border border-[var(--border)] space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                  {t.wizard.resumeNiche}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openEditor('niche')}
+                  className="text-[11px] font-semibold text-[#ED262A] hover:underline cursor-pointer"
+                >
+                  {t.common.edit}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-xs sm:text-sm text-[var(--text-primary)]">
+                  {nicheTitle}
+                </p>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  {t.common.confirmed}
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Target Goal */}
+            <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 border border-[var(--border)] space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                  {t.wizard.resumeGoal}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openEditor('goal')}
+                  className="text-[11px] font-semibold text-[#ED262A] hover:underline cursor-pointer"
+                >
+                  {t.common.edit}
+                </button>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                {draft.targetGoal || t.common.notFilled}
+              </p>
+              <div className="pt-0.5">
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                    draft.goalConfirmed
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                  }`}
+                >
+                  {draft.goalConfirmed ? t.common.confirmed : t.common.suggested}
+                </span>
+              </div>
+            </div>
+
+            {/* 4. Services & Pricing */}
+            <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 border border-[var(--border)] space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                  {t.wizard.resumePricing}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openEditor('pricing')}
+                  className="text-[11px] font-semibold text-[#ED262A] hover:underline cursor-pointer"
+                >
+                  {t.common.edit}
+                </button>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)] line-clamp-3 leading-relaxed whitespace-pre-line font-mono">
+                {draft.servicesAndPricing || t.common.notFilled}
+              </p>
+              <div className="pt-0.5">
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                    draft.pricingConfirmed
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                  }`}
+                >
+                  {draft.pricingConfirmed ? t.common.confirmed : t.common.suggested}
+                </span>
+              </div>
+            </div>
+
+            {/* 5. Tone */}
+            <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 border border-[var(--border)] space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                  {t.wizard.resumeTone}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openEditor('tone')}
+                  className="text-[11px] font-semibold text-[#ED262A] hover:underline cursor-pointer"
+                >
+                  {t.common.edit}
+                </button>
+              </div>
+              <p className="font-semibold text-xs sm:text-sm text-[var(--text-primary)]">
+                {t.wizard.tones[draft.tone] || draft.tone}
+              </p>
+            </div>
+
+            {/* 6. Clarifications */}
+            <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 border border-[var(--border)] space-y-1.5">
+              <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                {t.wizard.resumeClarify}
+              </span>
+              {draft.unresolvedQuestions && draft.unresolvedQuestions.length > 0 ? (
+                <ul className="text-xs text-amber-600 dark:text-amber-400 space-y-1">
+                  {draft.unresolvedQuestions.map((q, i) => (
+                    <li key={i} className="flex items-start gap-1.5">
+                      <span className="mt-1 size-1.5 rounded-full bg-amber-500 shrink-0" />
+                      <span>{q}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                  {t.wizard.resumeReady}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons: Save & Launch + Test Drive */}
+          <div className="pt-2 space-y-2">
+            <button
+              type="button"
+              onClick={onSaveAndLaunch}
+              disabled={isSaving}
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#ED262A] hover:bg-[#d01f23] disabled:opacity-50 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {isSaving ? (
+                <span>{t.common.saving}</span>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{lang === 'uz' ? 'Xodimni yaratish va saqlash' : 'Создать и запустить сотрудника'}</span>
+                  <CheckCircle2 size={16} />
+                  <span>{t.wizard.saveAndLaunch}</span>
                 </>
               )}
             </button>
+
+            <button
+              type="button"
+              onClick={onOpenSandbox}
+              className="w-full min-h-[42px] py-2 px-4 rounded-xl font-semibold text-xs sm:text-sm text-[var(--text-secondary)] bg-[var(--surface-secondary)] hover:bg-[var(--border)] border border-[var(--border)] transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Play size={15} className="text-[#ED262A]" />
+              <span>{t.wizard.openSandbox}</span>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      {/* ========================================================= */}
+      {/* COMPACT MODAL: Edit Single Field in Resume                */}
+      {/* ========================================================= */}
+      {editingField && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in"
+        >
+          <div className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+              <h4 className="font-bold text-sm text-[var(--text-primary)]">
+                {t.common.edit}:{' '}
+                {editingField === 'name' && t.wizard.resumeAgentName}
+                {editingField === 'niche' && t.wizard.resumeNiche}
+                {editingField === 'goal' && t.wizard.resumeGoal}
+                {editingField === 'pricing' && t.wizard.resumePricing}
+                {editingField === 'tone' && t.wizard.resumeTone}
+              </h4>
+              <button
+                type="button"
+                onClick={() => setEditingField(null)}
+                className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Field input variants */}
+            {editingField === 'name' && (
+              <input
+                type="text"
+                value={fieldValue}
+                onChange={(e) => setFieldValue(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+              />
+            )}
+
+            {editingField === 'niche' && (
+              <select
+                value={fieldValue}
+                onChange={(e) => setFieldValue(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+              >
+                <option value="courses">{t.wizard.niches.courses}</option>
+                <option value="clinic">{t.wizard.niches.clinic}</option>
+                <option value="beauty">{t.wizard.niches.beauty}</option>
+                <option value="ecommerce">{t.wizard.niches.ecommerce}</option>
+                <option value="marketing">{t.wizard.niches.marketing}</option>
+                <option value="other">{t.wizard.niches.other}</option>
+              </select>
+            )}
+
+            {editingField === 'goal' && (
+              <textarea
+                rows={4}
+                value={fieldValue}
+                onChange={(e) => setFieldValue(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+              />
+            )}
+
+            {editingField === 'pricing' && (
+              <textarea
+                rows={6}
+                value={fieldValue}
+                onChange={(e) => setFieldValue(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm font-mono text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+              />
+            )}
+
+            {editingField === 'tone' && (
+              <div className="space-y-2">
+                {(['consultative', 'friendly', 'professional', 'persuasive'] as WizardTone[]).map(
+                  (toneKey) => (
+                    <label
+                      key={toneKey}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                        fieldValue === toneKey
+                          ? 'border-[#ED262A] bg-red-500/10 text-[var(--text-primary)] font-bold'
+                          : 'border-[var(--border)] bg-[var(--surface-secondary)]/50 text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="tone"
+                        value={toneKey}
+                        checked={fieldValue === toneKey}
+                        onChange={() => setFieldValue(toneKey)}
+                        className="text-[#ED262A]"
+                      />
+                      <span className="text-xs sm:text-sm">{t.wizard.tones[toneKey]}</span>
+                    </label>
+                  )
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setEditingField(null)}>
+                {t.common.cancel}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={saveFieldEdit}
+                className="bg-[#ED262A] text-white hover:bg-[#d01f23]"
+              >
+                {t.common.save}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

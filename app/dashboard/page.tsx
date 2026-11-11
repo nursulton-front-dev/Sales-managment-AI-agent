@@ -45,6 +45,8 @@ export default function DashboardOverviewPage() {
     agentsError,
     refreshLeads,
     refreshAgents,
+    locale,
+    t,
   } = useApp();
 
   const [verifyOpen, setVerifyOpen] = useState(false);
@@ -93,8 +95,12 @@ export default function DashboardOverviewPage() {
     <div className="space-y-6 w-full pb-10">
       {/* Header */}
       <PageHeader
-        title="Обзор"
-        description="Сводка обращений клиентов, эффективность воронки и статус ИИ-сотрудников."
+        title={t.nav.overview}
+        description={
+          locale === 'uz'
+            ? 'Mijozlar murojaatlari, voronka samaradorligi va AI xodimlar holati.'
+            : 'Сводка обращений клиентов, эффективность воронки и статус ИИ-сотрудников.'
+        }
         actions={
           <Button
             variant="outline"
@@ -102,7 +108,7 @@ export default function DashboardOverviewPage() {
             className="flex items-center gap-2 text-xs font-semibold"
           >
             <Play size={15} />
-            <span>Тест-драйв</span>
+            <span>{t.common.testDrive}</span>
           </Button>
         }
       />
@@ -116,10 +122,14 @@ export default function DashboardOverviewPage() {
             </div>
             <div>
               <p className="font-semibold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                Подтвердите ваш email для начисления бонуса
+                {locale === 'uz'
+                  ? 'Bonus hisoblanishi uchun emailingizni tasdiqlang'
+                  : 'Подтвердите ваш email для начисления бонуса'}
               </p>
               <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                После подтверждения адреса на ваш счёт будут начислены 100 тестовых ИИ-ответов.
+                {locale === 'uz'
+                  ? 'Manzil tasdiqlangandan so‘ng hisobingizga 100 ta bepul test AI-javoblari o‘tkaziladi.'
+                  : 'После подтверждения адреса на ваш счёт будут начислены 100 тестовых ИИ-ответов.'}
               </p>
             </div>
           </div>
@@ -129,7 +139,7 @@ export default function DashboardOverviewPage() {
             onClick={() => setVerifyOpen(true)}
             className="bg-amber-600 hover:bg-amber-700 text-white shrink-0 text-xs font-semibold"
           >
-            <span>Ввести код</span>
+            <span>{locale === 'uz' ? 'Kodni kiritish' : 'Ввести код'}</span>
             <ArrowRight size={14} />
           </Button>
         </div>
@@ -138,17 +148,24 @@ export default function DashboardOverviewPage() {
       {/* Metrics Row */}
       <DataState loading={leadsLoading} error={leadsError} retry={refreshLeads} />
       {!leadsLoading && !leadsError && (
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4" aria-label="Показатели компании">
+        <section
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+          aria-label={locale === 'uz' ? 'Kompaniya ko‘rsatkichlari' : 'Показатели компании'}
+        >
           <div className="p-5 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex items-center gap-4 shadow-xs">
             <div className="size-12 rounded-xl bg-blue-500/10 text-[#229ED9] flex items-center justify-center shrink-0 border border-blue-500/20">
               <Users size={22} />
             </div>
             <div>
-              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">Лиды в воронке</p>
+              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                {locale === 'uz' ? 'Voronkadagi lidlar' : 'Лиды в воронке'}
+              </p>
               <p className="text-3xl font-extrabold text-[var(--text-primary)] dark:text-[#F4F7FB] my-0.5 tabular-nums">
                 {leads.length}
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">Всего обращений</p>
+              <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                {locale === 'uz' ? 'Jami murojaatlar' : 'Всего обращений'}
+              </p>
             </div>
           </div>
 
@@ -157,11 +174,15 @@ export default function DashboardOverviewPage() {
               <CalendarDays size={22} />
             </div>
             <div>
-              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">Записи на встречи</p>
+              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                {locale === 'uz' ? 'Uchrashuvlarga yozuvlar' : 'Записи на встречи'}
+              </p>
               <p className="text-3xl font-extrabold text-[var(--text-primary)] dark:text-[#F4F7FB] my-0.5 tabular-nums">
                 {booked}
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">Слоты в календаре</p>
+              <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                {locale === 'uz' ? 'Taqvimdagi band joylar' : 'Слоты в календаре'}
+              </p>
             </div>
           </div>
 
@@ -170,11 +191,15 @@ export default function DashboardOverviewPage() {
               <ChartNoAxesColumn size={22} />
             </div>
             <div>
-              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">Конверсия в запись</p>
+              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                {locale === 'uz' ? 'Yozuvga konversiya' : 'Конверсия в запись'}
+              </p>
               <p className="text-3xl font-extrabold text-[var(--text-primary)] dark:text-[#F4F7FB] my-0.5 tabular-nums">
                 {leads.length ? `${((booked / leads.length) * 100).toFixed(1)}%` : '—'}
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">Доля квалифицированных</p>
+              <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                {locale === 'uz' ? 'Saralanganlar ulushi' : 'Доля квалифицированных'}
+              </p>
             </div>
           </div>
         </section>
@@ -194,7 +219,7 @@ export default function DashboardOverviewPage() {
             href="/dashboard/integrations"
             className="font-semibold text-amber-700 dark:text-amber-300 hover:underline shrink-0"
           >
-            В интеграции →
+            {locale === 'uz' ? 'Integratsiyalarga o‘tish →' : 'В интеграции →'}
           </Link>
         </div>
       ))}
@@ -213,10 +238,14 @@ export default function DashboardOverviewPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                      Быстрый старт завершён · gapcha AI готов к работе
+                      {locale === 'uz'
+                        ? 'Tezkor boshlash yakunlandi · gapcha AI ishlashga tayyor'
+                        : 'Быстрый старт завершён · gapcha AI готов к работе'}
                     </h3>
                     <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-                      Сотрудник обучен, канал связи активен и протестирован. Входящие заявки принимаются круглосуточно.
+                      {locale === 'uz'
+                        ? 'Xodim o‘qitilgan, aloqa kanali faol va sinovdan o‘tgan. Kiruvchi arizalar kechayu kunduz qabul qilinadi.'
+                        : 'Сотрудник обучен, канал связи активен и протестирован. Входящие заявки принимаются круглосуточно.'}
                     </p>
                   </div>
                 </div>
@@ -227,7 +256,7 @@ export default function DashboardOverviewPage() {
                     onClick={() => setForceShowQuickStart(true)}
                     className="text-xs font-medium"
                   >
-                    Показать этапы
+                    {locale === 'uz' ? 'Bosqichlarni ko‘rsatish' : 'Показать этапы'}
                   </Button>
                 </div>
               </div>
@@ -240,30 +269,38 @@ export default function DashboardOverviewPage() {
                   <div className="space-y-3 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-[#FF7277] border border-red-500/20">
-                        Быстрый старт
+                        {locale === 'uz' ? 'Tezkor boshlash' : 'Быстрый старт'}
                       </span>
                       <button
                         type="button"
                         disabled={dismissing}
                         onClick={() => void handleToggleQuickStart(true)}
                         className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[#AABAD0] dark:hover:text-[#F4F7FB] transition-colors cursor-pointer"
-                        title="Скрыть блок быстрого старта"
+                        title={locale === 'uz' ? 'Tezkor boshlash blokini yashirish' : 'Скрыть блок быстрого старта'}
                       >
-                        Скрыть инструкцию
+                        {locale === 'uz' ? 'Yo‘riqnomani yashirish' : 'Скрыть инструкцию'}
                       </button>
                     </div>
                     <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                      Запустите первого ИИ-сотрудника
+                      {locale === 'uz'
+                        ? 'Birinchi AI-xodimni ishga tushiring'
+                        : 'Запустите первого ИИ-сотрудника'}
                     </h2>
                     <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
-                      Обучите ассистента на прайсе компании, подключите канал связи и принимайте заявки круглосуточно.
+                      {locale === 'uz'
+                        ? 'Yordamchini kompaniya narxlari bo‘yicha o‘qiting, aloqa kanalini ulang va arizalarni kechayu kunduz qabul qiling.'
+                        : 'Обучите ассистента на прайсе компании, подключите канал связи и принимайте заявки круглосуточно.'}
                     </p>
                     <div className="pt-1 flex items-center gap-3">
                       <Link
                         href={agents.length ? '/dashboard/agents' : '/dashboard/agents/new'}
                         className="px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs shadow-xs transition-all inline-flex items-center gap-1.5"
                       >
-                        <span>{agents.length ? 'Настроить агента' : 'Создать сотрудника'}</span>
+                        <span>
+                          {agents.length
+                            ? (locale === 'uz' ? 'Xodimni sozlash' : 'Настроить агента')
+                            : (locale === 'uz' ? 'AI xodim yaratish' : 'Создать сотрудника')}
+                        </span>
                         <ArrowRight size={14} />
                       </Link>
                       <Button
@@ -272,7 +309,7 @@ export default function DashboardOverviewPage() {
                         onClick={() => openSandbox()}
                         className="text-xs"
                       >
-                        Тест диалога
+                        {locale === 'uz' ? 'Muloqot testi' : 'Тест диалога'}
                       </Button>
                     </div>
                   </div>
@@ -295,7 +332,7 @@ export default function DashboardOverviewPage() {
               <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs">
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                    Этапы настройки продаж
+                    {locale === 'uz' ? 'Sotuvni sozlash bosqichlari' : 'Этапы настройки продаж'}
                   </h3>
                   {forceShowQuickStart && (
                     <button
@@ -303,7 +340,7 @@ export default function DashboardOverviewPage() {
                       onClick={() => setForceShowQuickStart(false)}
                       className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                     >
-                      Свернуть
+                      {locale === 'uz' ? 'Yig‘ish' : 'Свернуть'}
                     </button>
                   )}
                 </div>
@@ -312,30 +349,30 @@ export default function DashboardOverviewPage() {
                   <ol className="space-y-4">
                     {[
                       {
-                        title: '1. Создайте ИИ-сотрудника',
+                        title: locale === 'uz' ? '1. AI-xodimni yarating' : '1. Создайте ИИ-сотрудника',
                         note: agents.length
-                          ? 'Инструкции и база знаний сохранены'
-                          : 'Добавьте имя, услуги, цены и вопросы клиентам',
+                          ? (locale === 'uz' ? 'Ko‘rsatmalar va bilimlar bazasi saqlangan' : 'Инструкции и база знаний сохранены')
+                          : (locale === 'uz' ? 'Nom, xizmatlar, narxlar va mijozlar savollarini qo‘shing' : 'Добавьте имя, услуги, цены и вопросы клиентам'),
                         done: agents.length > 0,
                         href: '/dashboard/agents/new',
-                        action: 'Создать',
+                        action: locale === 'uz' ? 'Yaratish' : 'Создать',
                       },
                       {
-                        title: '2. Подключите канал общения',
+                        title: locale === 'uz' ? '2. Aloqa kanalini ulang' : '2. Подключите канал общения',
                         note: connected
-                          ? 'Канал успешно привязан и активен'
-                          : 'Чат на сайте, Telegram или Instagram',
+                          ? (locale === 'uz' ? 'Kanal muvaffaqiyatli ulangan va faol' : 'Канал успешно привязан и активен')
+                          : (locale === 'uz' ? 'Saytdagi chat, Telegram yoki Instagram' : 'Чат на сайте, Telegram или Instagram'),
                         done: connected,
                         href: '/dashboard/integrations',
-                        action: 'Подключить',
+                        action: locale === 'uz' ? 'Ulash' : 'Подключить',
                       },
                       {
-                        title: '3. Проверьте качество ответов',
+                        title: locale === 'uz' ? '3. Javoblar sifatini tekshiring' : '3. Проверьте качество ответов',
                         note: testDriveDone
-                          ? 'Тестовый диалог проверен'
-                          : 'Отправьте тестовое сообщение в песочнице',
+                          ? (locale === 'uz' ? 'Sinov suhbati tekshirildi' : 'Тестовый диалог проверен')
+                          : (locale === 'uz' ? 'Test-drayvda sinov xabarini yuboring' : 'Отправьте тестовое сообщение в песочнице'),
                         done: testDriveDone,
-                        action: 'Тест-драйв',
+                        action: t.common.testDrive,
                       },
                     ].map((step, idx) => (
                       <li
@@ -396,13 +433,13 @@ export default function DashboardOverviewPage() {
             <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 shadow-xs">
               <div className="flex items-center justify-between gap-2 mb-3">
                 <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                  Основной сотрудник
+                  {locale === 'uz' ? 'Asosiy xodim' : 'Основной сотрудник'}
                 </span>
                 <Link
                   href={`/dashboard/agents?edit=${activeAgent.id}`}
                   className="text-xs font-semibold text-[#FF7277] hover:underline"
                 >
-                  Настроить →
+                  {locale === 'uz' ? 'Sozlash →' : 'Настроить →'}
                 </Link>
               </div>
 
@@ -420,10 +457,10 @@ export default function DashboardOverviewPage() {
                 </div>
                 <Badge variant={connected ? 'success' : 'warning'}>
                   {!activeAgent.isActive
-                    ? 'На паузе'
+                    ? (locale === 'uz' ? 'To‘xtatilgan' : 'На паузе')
                     : connected
-                    ? '● На связи'
-                    : '○ Тест-драйв'}
+                    ? (locale === 'uz' ? '● Aloqada' : '● На связи')
+                    : (locale === 'uz' ? '○ Test-drayv' : '○ Тест-драйв')}
                 </Badge>
               </div>
             </div>
@@ -434,21 +471,21 @@ export default function DashboardOverviewPage() {
             <div>
               <div className="flex items-center justify-between gap-2 mb-3">
                 <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                  Последние обращения
+                  {locale === 'uz' ? 'So‘nggi murojaatlar' : 'Последние обращения'}
                 </h3>
                 {leads.length > 0 && (
                   <Link
                     href="/dashboard/leads"
                     className="text-xs font-semibold text-[#FF7277] hover:underline"
                   >
-                    Все лиды →
+                    {locale === 'uz' ? 'Barcha lidlar →' : 'Все лиды →'}
                   </Link>
                 )}
               </div>
 
               {leadsLoading || leadsError ? (
                 <p className="py-8 text-center text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                  Загрузка данных…
+                  {locale === 'uz' ? 'Ma\'lumotlar yuklanmoqda…' : 'Загрузка данных…'}
                 </p>
               ) : recent.length > 0 ? (
                 <ul className="divide-y divide-[var(--border)] dark:divide-[#29374C] text-xs">
@@ -469,7 +506,11 @@ export default function DashboardOverviewPage() {
                         </span>
                       </div>
                       <Badge variant={lead.status === 'Записан в календарь' ? 'success' : 'neutral'}>
-                        {lead.status}
+                        {lead.status === 'Записан в календарь'
+                          ? (locale === 'uz' ? 'Taqvimga yozilgan' : 'Записан в календарь')
+                          : lead.status === 'Квалифицирован'
+                          ? (locale === 'uz' ? 'Saralangan' : 'Квалифицирован')
+                          : (locale === 'uz' ? 'Yangi' : 'Новый')}
                       </Badge>
                     </li>
                   ))}
@@ -487,16 +528,18 @@ export default function DashboardOverviewPage() {
                     />
                   </div>
                   <h4 className="font-semibold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                    Пока нет обращений
+                    {locale === 'uz' ? 'Hozircha murojaatlar yo‘q' : 'Пока нет обращений'}
                   </h4>
                   <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-xs mx-auto">
-                    Подключите канал связи, чтобы входящие заявки появлялись здесь.
+                    {locale === 'uz'
+                      ? 'Kiruvchi arizalar shu yerda ko‘rinishi uchun aloqa kanalini ulang.'
+                      : 'Подключите канал связи, чтобы входящие заявки появлялись здесь.'}
                   </p>
                   <Link
                     href="/dashboard/integrations"
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF7277] hover:underline mt-3"
                   >
-                    <span>Перейти к интеграциям</span>
+                    <span>{locale === 'uz' ? 'Integratsiyalarga o‘tish' : 'Перейти к интеграциям'}</span>
                     <ArrowRight size={12} />
                   </Link>
                 </div>
@@ -514,10 +557,12 @@ export default function DashboardOverviewPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-xs text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                Нужна помощь с запуском?
+                {locale === 'uz' ? 'Boshlashda yordam kerakmi?' : 'Нужна помощь с запуском?'}
               </p>
               <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] truncate">
-                Напишите в поддержку — поможем настроить сотрудника бесплатно
+                {locale === 'uz'
+                  ? 'Yordamga yozing — xodimni bepul sozlab beramiz'
+                  : 'Напишите в поддержку — поможем настроить сотрудника бесплатно'}
               </p>
             </div>
             <ArrowRight
@@ -534,7 +579,7 @@ export default function DashboardOverviewPage() {
         onClose={() => {
           if (!saving) setVerifyOpen(false);
         }}
-        label="Подтверждение email"
+        label={locale === 'uz' ? 'Emailni tasdiqlash' : 'Подтверждение email'}
         className="w-[calc(100vw-32px)] sm:w-[440px] max-w-[440px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
       >
         <form
@@ -555,12 +600,12 @@ export default function DashboardOverviewPage() {
         >
           <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3">
             <h3 className="text-base font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-              Подтвердите email
+              {locale === 'uz' ? 'Emailni tasdiqlang' : 'Подтвердите email'}
             </h3>
             <Button
               type="button"
               variant="ghost"
-              aria-label="Закрыть"
+              aria-label={locale === 'uz' ? 'Yopish' : 'Закрыть'}
               onClick={() => setVerifyOpen(false)}
               disabled={saving}
             >
@@ -569,15 +614,27 @@ export default function DashboardOverviewPage() {
           </div>
 
           <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
-            Введите 6-значный проверочный код, отправленный на адрес{' '}
-            <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">
-              {user?.email}
-            </strong>
-            .
+            {locale === 'uz' ? (
+              <>
+                Ushbu manzilga yuborilgan 6 xonali tasdiqlash kodini kiriting:{' '}
+                <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  {user?.email}
+                </strong>
+                .
+              </>
+            ) : (
+              <>
+                Введите 6-значный проверочный код, отправленный на адрес{' '}
+                <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  {user?.email}
+                </strong>
+                .
+              </>
+            )}
           </p>
 
           <Input
-            label="Код подтверждения"
+            label={locale === 'uz' ? 'Tasdiqlash kodi' : 'Код подтверждения'}
             value={code}
             onChange={(event) => setCode(event.target.value)}
             inputMode="numeric"
@@ -604,7 +661,7 @@ export default function DashboardOverviewPage() {
               }}
               className="text-xs"
             >
-              Отправить повторно
+              {locale === 'uz' ? 'Qayta yuborish' : 'Отправить повторно'}
             </Button>
 
             <Button
@@ -613,7 +670,7 @@ export default function DashboardOverviewPage() {
               isLoading={saving}
               className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
             >
-              Подтвердить
+              {locale === 'uz' ? 'Tasdiqlash' : 'Подтвердить'}
             </Button>
           </div>
         </form>

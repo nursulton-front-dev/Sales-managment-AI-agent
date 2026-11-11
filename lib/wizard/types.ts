@@ -22,6 +22,9 @@ export interface AgentDraft {
   channels: ('telegram' | 'instagram' | 'widget')[];
   unresolvedQuestions: string[]; // Items requiring owner clarification
   currentStep: 1 | 2 | 3 | 4; // 1: Бизнес, 2: Знания, 3: Проверка, 4: Запуск
+  subStep?: 'niche' | 'goal' | 'knowledge' | 'review' | 'launch';
+  pricingConfirmed?: boolean;
+  goalConfirmed?: boolean;
   updatedAt: string;
 }
 

@@ -48,6 +48,8 @@ function AgentList() {
     toggleAgentStatus,
     workspace,
     plan,
+    locale,
+    t,
   } = useApp();
 
   const [query, setQuery] = useState('');
@@ -94,21 +96,21 @@ function AgentList() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)] dark:border-[#29374C]">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] dark:text-[#F4F7FB] leading-tight">
-            ИИ-сотрудники
+            {t.agents.title}
           </h1>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
-            Настраивайте базу знаний, прайс-лист и каналы общения для каждого ассистента.
+            {t.agents.subtitle}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="px-3 py-1.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] flex items-center gap-2">
             <span>
-              Сотрудники:{' '}
+              {locale === 'uz' ? 'Xodimlar:' : 'Сотрудники:'}{' '}
               <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">
                 {agents.length}
               </strong>{' '}
-              из {maxAgents}
+              {locale === 'uz' ? 'dan' : 'из'} {maxAgents}
             </span>
           </div>
 
@@ -118,14 +120,14 @@ function AgentList() {
               className="px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-all"
             >
               <Plus size={16} />
-              <span>Создать сотрудника</span>
+              <span>{t.agents.createButton}</span>
             </Link>
           ) : (
             <Link
               href="/dashboard/billing"
               className="px-4 py-2 rounded-xl border border-[#FF7277] text-[#FF7277] hover:bg-red-500/10 font-semibold text-xs flex items-center gap-1.5 transition-all"
             >
-              <span>Повысить тариф →</span>
+              <span>{locale === 'uz' ? 'Tarifni oshirish →' : 'Повысить тариф →'}</span>
             </Link>
           )}
         </div>
@@ -138,10 +140,14 @@ function AgentList() {
             <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
             <div>
               <p className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                Достигнут лимит сотрудников для тарифа {plan?.toUpperCase()} ({maxAgents} из {maxAgents})
+                {locale === 'uz'
+                  ? `${plan?.toUpperCase()} tarifi bo‘yicha xodimlar limiti to‘ldi (${maxAgents} dan ${maxAgents})`
+                  : `Достигнут лимит сотрудников для тарифа ${plan?.toUpperCase()} (${maxAgents} из ${maxAgents})`}
               </p>
               <p className="text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                Для подключения до 3 сотрудников выберите тариф BUSINESS, до 10 — тариф PRO.
+                {locale === 'uz'
+                  ? '3 tagacha xodim ulash uchun BUSINESS, 10 tagacha — PRO tarifini tanlang.'
+                  : 'Для подключения до 3 сотрудников выберите тариф BUSINESS, до 10 — тариф PRO.'}
               </p>
             </div>
           </div>
@@ -149,7 +155,7 @@ function AgentList() {
             href="/dashboard/billing"
             className="text-xs font-semibold text-[#FF7277] hover:underline shrink-0"
           >
-            Перейти к тарифам →
+            {locale === 'uz' ? 'Tariflarga o‘tish →' : 'Перейти к тарифам →'}
           </Link>
         </div>
       )}
@@ -158,20 +164,20 @@ function AgentList() {
       {agents.length > 0 && (
         <div className="flex flex-col sm:flex-row gap-3 max-w-3xl">
           <Input
-            aria-label="Найти сотрудника"
-            placeholder="Поиск по имени сотрудника..."
+            aria-label={locale === 'uz' ? 'Xodimni qidirish' : 'Найти сотрудника'}
+            placeholder={locale === 'uz' ? 'Xodim nomi bo‘yicha qidirish…' : 'Поиск по имени сотрудника...'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1"
           />
           <Select
-            aria-label="Статус сотрудника"
+            aria-label={locale === 'uz' ? 'Xodim holati' : 'Статус сотрудника'}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             options={[
-              { value: 'all', label: 'Все статусы' },
-              { value: 'active', label: 'Включены' },
-              { value: 'paused', label: 'На паузе' },
+              { value: 'all', label: locale === 'uz' ? 'Barcha holatlar' : 'Все статусы' },
+              { value: 'active', label: locale === 'uz' ? 'Yoqilgan' : 'Включены' },
+              { value: 'paused', label: locale === 'uz' ? 'To‘xtatilgan' : 'На паузе' },
             ]}
           />
         </div>
@@ -184,12 +190,14 @@ function AgentList() {
             <Users size={28} />
           </div>
           <h2 className="font-bold text-lg text-[var(--text-primary)] dark:text-[#F4F7FB]">
-            {agents.length ? 'Сотрудники не найдены' : 'Создайте первого ИИ-сотрудника'}
+            {agents.length
+              ? (locale === 'uz' ? 'Xodimlar topilmadi' : 'Сотрудники не найдены')
+              : (locale === 'uz' ? 'Birinchi AI-xodimni yarating' : 'Создайте первого ИИ-сотрудника')}
           </h2>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1.5 max-w-sm mx-auto leading-relaxed">
             {agents.length
-              ? 'Попробуйте изменить поисковый запрос или фильтр статуса.'
-              : 'Добавьте инструкции и прайс-лист, чтобы ассистент начал квалифицировать клиентов.'}
+              ? (locale === 'uz' ? 'Qidiruv so‘rovi yoki holat filtrini o‘zgartirib ko‘ring.' : 'Попробуйте изменить поисковый запрос или фильтр статуса.')
+              : (locale === 'uz' ? 'Yordamchi mijozlarni saralashni boshlashi uchun ko‘rsatmalar va narxlarni qo‘shing.' : 'Добавьте инструкции и прайс-лист, чтобы ассистент начал квалифицировать клиентов.')}
           </p>
           {!agents.length && (
             <Link
@@ -197,7 +205,7 @@ function AgentList() {
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs mt-4 shadow-2xs"
             >
               <Plus size={16} />
-              <span>Создать сотрудника</span>
+              <span>{t.agents.createButton}</span>
             </Link>
           )}
         </div>
@@ -239,10 +247,12 @@ function AgentList() {
                     <BookOpen size={16} className="text-[#FF7277] shrink-0" />
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
-                        База знаний
+                        {locale === 'uz' ? 'Bilimlar bazasi' : 'База знаний'}
                       </span>
                       <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block">
-                        {agent.priceList.trim() ? 'Добавлена' : 'Нужно заполнить'}
+                        {agent.priceList.trim()
+                          ? (locale === 'uz' ? 'Qo‘shilgan' : 'Добавлена')
+                          : (locale === 'uz' ? 'To‘ldirish kerak' : 'Нужно заполнить')}
                       </strong>
                     </div>
                   </div>
@@ -251,10 +261,10 @@ function AgentList() {
                     <Plug size={16} className="text-[#229ED9] shrink-0" />
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
-                        Каналы связи
+                        {locale === 'uz' ? 'Aloqa kanallari' : 'Каналы связи'}
                       </span>
                       <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block" title={statusInfo.primaryChannelText}>
-                        {statusInfo.channels.length > 0 ? statusInfo.primaryChannelText : 'Не подключены'}
+                        {statusInfo.channels.length > 0 ? statusInfo.primaryChannelText : (locale === 'uz' ? 'Ulanmagan' : 'Не подключены')}
                       </strong>
                     </div>
                   </div>
@@ -263,12 +273,12 @@ function AgentList() {
                     <CalendarDays size={16} className="text-emerald-500 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
-                        Google Календарь
+                        Google {locale === 'uz' ? 'Taqvim' : 'Календарь'}
                       </span>
                       <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block">
                         {workspace?.googleCalendarConnected && agent.googleCalendarEnabled
-                          ? 'Синхронизирован'
-                          : 'Не подключён'}
+                          ? (locale === 'uz' ? 'Sinxronlangan' : 'Синхронизирован')
+                          : (locale === 'uz' ? 'Ulanmagan' : 'Не подключён')}
                       </strong>
                     </div>
                   </div>
@@ -280,13 +290,15 @@ function AgentList() {
                     <span>
                       {statusInfo.channels.length > 0 && statusInfo.channels[0].details
                         ? statusInfo.channels[0].details
-                        : 'Подключите Telegram, Instagram или виджет на сайт, чтобы сотрудник начал отвечать клиентам.'}
+                        : (locale === 'uz'
+                            ? 'Xodim mijozlarga javob berishni boshlashi uchun Telegram, Instagram yoki sayt vidjetini ulang.'
+                            : 'Подключите Telegram, Instagram или виджет на сайт, чтобы сотрудник начал отвечать клиентам.')}
                     </span>
                     <Link
                       href="/dashboard/integrations"
                       className="font-semibold underline shrink-0 hover:text-amber-900 dark:hover:text-amber-200"
                     >
-                      Настроить каналы →
+                      {locale === 'uz' ? 'Kanallarni sozlash →' : 'Настроить каналы →'}
                     </Link>
                   </div>
                 )}
@@ -299,7 +311,7 @@ function AgentList() {
                     className="flex-1 text-xs font-semibold"
                     onClick={() => setEditingId(agent.id)}
                   >
-                    Настроить
+                    {locale === 'uz' ? 'Sozlash' : 'Настроить'}
                   </Button>
                   <Button
                     variant="outline"
@@ -308,7 +320,7 @@ function AgentList() {
                     onClick={() => openSandbox(agent.id)}
                   >
                     <Play size={14} />
-                    <span>Тест-драйв</span>
+                    <span>{t.agents.testDrive}</span>
                   </Button>
                   <Button
                     variant="ghost"
@@ -316,7 +328,9 @@ function AgentList() {
                     className="text-xs"
                     onClick={() => toggleAgentStatus(agent.id)}
                   >
-                    {agent.isActive ? 'Приостановить' : 'Включить'}
+                    {agent.isActive
+                      ? (locale === 'uz' ? 'To‘xtatish' : 'Приостановить')
+                      : (locale === 'uz' ? 'Yoqish' : 'Включить')}
                   </Button>
                 </div>
               </div>
@@ -328,29 +342,35 @@ function AgentList() {
           <div className="xl:col-span-4 space-y-5">
             <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 shadow-xs space-y-4">
               <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                Рекомендации по запуску
+                {locale === 'uz' ? 'Ishga tushirish bo‘yicha tavsiyalar' : 'Рекомендации по запуску'}
               </h3>
 
               <div className="space-y-3 text-xs leading-relaxed">
                 <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
                   <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] block mb-1">
-                    1. Актуальный прайс-лист
+                    {locale === 'uz' ? '1. Aniq narxlar ro‘yxati' : '1. Актуальный прайс-лист'}
                   </strong>
-                  Укажите точные цены, длительность услуг и правила записи, чтобы ИИ отвечал клиентам уверенно.
+                  {locale === 'uz'
+                    ? 'AI ishonchli javob berishi uchun aniq narxlar, xizmat vaqti va yozilish qoidalarini ko‘rsating.'
+                    : 'Укажите точные цены, длительность услуг и правила записи, чтобы ИИ отвечал клиентам уверенно.'}
                 </div>
 
                 <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
                   <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] block mb-1">
-                    2. Квалификационные вопросы
+                    {locale === 'uz' ? '2. Saralash savollari' : '2. Квалификационные вопросы'}
                   </strong>
-                  Задайте 2–3 вопроса для определения потребностей клиента (например: город, бюджет, удобный день).
+                  {locale === 'uz'
+                    ? 'Mijoz ehtiyojlarini aniqlash uchun 2–3 ta savol belgilang (masalan: shahar, byudjet, qulay kun).'
+                    : 'Задайте 2–3 вопроса для определения потребностей клиента (например: город, бюджет, удобный день).'}
                 </div>
 
                 <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
                   <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] block mb-1">
-                    3. Проверка через тест-драйв
+                    {locale === 'uz' ? '3. Test-drayv orqali tekshirish' : '3. Проверка через тест-драйв'}
                   </strong>
-                  Перед запуском в живой канал протестируйте диалог в песочнице с разными сценариями вопросов.
+                  {locale === 'uz'
+                    ? 'Jonli kanalga ulashdan oldin turli savol stsenariylari bilan dialog sifatini sinab ko‘ring.'
+                    : 'Перед запуском в живой канал протестируйте диалог в песочнице с разными сценариями вопросов.'}
                 </div>
               </div>
 
@@ -358,7 +378,7 @@ function AgentList() {
                 href="/dashboard/integrations"
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF7277] hover:underline pt-1"
               >
-                <span>Перейти в каталог интеграций</span>
+                <span>{locale === 'uz' ? 'Integratsiyalar katalogiga o‘tish' : 'Перейти в каталог интеграций'}</span>
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -388,7 +408,7 @@ function AgentEditor({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
-  const { showToast } = useApp();
+  const { showToast, locale, t } = useApp();
   const [name, setName] = useState(agent.name);
   const [knowledge, setKnowledge] = useState(agent.priceList);
   const [prompt, setPrompt] = useState(agent.systemPrompt);
@@ -408,7 +428,7 @@ function AgentEditor({
   const closeEditor = () => {
     if (
       !saving &&
-      (!dirty || window.confirm('Изменения не сохранены. Закрыть редактор?'))
+      (!dirty || window.confirm(locale === 'uz' ? 'O‘zgarishlar saqlanmadi. Muharrirni yopasizmi?' : 'Изменения не сохранены. Закрыть редактор?'))
     ) {
       onClose();
     }
@@ -418,7 +438,7 @@ function AgentEditor({
     <Dialog
       open
       onClose={closeEditor}
-      label="Настройка ИИ-сотрудника"
+      label={locale === 'uz' ? 'AI-xodimni sozlash' : 'Настройка ИИ-сотрудника'}
       className="w-[calc(100vw-32px)] sm:w-[600px] max-w-[600px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
     >
       <form
@@ -444,13 +464,13 @@ function AgentEditor({
             });
             const data = await res.json();
             if (!res.ok || !data.success)
-              throw new Error(data.error || 'Ошибка сохранения');
+              throw new Error(data.error || (locale === 'uz' ? 'Saqlashda xatolik yuz berdi' : 'Ошибка сохранения'));
             onClose();
             await onSaved();
-            showToast('Настройки сотрудника сохранены');
+            showToast(locale === 'uz' ? 'Xodim sozlamalari saqlandi' : 'Настройки сотрудника сохранены');
           } catch (error) {
             showToast(
-              'Не удалось сохранить',
+              locale === 'uz' ? 'Saqlab bo‘lmadi' : 'Не удалось сохранить',
               error instanceof Error ? error.message : 'Ошибка сети',
               'error'
             );
@@ -461,13 +481,13 @@ function AgentEditor({
       >
         <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3">
           <h2 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-            Настройка сотрудника {agent.name}
+            {locale === 'uz' ? `${agent.name} xodimini sozlash` : `Настройка сотрудника ${agent.name}`}
           </h2>
           <Button
             type="button"
             variant="ghost"
             onClick={closeEditor}
-            aria-label="Закрыть редактор"
+            aria-label={locale === 'uz' ? 'Muharrirni yopish' : 'Закрыть редактор'}
           >
             <X size={18} />
           </Button>
@@ -475,7 +495,7 @@ function AgentEditor({
 
         <div className="space-y-3.5">
           <Input
-            label="Имя сотрудника"
+            label={locale === 'uz' ? 'Xodim nomi' : 'Имя сотрудника'}
             required
             maxLength={200}
             value={name}
@@ -484,33 +504,33 @@ function AgentEditor({
 
           <div>
             <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] mb-1.5">
-              Услуги, прайс-лист и регламенты
+              {locale === 'uz' ? 'Xizmatlar, narxlar va qoidalar' : 'Услуги, прайс-лист и регламенты'}
             </label>
             <textarea
               rows={4}
               className="w-full border border-[var(--border)] dark:border-[#29374C] rounded-xl bg-[var(--surface-secondary)] dark:bg-[#101B2E] p-3 text-xs text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
               value={knowledge}
               onChange={(e) => setKnowledge(e.target.value)}
-              placeholder="Опишите товары, услуги, цены, адрес и часто задаваемые вопросы..."
+              placeholder={locale === 'uz' ? 'Mahsulotlar, xizmatlar, narxlar, manzil va tez-tez so‘raladigan savollarni tavsiflang...' : 'Опишите товары, услуги, цены, адрес и часто задаваемые вопросы...'}
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] mb-1.5">
-              Вопросы квалификации (по одному на строке)
+              {locale === 'uz' ? 'Saralash savollari (har bir qatorda bittadan)' : 'Вопросы квалификации (по одному на строке)'}
             </label>
             <textarea
               rows={3}
               className="w-full border border-[var(--border)] dark:border-[#29374C] rounded-xl bg-[var(--surface-secondary)] dark:bg-[#101B2E] p-3 text-xs text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
               value={questions}
               onChange={(e) => setQuestions(e.target.value)}
-              placeholder="Какая услуга вас интересует?&#10;Какой день удобен для визита?"
+              placeholder={locale === 'uz' ? 'Sizni qaysi xizmat qiziqtiradi?&#10;Tashrif uchun qaysi kun qulay?' : 'Какая услуга вас интересует?&#10;Какой день удобен для визита?'}
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] mb-1.5">
-              Инструкции сотруднику (системный промпт)
+              {locale === 'uz' ? 'Xodim uchun ko‘rsatmalar (tizimli promt)' : 'Инструкции сотруднику (системный промпт)'}
             </label>
             <textarea
               rows={4}
@@ -524,7 +544,7 @@ function AgentEditor({
 
         <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[#29374C]">
           <Button type="button" variant="ghost" onClick={closeEditor} disabled={saving}>
-            Отмена
+            {t.common.cancel}
           </Button>
           <Button
             type="submit"
@@ -533,7 +553,7 @@ function AgentEditor({
             disabled={!dirty}
             className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
           >
-            Сохранить изменения
+            {t.common.save}
           </Button>
         </div>
       </form>

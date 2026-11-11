@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { SparrowMascot } from './SparrowMascot';
 import { Button } from './Button';
+import { useApp } from '@/context/AppContext';
 import { AlertCircle, RefreshCw, WifiOff, ShieldAlert, ServerCrash } from 'lucide-react';
 
 export interface DataStateProps {
@@ -20,10 +21,20 @@ export function DataState({
   error,
   retry,
   message,
-  lang = 'ru',
+  lang,
   compact = false,
   className = '',
 }: DataStateProps) {
+  let contextLocale: 'ru' | 'uz' = 'ru';
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const app = useApp();
+    if (app?.locale) contextLocale = app.locale;
+  } catch {
+    // outside provider
+  }
+  const activeLang = lang || contextLocale;
+
   // Delay display of loading state slightly (220ms) to avoid flashing on near-instant queries
   const [showLoading, setShowLoading] = useState(false);
 
@@ -55,7 +66,7 @@ export function DataState({
           className={`flex items-center gap-2.5 py-4 px-3 text-xs text-[var(--text-secondary)] ${className}`}
         >
           <SparrowMascot variant="loading" size={28} />
-          <span>{message || (lang === 'uz' ? 'Yuklanmoqda…' : 'Загружаем…')}</span>
+          <span>{message || (activeLang === 'uz' ? 'Yuklanmoqda…' : 'Загружаем…')}</span>
         </div>
       );
     }
@@ -71,10 +82,10 @@ export function DataState({
         </div>
         <div>
           <p className="font-semibold text-sm text-[var(--text-primary)]">
-            {message || (lang === 'uz' ? 'Kabinet yuklanmoqda…' : 'Загружаем кабинет…')}
+            {message || (activeLang === 'uz' ? 'Kabinet yuklanmoqda…' : 'Загружаем кабинет…')}
           </p>
           <p className="text-xs text-[var(--text-muted)] mt-0.5">
-            {lang === 'uz' ? 'Iltimos, kuting' : 'Синхронизируем актуальные данные'}
+            {activeLang === 'uz' ? 'Iltimos, kuting' : 'Синхронизируем актуальные данные'}
           </p>
         </div>
       </div>
@@ -106,20 +117,20 @@ export function DataState({
       errText.includes('сервер') ||
       errText.includes('server');
 
-    let title = lang === 'uz' ? 'Ma\'lumotlarni yuklab bo\'lmadi' : 'Не удалось загрузить данные';
+    let title = activeLang === 'uz' ? 'Ma\'lumotlarni yuklab bo\'lmadi' : 'Не удалось загрузить данные';
     let Icon = AlertCircle;
     let iconColor = 'text-amber-500';
 
     if (isOffline) {
-      title = lang === 'uz' ? 'Internet aloqasi yo\'q' : 'Нет подключения к интернету';
+      title = activeLang === 'uz' ? 'Internet aloqasi yo\'q' : 'Нет подключения к интернету';
       Icon = WifiOff;
       iconColor = 'text-red-500';
     } else if (isAccess) {
-      title = lang === 'uz' ? 'Bo\'limga kirish huquqi yo\'q' : 'Нет доступа к разделу';
+      title = activeLang === 'uz' ? 'Bo\'limga kirish huquqi yo\'q' : 'Нет доступа к разделу';
       Icon = ShieldAlert;
       iconColor = 'text-amber-500';
     } else if (isServer) {
-      title = lang === 'uz' ? 'Serverda xatolik yuz berdi' : 'Ошибка на стороне сервера';
+      title = activeLang === 'uz' ? 'Serverda xatolik yuz berdi' : 'Ошибка на стороне сервера';
       Icon = ServerCrash;
       iconColor = 'text-red-500';
     }
@@ -154,7 +165,7 @@ export function DataState({
               className="text-xs font-semibold inline-flex items-center gap-1.5"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>{lang === 'uz' ? 'Qayta urinish' : 'Повторить'}</span>
+              <span>{activeLang === 'uz' ? 'Qayta urinish' : 'Повторить'}</span>
             </Button>
           </div>
         )}

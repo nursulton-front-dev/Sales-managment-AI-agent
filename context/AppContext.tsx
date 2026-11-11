@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { authClient } from '@/lib/auth-client';
+import { SupportedLocale, TranslationDictionary, DICTIONARIES } from '@/src/config/i18n';
 
 export type PlanType = 'TRIAL' | 'START' | 'BUSINESS' | 'PRO';
 export interface UserProfile { id: string; email: string; name: string; companyName: string; isDemo: boolean; emailVerified?: boolean; role?: string; }
@@ -71,6 +72,7 @@ interface AppContextType {
   setWorkspace: (workspace: WorkspaceData) => void; logout: () => Promise<void>;
   isGoogleCalendarConnected: boolean; isCalendarModalOpen: boolean; openCalendarModal: () => void; closeCalendarModal: () => void;
   connectGoogleCalendar: () => void; disconnectGoogleCalendar: () => void;
+  locale: SupportedLocale; setLocale: (locale: SupportedLocale) => Promise<void>; t: TranslationDictionary;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -86,7 +88,18 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 const jsonRequest = (method: string, body: unknown): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
+function getInitialLocale(): SupportedLocale {
+  if (typeof document !== 'undefined') {
+    const match = document.cookie.match(/(?:^|;\s*)gapcha_locale=(ru|uz)(?:;|$)/);
+    if (match && (match[1] === 'ru' || match[1] === 'uz')) return match[1];
+    const local = localStorage.getItem('gapcha_locale');
+    if (local === 'ru' || local === 'uz') return local;
+  }
+  return 'ru';
+}
+
 export function AppContextProvider({ children }: { children: ReactNode }) {
+  const [locale, setLocaleState] = useState<SupportedLocale>(getInitialLocale);
   const [workspace, saveWorkspace] = useState<WorkspaceData | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -104,6 +117,39 @@ export function AppContextProvider({ children }: { children: ReactNode }) {
   const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const pending = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = locale;
+    }
+  }, [locale]);
+
+  const setLocale = useCallback(async (newLocale: SupportedLocale) => {
+    setLocaleState(newLocale);
+    if (typeof document !== 'undefined') {
+      document.cookie = `gapcha_locale=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
+      localStorage.setItem('gapcha_locale', newLocale);
+      document.documentElement.lang = newLocale;
+    }
+    if (workspace?.id) {
+      try {
+        const currentSettings = workspace.settings || {};
+        await fetch('/api/workspace/settings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            settings: { ...currentSettings, language: newLocale },
+          }),
+        });
+        saveWorkspace((prev) => prev ? {
+          ...prev,
+          settings: { ...(prev.settings || {}), language: newLocale },
+        } : prev);
+      } catch {
+        // Non-blocking
+      }
+    }
+  }, [workspace?.id, workspace?.settings]);
   const removeToast = useCallback((id: string) => setToasts((items) => items.filter((item) => item.id !== id)), []);
   const showToast = useCallback((title: string, description?: string, type: ToastMessage['type'] = 'success') => {
     const id = crypto.randomUUID();
@@ -137,6 +183,15 @@ export function AppContextProvider({ children }: { children: ReactNode }) {
         return;
       }
       setWorkspace(data.workspace);
+      if (data.workspace?.settings?.language && (data.workspace.settings.language === 'ru' || data.workspace.settings.language === 'uz')) {
+        const wsLang = data.workspace.settings.language as SupportedLocale;
+        setLocaleState(wsLang);
+        if (typeof document !== 'undefined') {
+          document.cookie = `gapcha_locale=${wsLang}; path=/; max-age=31536000; SameSite=Lax`;
+          localStorage.setItem('gapcha_locale', wsLang);
+          document.documentElement.lang = wsLang;
+        }
+      }
       setSupportSession({ isImpersonating: Boolean(data.isImpersonating), reason: data.supportSessionReason || '' });
       setIsSuperAdmin(Boolean(data.isSuperAdmin));
       setUser((previous) => previous ? { ...previous, role: data.role } : previous);
@@ -204,6 +259,7 @@ export function AppContextProvider({ children }: { children: ReactNode }) {
   const activeAgent = agents.find((agent) => agent.isActive) || agents[0] || null;
   const plan = (workspace?.plan.toUpperCase() || 'TRIAL') as PlanType;
   const trialDaysLeft = workspace?.trialDaysLeft || 0;
-  return <AppContext.Provider value={{ user, workspace, workspaceLoading, workspaceError, isSuperAdmin, isImpersonating: supportSession.isImpersonating, supportSessionReason: supportSession.reason, isDemoMode: false, plan, trialDaysLeft, tokenBalance: workspace?.tokenBalance ?? 0, agents, leads, agentsLoading, leadsLoading, agentsError, leadsError, activeAgent, isSandboxOpen, sandboxAgent: agents.find((agent) => agent.id === sandboxAgentId) || activeAgent, toasts, createAgent, toggleAgentStatus, addLead, updateLeadStatus, refreshWorkspace, refreshAgents, refreshLeads, setPlan: () => { void refreshWorkspace(); }, openSandbox: (id) => { setSandboxAgentId(id || activeAgent?.id || null); setIsSandboxOpen(true); }, closeSandbox: () => setIsSandboxOpen(false), showToast, removeToast, emailVerified: Boolean(workspace?.emailVerified), verifyEmail, sendVerificationCode, setWorkspace, logout, isGoogleCalendarConnected: Boolean(workspace?.googleCalendarConnected), isCalendarModalOpen, openCalendarModal: () => setIsCalendarModalOpen(true), closeCalendarModal: () => setIsCalendarModalOpen(false), connectGoogleCalendar: () => { void refreshWorkspace(); setIsCalendarModalOpen(false); }, disconnectGoogleCalendar: () => { void refreshWorkspace(); } }}>{children}</AppContext.Provider>;
+  const t = DICTIONARIES[locale] || DICTIONARIES.ru;
+  return <AppContext.Provider value={{ user, workspace, workspaceLoading, workspaceError, isSuperAdmin, isImpersonating: supportSession.isImpersonating, supportSessionReason: supportSession.reason, isDemoMode: false, plan, trialDaysLeft, tokenBalance: workspace?.tokenBalance ?? 0, agents, leads, agentsLoading, leadsLoading, agentsError, leadsError, activeAgent, isSandboxOpen, sandboxAgent: agents.find((agent) => agent.id === sandboxAgentId) || activeAgent, toasts, createAgent, toggleAgentStatus, addLead, updateLeadStatus, refreshWorkspace, refreshAgents, refreshLeads, setPlan: () => { void refreshWorkspace(); }, openSandbox: (id) => { setSandboxAgentId(id || activeAgent?.id || null); setIsSandboxOpen(true); }, closeSandbox: () => setIsSandboxOpen(false), showToast, removeToast, emailVerified: Boolean(workspace?.emailVerified), verifyEmail, sendVerificationCode, setWorkspace, logout, isGoogleCalendarConnected: Boolean(workspace?.googleCalendarConnected), isCalendarModalOpen, openCalendarModal: () => setIsCalendarModalOpen(true), closeCalendarModal: () => setIsCalendarModalOpen(false), connectGoogleCalendar: () => { void refreshWorkspace(); setIsCalendarModalOpen(false); }, disconnectGoogleCalendar: () => { void refreshWorkspace(); }, locale, setLocale, t }}>{children}</AppContext.Provider>;
 }
 export function useApp() { const value = useContext(AppContext); if (!value) throw new Error('useApp must be used within AppContextProvider'); return value; }

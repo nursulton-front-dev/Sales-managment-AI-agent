@@ -31,7 +31,7 @@ type Transaction = {
 };
 
 export default function BillingPage() {
-  const { plan, tokenBalance, workspace } = useApp();
+  const { plan, tokenBalance, workspace, locale, t } = useApp();
   const [selected, setSelected] = useState<PlanId | null>(null);
   const [paymentNotice, setPaymentNotice] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -64,8 +64,12 @@ export default function BillingPage() {
   return (
     <div className="space-y-8 w-full pb-10">
       <PageHeader
-        title="Тарифы и баланс"
-        description="Управляйте подпиской, лимитами ИИ-сотрудников и объёмом ответов."
+        title={t.billing.title}
+        description={
+          locale === 'uz'
+            ? 'Obunani, AI xodimlar limitini va javoblar hajmini boshqaring.'
+            : 'Управляйте подпиской, лимитами ИИ-сотрудников и объёмом ответов.'
+        }
       />
 
       {/* ========================================================================= */}
@@ -76,38 +80,44 @@ export default function BillingPage() {
           {/* Current Plan */}
           <div className="space-y-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-              Ваш тариф
+              {locale === 'uz' ? 'Sizning tarifingiz' : 'Ваш тариф'}
             </span>
             <div className="flex items-center gap-3">
               <span className="text-xl font-bold px-3 py-1.5 rounded-xl bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB]">
                 {plan}
               </span>
               <Badge variant={active ? 'success' : 'warning'}>
-                {active ? '● Активен' : '○ Пробный период'}
+                {active
+                  ? (locale === 'uz' ? '● Faol' : '● Активен')
+                  : (locale === 'uz' ? '○ Sinov davri' : '○ Пробный период')}
               </Badge>
             </div>
             <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
               {active
-                ? 'Подписка оплачена и активна'
-                : '100 бонусных ИИ-ответов на 3 дня после регистрации'}
+                ? (locale === 'uz' ? 'Obuna to‘langan va faol' : 'Подписка оплачена и активна')
+                : (locale === 'uz'
+                    ? 'Ro‘yxatdan o‘tgandan so‘ng 3 kunga 100 ta bonus AI-javoblari'
+                    : '100 бонусных ИИ-ответов на 3 дня после регистрации')}
             </p>
           </div>
 
           {/* AI Responses Balance */}
           <div className="space-y-1 md:border-x md:border-[var(--border)] md:dark:border-[#29374C] md:px-6">
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-              Баланс ИИ-ответов
+              {locale === 'uz' ? 'AI javoblari balansi' : 'Баланс ИИ-ответов'}
             </span>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-primary)] dark:text-[#F4F7FB] tabular-nums">
-                {tokenBalance.toLocaleString('ru-RU')}
+                {tokenBalance.toLocaleString(locale === 'uz' ? 'uz-UZ' : 'ru-RU')}
               </span>
               <span className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                ответов (токенов)
+                {locale === 'uz' ? 'javob (tokenlar)' : 'ответов (токенов)'}
               </span>
             </div>
             <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-              1 ответ ИИ = 1 токен. При обращении клиента списывается 1 единица.
+              {locale === 'uz'
+                ? '1 ta AI javobi = 1 token. Mijoz murojaatida 1 birlik sarflanadi.'
+                : '1 ответ ИИ = 1 токен. При обращении клиента списывается 1 единица.'}
             </p>
           </div>
 
@@ -117,13 +127,13 @@ export default function BillingPage() {
               href="#pricing-plans"
               className="px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs text-center transition-all shadow-xs"
             >
-              Сменить тариф
+              {locale === 'uz' ? 'Tarifni o‘zgartirish' : 'Сменить тариф'}
             </a>
             <a
               href="#transactions"
               className="text-xs font-semibold text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[#FF7277] flex items-center justify-center gap-1 transition-colors"
             >
-              <span>История операций</span>
+              <span>{locale === 'uz' ? 'Amallar tarixi' : 'История операций'}</span>
               <ArrowRight size={14} />
             </a>
           </div>
@@ -136,10 +146,12 @@ export default function BillingPage() {
       <section id="pricing-plans" className="space-y-4">
         <div>
           <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-            Тарифные планы
+            {locale === 'uz' ? 'Tarif rejalari' : 'Тарифные планы'}
           </h2>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1">
-            Выберите масштаб для вашей компании: от одного ассистента до распределённой команды отделов продаж.
+            {locale === 'uz'
+              ? 'Kompaniyangiz uchun mos ko‘lamni tanlang: bitta yordamchidan tortib sotuv bo‘limlarigacha.'
+              : 'Выберите масштаб для вашей компании: от одного ассистента до распределённой команды отделов продаж.'}
           </p>
         </div>
 
@@ -161,10 +173,12 @@ export default function BillingPage() {
 
         <div className="p-4 rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] flex items-center justify-between gap-4">
           <p>
-            Онлайн-оплата находится в процессе интеграции. Выбор тарифа фиксирует заявку, но не списывает средства автоматически.
+            {locale === 'uz'
+              ? 'Onlayn to‘lov tizimi ulanish jarayonida. Tarifni tanlash arizani qayd etadi, lekin mablag‘ni avtomatik yechmaydi.'
+              : 'Онлайн-оплата находится в процессе интеграции. Выбор тарифа фиксирует заявку, но не списывает средства автоматически.'}
           </p>
           <span className="shrink-0 text-[11px] font-semibold text-[#FF7277]">
-            Честный расчёт
+            {locale === 'uz' ? 'Haqqoniy hisob-kitob' : 'Честный расчёт'}
           </span>
         </div>
       </section>
@@ -176,14 +190,16 @@ export default function BillingPage() {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-              План развития возможностей (Roadmap)
+              {locale === 'uz' ? 'Imkoniyatlar rejasi (Roadmap)' : 'План развития возможностей (Roadmap)'}
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-              Скоро
+              {locale === 'uz' ? 'Tez kunda' : 'Скоро'}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1">
-            Эти функции находятся в активной разработке и появятся в тарифах без дополнительной платы после релиза.
+            {locale === 'uz'
+              ? 'Ushbu imkoniyatlar faol ishlab chiqilmoqda va relizdan so‘ng tariflarga qo‘shimcha to‘lovsiz qo‘shiladi.'
+              : 'Эти функции находятся в активной разработке и появятся в тарифах без дополнительной платы после релиза.'}
           </p>
         </div>
 
@@ -205,7 +221,7 @@ export default function BillingPage() {
                 {module.description}
               </p>
               <span className="inline-block text-[10px] font-semibold text-[#FF7277] pt-1">
-                Тариф: {module.tier}
+                {locale === 'uz' ? 'Tarif:' : 'Тариф:'} {module.tier}
               </span>
             </div>
           ))}
@@ -218,10 +234,12 @@ export default function BillingPage() {
       <section className="space-y-4">
         <div>
           <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-            Докупка пакетов ИИ-ответов
+            {locale === 'uz' ? 'Qo‘shimcha AI javoblari paketlari' : 'Докупка пакетов ИИ-ответов'}
           </h2>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1">
-            Если основной лимит тарифа подходит к концу при активном трафике, пополните баланс в один клик.
+            {locale === 'uz'
+              ? 'Faol trafikda asosiy limit tugab qolsa, balansni bir bosishda to‘ldiring.'
+              : 'Если основной лимит тарифа подходит к концу при активном трафике, пополните баланс в один клик.'}
           </p>
         </div>
 
@@ -258,7 +276,7 @@ export default function BillingPage() {
                 className="w-full text-xs font-semibold"
                 disabled
               >
-                Оплата подключается
+                {locale === 'uz' ? 'To‘lov tizimi ulanmoqda' : 'Оплата подключается'}
               </Button>
             </div>
           ))}
@@ -270,7 +288,7 @@ export default function BillingPage() {
       {/* ========================================================================= */}
       <section id="transactions" className="space-y-4">
         <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-          История операций
+          {locale === 'uz' ? 'Amallar tarixi' : 'История операций'}
         </h2>
         <DataState loading={loading} error={error} retry={load} />
         {!loading && !error && (
@@ -282,10 +300,12 @@ export default function BillingPage() {
                   className="mx-auto text-[var(--text-muted)] dark:text-[#AABAD0]/60 mb-3"
                 />
                 <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                  Операций пока нет
+                  {locale === 'uz' ? 'Hozircha amallar yo‘q' : 'Операций пока нет'}
                 </h3>
                 <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm mx-auto">
-                  Здесь будут отображаться списания за ИИ-ответы и начисления токенов.
+                  {locale === 'uz'
+                    ? 'Bu yerda AI javoblari uchun sarflar va hisob to‘ldirishlar ko‘rinadi.'
+                    : 'Здесь будут отображаться списания за ИИ-ответы и начисления токенов.'}
                 </p>
               </div>
             ) : (
@@ -300,7 +320,7 @@ export default function BillingPage() {
                         {item.description}
                       </p>
                       <time className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-0.5 block">
-                        {new Date(item.createdAt).toLocaleString('ru-RU')}
+                        {new Date(item.createdAt).toLocaleString(locale === 'uz' ? 'uz-UZ' : 'ru-RU')}
                       </time>
                     </div>
                     <div className="flex items-center gap-4">
@@ -312,7 +332,7 @@ export default function BillingPage() {
                         }`}
                       >
                         {item.tokensDelta > 0 ? '+' : ''}
-                        {item.tokensDelta} отв.
+                        {item.tokensDelta} {locale === 'uz' ? 'javob' : 'отв.'}
                       </strong>
                       <span className="text-[var(--text-secondary)] dark:text-[#AABAD0]">
                         ${item.amountUsd}
@@ -330,7 +350,7 @@ export default function BillingPage() {
       <Dialog
         open={paymentNotice}
         onClose={() => setPaymentNotice(false)}
-        label="Выбор тарифа"
+        label={locale === 'uz' ? 'Tarifni tanlash' : 'Выбор тарифа'}
         className="w-[calc(100vw-32px)] sm:w-[460px] max-w-[460px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
       >
         <div className="p-5 sm:p-6 space-y-4">
@@ -341,10 +361,10 @@ export default function BillingPage() {
               </div>
               <div>
                 <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
-                  Тариф {selected?.toUpperCase()}
+                  {locale === 'uz' ? `${selected?.toUpperCase()} tarifi` : `Тариф ${selected?.toUpperCase()}`}
                 </h3>
                 <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
-                  Подтверждение выбора
+                  {locale === 'uz' ? 'Tanlovni tasdiqlash' : 'Подтверждение выбора'}
                 </p>
               </div>
             </div>
@@ -353,19 +373,22 @@ export default function BillingPage() {
               variant="ghost"
               size="sm"
               onClick={() => setPaymentNotice(false)}
-              aria-label="Закрыть"
+              aria-label={locale === 'uz' ? 'Yopish' : 'Закрыть'}
             >
               <X size={18} />
             </Button>
           </div>
 
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
-            Модуль онлайн-оплаты через Payme / Click / банковские карты находится на этапе юридического согласования.
-            Ваша подписка и текущий баланс не изменяются автоматически.
+            {locale === 'uz'
+              ? 'Payme / Click / bank kartalari orqali onlayn to‘lov moduli yuridik kelishuv bosqichida. Sizning obunangiz va joriy balansingiz avtomatik o‘zgarmaydi.'
+              : 'Модуль онлайн-оплаты через Payme / Click / банковские карты находится на этапе юридического согласования. Ваша подписка и текущий баланс не изменяются автоматически.'}
           </p>
 
           <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
-            Для подключения расширенного тарифа или персонального тестирования обратитесь в нашу службу поддержки.
+            {locale === 'uz'
+              ? 'Kengaytirilgan tarifni ulash yoki shaxsiy test o‘tkazish uchun yordam xizmatimizga murojaat qiling.'
+              : 'Для подключения расширенного тарифа или персонального тестирования обратитесь в нашу службу поддержки.'}
           </div>
 
           <div className="flex justify-end gap-2.5 pt-2">
@@ -375,7 +398,7 @@ export default function BillingPage() {
               className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold"
               onClick={() => setPaymentNotice(false)}
             >
-              Понятно
+              {locale === 'uz' ? 'Tushunarli' : 'Понятно'}
             </Button>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useApp } from '@/context/AppContext';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -19,13 +20,24 @@ type Event = {
   error: string | null;
 };
 
-const labels: Record<string, string> = {
-  pending: 'В очереди',
-  processing: 'Обрабатывается',
-  retry: 'Повторная попытка',
-  done: 'Ответ отправлен',
-  ignored: 'Без автоответа',
-  review: 'Требует проверки',
+const getStatusLabel = (status: string, locale: string) => {
+  const ru: Record<string, string> = {
+    pending: 'В очереди',
+    processing: 'Обрабатывается',
+    retry: 'Повторная попытка',
+    done: 'Ответ отправлен',
+    ignored: 'Без автоответа',
+    review: 'Требует проверки',
+  };
+  const uz: Record<string, string> = {
+    pending: 'Navbatda',
+    processing: 'Qayta ishlanmoqda',
+    retry: 'Qayta urinish',
+    done: 'Javob yuborildi',
+    ignored: 'Avtojavobsiz',
+    review: 'Tekshirish talab etiladi',
+  };
+  return (locale === 'uz' ? uz[status] : ru[status]) || status;
 };
 
 const statusBadgeVariant = (status: string): 'success' | 'warning' | 'neutral' => {
@@ -35,6 +47,7 @@ const statusBadgeVariant = (status: string): 'success' | 'warning' | 'neutral' =
 };
 
 export function ChannelEventLog() {
+  const { locale, t } = useApp();
   const [events, setEvents] = useState<Event[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,16 +58,16 @@ export function ChannelEventLog() {
       const response = await fetch('/api/integrations/events');
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Не удалось загрузить журнал');
+        throw new Error(data.error || (locale === 'uz' ? 'Jurnalni yuklab bo‘lmadi' : 'Не удалось загрузить журнал'));
       }
       setEvents(data.events);
       setError(null);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Нет связи с сервером');
+      setError(failure instanceof Error ? failure.message : (locale === 'uz' ? 'Server bilan aloqa yo‘q' : 'Нет связи с сервером'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial async request and polling cleanup.
   useEffect(() => {
@@ -69,10 +82,10 @@ export function ChannelEventLog() {
     setBusy(true);
     try {
       const response = await fetch('/api/integrations/events', { method: 'POST' });
-      if (!response.ok) throw new Error('Не удалось запустить проверку');
+      if (!response.ok) throw new Error(locale === 'uz' ? 'Tekshiruvni boshlab bo‘lmadi' : 'Не удалось запустить проверку');
       await load();
     } catch {
-      setError('Не удалось проверить очередь. Повторите позже.');
+      setError(locale === 'uz' ? 'Navbatni tekshirib bo‘lmadi. Keyinroq urinib ko‘ring.' : 'Не удалось проверить очередь. Повторите позже.');
     } finally {
       setBusy(false);
     }
@@ -87,10 +100,12 @@ export function ChannelEventLog() {
           </div>
           <div>
             <h2 id="channel-events-title" className="text-base font-semibold text-[var(--text-primary)]">
-              Журнал событий каналов
+              {locale === 'uz' ? 'Kanallar voqealari jurnali' : 'Журнал событий каналов'}
             </h2>
             <p className="text-xs text-[var(--text-secondary)]">
-              Последние 30 входящих событий из Telegram, Instagram и сайта.
+              {locale === 'uz'
+                ? 'Telegram, Instagram va saytdan so‘nggi 30 ta kiruvchi voqealar.'
+                : 'Последние 30 входящих событий из Telegram, Instagram и сайта.'}
             </p>
           </div>
         </div>
@@ -103,7 +118,7 @@ export function ChannelEventLog() {
           className="text-xs flex items-center gap-1.5"
         >
           <RefreshCw size={13} className={busy ? 'animate-spin' : ''} />
-          <span>Проверить очередь</span>
+          <span>{locale === 'uz' ? 'Navbatni tekshirish' : 'Проверить очередь'}</span>
         </Button>
       </div>
 
@@ -115,9 +130,13 @@ export function ChannelEventLog() {
             {!events.length ? (
               <div className="p-8 text-center space-y-2">
                 <MessageSquare size={28} className="mx-auto text-[var(--text-muted)] opacity-60" />
-                <p className="text-sm font-medium text-[var(--text-primary)]">Входящих сообщений пока нет</p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {locale === 'uz' ? 'Hozircha kiruvchi xabarlar yo‘q' : 'Входящих сообщений пока нет'}
+                </p>
                 <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto">
-                  События появятся здесь автоматически, когда клиенты напишут в подключённые каналы.
+                  {locale === 'uz'
+                    ? 'Mijozlar ulangan kanallarga yozishi bilan voqealar shu yerda avtomatik ko‘rinadi.'
+                    : 'События появятся здесь автоматически, когда клиенты напишут в подключённые каналы.'}
                 </p>
               </div>
             ) : (
@@ -125,22 +144,22 @@ export function ChannelEventLog() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-[var(--surface-secondary)]/60 text-[var(--text-muted)] font-medium border-b border-[var(--border)]">
                     <tr>
-                      <th className="py-2.5 px-4">Канал</th>
-                      <th className="py-2.5 px-4">Статус</th>
-                      <th className="py-2.5 px-4">Попытки</th>
-                      <th className="py-2.5 px-4">Время</th>
-                      <th className="py-2.5 px-4 text-right">Действие</th>
+                      <th className="py-2.5 px-4">{locale === 'uz' ? 'Kanal' : 'Канал'}</th>
+                      <th className="py-2.5 px-4">{locale === 'uz' ? 'Holat' : 'Статус'}</th>
+                      <th className="py-2.5 px-4">{locale === 'uz' ? 'Urinishlar' : 'Попытки'}</th>
+                      <th className="py-2.5 px-4">{locale === 'uz' ? 'Vaqt' : 'Время'}</th>
+                      <th className="py-2.5 px-4 text-right">{locale === 'uz' ? 'Amal' : 'Действие'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
                     {events.map((event) => (
                       <tr key={event.id} className="hover:bg-[var(--surface-secondary)]/30 transition-colors">
                         <td className="py-3 px-4 font-medium text-[var(--text-primary)]">
-                          {event.channel === 'WebWidget' ? 'Чат на сайте' : event.channel}
+                          {event.channel === 'WebWidget' ? (locale === 'uz' ? 'Saytdagi chat' : 'Чат на сайте') : event.channel}
                         </td>
                         <td className="py-3 px-4">
                           <Badge variant={statusBadgeVariant(event.status)}>
-                            {labels[event.status] || event.status}
+                            {getStatusLabel(event.status, locale)}
                           </Badge>
                           {event.error && (
                             <p className="text-[11px] text-[var(--danger-text)] mt-1 flex items-center gap-1">
@@ -153,7 +172,7 @@ export function ChannelEventLog() {
                           {event.attempts}
                         </td>
                         <td className="py-3 px-4 text-[var(--text-muted)] whitespace-nowrap">
-                          {new Date(event.createdAt).toLocaleString('ru-RU', {
+                          {new Date(event.createdAt).toLocaleString(locale === 'uz' ? 'uz-UZ' : 'ru-RU', {
                             day: '2-digit',
                             month: '2-digit',
                             hour: '2-digit',
@@ -166,7 +185,7 @@ export function ChannelEventLog() {
                             href={`/dashboard/conversations?conversation=${event.conversationId}`}
                             className="inline-flex items-center gap-1 text-[var(--accent-link)] hover:underline font-medium"
                           >
-                            <span>Диалог</span>
+                            <span>{locale === 'uz' ? 'Suhbat' : 'Диалог'}</span>
                             <ArrowUpRight size={13} />
                           </Link>
                         </td>

@@ -290,6 +290,9 @@ export function createInitialDraft(niche: WizardNiche = 'courses', lang: 'ru' | 
     channels: ['telegram'],
     unresolvedQuestions: [],
     currentStep: 1,
+    subStep: 'niche',
+    pricingConfirmed: false,
+    goalConfirmed: false,
     updatedAt: new Date().toISOString(),
   };
 }

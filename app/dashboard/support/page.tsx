@@ -55,7 +55,7 @@ interface Message {
 }
 
 export default function SupportPage() {
-  const { user, showToast } = useApp();
+  const { user, showToast, locale, t } = useApp();
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,25 +231,25 @@ export default function SupportPage() {
       case 'bug':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-700 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 px-2 py-0.5 rounded-[4px]">
-            <AlertCircle className="w-3 h-3" /> Ошибка
+            <AlertCircle className="w-3 h-3" /> {locale === 'uz' ? 'Xatolik' : 'Ошибка'}
           </span>
         );
       case 'complaint':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 px-2 py-0.5 rounded-[4px]">
-            <AlertCircle className="w-3 h-3" /> Претензия
+            <AlertCircle className="w-3 h-3" /> {locale === 'uz' ? 'E\'tiroz' : 'Претензия'}
           </span>
         );
       case 'suggestion':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 px-2 py-0.5 rounded-[4px]">
-            <Lightbulb className="w-3 h-3" /> Предложение
+            <Lightbulb className="w-3 h-3" /> {locale === 'uz' ? 'Taklif' : 'Предложение'}
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-[4px]">
-            <HelpCircle className="w-3 h-3" /> Вопрос
+            <HelpCircle className="w-3 h-3" /> {locale === 'uz' ? 'Savol' : 'Вопрос'}
           </span>
         );
     }
@@ -260,26 +260,26 @@ export default function SupportPage() {
       case 'new':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 px-2 py-0.5 rounded-[4px]">
-            <Clock className="w-3 h-3" /> Новое
+            <Clock className="w-3 h-3" /> {locale === 'uz' ? 'Yangi' : 'Новое'}
           </span>
         );
       case 'in_progress':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 px-2 py-0.5 rounded-[4px]">
-            <Clock className="w-3 h-3" /> В работе
+            <Clock className="w-3 h-3" /> {locale === 'uz' ? 'Jarayonda' : 'В работе'}
           </span>
         );
       case 'waiting_user':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 px-2 py-0.5 rounded-[4px]">
-            Ждет вашего ответа
+            {locale === 'uz' ? 'Sizning javobingiz kutilmoqda' : 'Ждет вашего ответа'}
           </span>
         );
       case 'resolved':
       case 'closed':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 px-2 py-0.5 rounded-[4px]">
-            <CheckCircle2 className="w-3 h-3" /> Решено
+            <CheckCircle2 className="w-3 h-3" /> {locale === 'uz' ? 'Hal qilindi' : 'Решено'}
           </span>
         );
       default:
@@ -291,8 +291,12 @@ export default function SupportPage() {
     <div className="space-y-6 w-full pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageHeader
-          title="Поддержка и предложения"
-          description="Задайте вопрос, отправьте пожелание по развитию или сообщите об инциденте"
+          title={t.support.title}
+          description={
+            locale === 'uz'
+              ? 'Savol bering, rivojlantirish bo‘yicha taklif yuboring yoki muammoni xabar qiling'
+              : 'Задайте вопрос, отправьте пожелание по развитию или сообщите об инциденте'
+          }
         />
 
         {!isCreating && (
@@ -307,7 +311,7 @@ export default function SupportPage() {
             className="shrink-0"
           >
             <Plus className="w-4 h-4 mr-1.5" />
-            Создать обращение
+            {locale === 'uz' ? 'Murojaat yaratish' : 'Создать обращение'}
           </Button>
         )}
       </div>
@@ -318,9 +322,11 @@ export default function SupportPage() {
         /* Create Ticket Form */
         <Card>
           <CardHeader>
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Новое обращение в поддержку</h3>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              {locale === 'uz' ? 'Qo‘llab-quvvatlashga yangi murojaat' : 'Новое обращение в поддержку'}
+            </h3>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-              Ответ команды появится в вашем обращении.
+              {locale === 'uz' ? 'Jamoaning javobi sizning murojaatingizda ko‘rinadi.' : 'Ответ команды появится в вашем обращении.'}
             </p>
           </CardHeader>
           <CardBody>
@@ -328,27 +334,30 @@ export default function SupportPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-                    Тип обращения
+                    {locale === 'uz' ? 'Murojaat turi' : 'Тип обращения'}
                   </label>
-                  <Select aria-label="Тип обращения"
+                  <Select
+                    aria-label={locale === 'uz' ? 'Murojaat turi' : 'Тип обращения'}
                     value={newType}
                     onChange={(e) => setNewType(e.target.value as typeof newType)}
                     options={[
-                      { value: 'question', label: 'Вопрос по использованию' },
-                      { value: 'bug', label: 'Техническая ошибка / сбой' },
-                      { value: 'suggestion', label: 'Предложение по улучшению' },
+                      { value: 'question', label: locale === 'uz' ? 'Foydalanish bo‘yicha savol' : 'Вопрос по использованию' },
+                      { value: 'bug', label: locale === 'uz' ? 'Texnik xatolik / uzilish' : 'Техническая ошибка / сбой' },
+                      { value: 'suggestion', label: locale === 'uz' ? 'Yaxshilash bo‘yicha taklif' : 'Предложение по улучшению' },
                     ]}
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-                    Тема обращения
+                    {locale === 'uz' ? 'Murojaat mavzusi' : 'Тема обращения'}
                   </label>
-                  <Input aria-label="Тема обращения" maxLength={200}
+                  <Input
+                    aria-label={locale === 'uz' ? 'Murojaat mavzusi' : 'Тема обращения'}
+                    maxLength={200}
                     value={newSubject}
                     onChange={(e) => setNewSubject(e.target.value)}
-                    placeholder="Краткая суть проблемы или вопроса"
+                    placeholder={locale === 'uz' ? 'Muammo yoki savolning qisqacha mazmuni' : 'Краткая суть проблемы или вопроса'}
                     required
                   />
                 </div>
@@ -356,26 +365,57 @@ export default function SupportPage() {
 
               <div>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-                  Подробное описание
+                  {locale === 'uz' ? 'Batafsil tavsif' : 'Подробное описание'}
                 </label>
-                <textarea aria-label="Подробное описание" maxLength={10000}
+                <textarea
+                  aria-label={locale === 'uz' ? 'Batafsil tavsif' : 'Подробное описание'}
+                  maxLength={10000}
                   rows={5}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Опишите, что произошло, шаги воспроизведения или ваше предложение..."
+                  placeholder={locale === 'uz' ? 'Nima sodir bo‘lganini, qadamlarni yoki taklifingizni yozing...' : 'Опишите, что произошло, шаги воспроизведения или ваше предложение...'}
                   className="w-full px-3 py-2 text-sm bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Input label="Прикрепить файл" type="file" accept="image/png,image/jpeg,application/pdf" multiple onChange={async (event) => {
-                  const files = Array.from(event.target.files || []);
-                  if (files.length > 3 || files.some((file) => file.size > 2 * 1024 * 1024 || !['image/png', 'image/jpeg', 'application/pdf'].includes(file.type))) { showToast('Проверьте файлы', 'До трёх PNG, JPEG или PDF, каждый до 2 МБ.', 'error'); event.target.value = ''; return; }
-                  try { setNewAttachments(await Promise.all(files.map(async (file) => ({ name: file.name, size: file.size, mimeType: file.type, url: await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('Не удалось прочитать файл')); reader.readAsDataURL(file); }) })))); }
-                  catch { showToast('Не удалось прочитать файлы', undefined, 'error'); }
-                }} />
-                <p className="text-xs text-[var(--text-muted)]">До трёх файлов PNG, JPEG или PDF. До 2 МБ каждый.</p>
+                <Input
+                  label={locale === 'uz' ? 'Fayl biriktirish' : 'Прикрепить файл'}
+                  type="file"
+                  accept="image/png,image/jpeg,application/pdf"
+                  multiple
+                  onChange={async (event) => {
+                    const files = Array.from(event.target.files || []);
+                    if (files.length > 3 || files.some((file) => file.size > 2 * 1024 * 1024 || !['image/png', 'image/jpeg', 'application/pdf'].includes(file.type))) {
+                      showToast(
+                        locale === 'uz' ? 'Fayllarni tekshiring' : 'Проверьте файлы',
+                        locale === 'uz' ? '3 tagacha PNG, JPEG yoki PDF, har biri 2 MB gacha.' : 'До трёх PNG, JPEG или PDF, каждый до 2 МБ.',
+                        'error'
+                      );
+                      event.target.value = '';
+                      return;
+                    }
+                    try {
+                      setNewAttachments(await Promise.all(files.map(async (file) => ({
+                        name: file.name,
+                        size: file.size,
+                        mimeType: file.type,
+                        url: await new Promise<string>((resolve, reject) => {
+                          const reader = new FileReader();
+                          reader.onload = () => resolve(String(reader.result));
+                          reader.onerror = () => reject(new Error('Faylni o‘qib bo‘lmadi'));
+                          reader.readAsDataURL(file);
+                        }),
+                      }))));
+                    } catch {
+                      showToast(locale === 'uz' ? 'Fayllarni o‘qib bo‘lmadi' : 'Не удалось прочитать файлы', undefined, 'error');
+                    }
+                  }}
+                />
+                <p className="text-xs text-[var(--text-muted)]">
+                  {locale === 'uz' ? '3 tagacha PNG, JPEG yoki PDF fayl. Har biri 2 MB gacha.' : 'До трёх файлов PNG, JPEG или PDF. До 2 МБ каждый.'}
+                </p>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
@@ -384,14 +424,14 @@ export default function SupportPage() {
                   variant="secondary"
                   onClick={() => setIsCreating(false)}
                 >
-                  Отмена
+                  {t.common.cancel}
                 </Button>
                 <Button
                   type="submit"
                   variant="primary"
                   isLoading={submitting}
                 >
-                  Отправить в поддержку
+                  {locale === 'uz' ? 'Yordamga yuborish' : 'Отправить в поддержку'}
                 </Button>
               </div>
             </form>
@@ -409,7 +449,7 @@ export default function SupportPage() {
             className="inline-flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Вернуться к списку обращений</span>
+            <span>{locale === 'uz' ? 'Murojaatlar ro‘yxatiga qaytish' : 'Вернуться к списку обращений'}</span>
           </button>
 
           <Card>
@@ -425,8 +465,9 @@ export default function SupportPage() {
                   {getTypeBadge(ticketDetails.ticket.type)}
                   {getStatusBadge(ticketDetails.ticket.status)}
                   <span className="text-[11px] text-[var(--text-muted)]">
-                    Создано {new Date(ticketDetails.ticket.createdAt).toLocaleDateString('ru-RU')} в{' '}
-                    {new Date(ticketDetails.ticket.createdAt).toLocaleTimeString('ru-RU', {
+                    {locale === 'uz' ? 'Yaratilgan sana:' : 'Создано'}{' '}
+                    {new Date(ticketDetails.ticket.createdAt).toLocaleDateString(locale === 'uz' ? 'uz-UZ' : 'ru-RU')}{' '}
+                    {new Date(ticketDetails.ticket.createdAt).toLocaleTimeString(locale === 'uz' ? 'uz-UZ' : 'ru-RU', {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
@@ -442,7 +483,7 @@ export default function SupportPage() {
                   onClick={handleReopenTicket}
                 >
                   <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                  Возобновить обращение
+                  {locale === 'uz' ? 'Murojaatni qayta ochish' : 'Возобновить обращение'}
                 </Button>
               )}
             </CardHeader>
@@ -464,16 +505,18 @@ export default function SupportPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-xs text-[var(--text-primary)]">
-                            {isStaff ? 'Служба заботы gapcha AI' : msg.senderName || 'Вы'}
+                            {isStaff
+                              ? (locale === 'uz' ? 'gapcha AI g‘amxo‘rlik xizmati' : 'Служба заботы gapcha AI')
+                              : msg.senderName || (locale === 'uz' ? 'Siz' : 'Вы')}
                           </span>
                           {isStaff && (
                             <Badge variant="danger">
-                              Поддержка
+                              {locale === 'uz' ? 'Yordam' : 'Поддержка'}
                             </Badge>
                           )}
                         </div>
                         <span className="text-[11px] text-[var(--text-muted)] font-mono">
-                          {new Date(msg.createdAt).toLocaleTimeString('ru-RU', {
+                          {new Date(msg.createdAt).toLocaleTimeString(locale === 'uz' ? 'uz-UZ' : 'ru-RU', {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
@@ -506,13 +549,15 @@ export default function SupportPage() {
               {ticketDetails.ticket.status !== 'closed' ? (
                 <form onSubmit={handleSendReply} className="pt-4 border-t border-[var(--border)] space-y-3">
                   <label className="block text-xs font-medium text-[var(--text-secondary)]">
-                    Ваш ответ
+                    {locale === 'uz' ? 'Sizning javobingiz' : 'Ваш ответ'}
                   </label>
-                  <textarea aria-label="Ваш ответ" maxLength={10000}
+                  <textarea
+                    aria-label={locale === 'uz' ? 'Sizning javobingiz' : 'Ваш ответ'}
+                    maxLength={10000}
                     rows={3}
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Напишите ответ или уточнение по обращению..."
+                    placeholder={locale === 'uz' ? 'Murojaat bo‘yicha javob yoki aniqlik kiriting...' : 'Напишите ответ или уточнение по обращению...'}
                     className="w-full px-3 py-2 text-sm bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors"
                   />
                   <div className="flex justify-end">
@@ -524,13 +569,15 @@ export default function SupportPage() {
                       disabled={!replyText.trim()}
                     >
                       <Send className="w-3.5 h-3.5 mr-1.5" />
-                      Отправить ответ
+                      {locale === 'uz' ? 'Javobni yuborish' : 'Отправить ответ'}
                     </Button>
                   </div>
                 </form>
               ) : (
                 <div className="p-3 bg-[var(--surface-secondary)] rounded-lg text-xs text-[var(--text-muted)] text-center">
-                  Обращение закрыто. Вы можете создать новое обращение или возобновить текущее.
+                  {locale === 'uz'
+                    ? 'Murojaat yopilgan. Yangi murojaat yaratishingiz yoki joriysini qayta ochishingiz mumkin.'
+                    : 'Обращение закрыто. Вы можете создать новое обращение или возобновить текущее.'}
                 </div>
               )}
             </CardBody>
@@ -540,15 +587,19 @@ export default function SupportPage() {
         /* Tickets List */
         <Card>
           <CardHeader>
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">История обращений</h3>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              {locale === 'uz' ? 'Murojaatlar tarixi' : 'История обращений'}
+            </h3>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-              Все зарегистрированные запросы, ошибки и предложения вашей организации
+              {locale === 'uz'
+                ? 'Tashkilotingizning barcha ro‘yxatga olingan so‘rovlari, xatoliklari va takliflari'
+                : 'Все зарегистрированные запросы, ошибки и предложения вашей организации'}
             </p>
           </CardHeader>
           <CardBody className="p-0">
             {loading ? (
               <div className="p-8 text-center text-xs text-[var(--text-muted)]">
-                Загрузка обращений...
+                {locale === 'uz' ? 'Murojaatlar yuklanmoqda...' : 'Загрузка обращений...'}
               </div>
             ) : tickets.length === 0 ? (
               <div className="p-12 text-center space-y-3">
@@ -556,10 +607,12 @@ export default function SupportPage() {
                   <LifeBuoy className="w-6 h-6" />
                 </div>
                 <div className="text-sm font-semibold text-[var(--text-primary)]">
-                  Обращений пока нет
+                  {locale === 'uz' ? 'Hozircha murojaatlar yo‘q' : 'Обращений пока нет'}
                 </div>
                 <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto">
-                  Если у вас возник вопрос по подключению Google Календаря, настройке сотрудников или тарифам, создайте обращение.
+                  {locale === 'uz'
+                    ? 'Google Taqvimni ulash, xodimlarni sozlash yoki tariflar bo‘yicha savol tug‘ilsa, murojaat yarating.'
+                    : 'Если у вас возник вопрос по подключению Google Календаря, настройке сотрудников или тарифам, создайте обращение.'}
                 </p>
                 <Button
                   type="button"
@@ -568,7 +621,7 @@ export default function SupportPage() {
                   onClick={() => setIsCreating(true)}
                 >
                   <Plus className="w-4 h-4 mr-1.5" />
-                  Создать первое обращение
+                  {locale === 'uz' ? 'Birinchi murojaatni yaratish' : 'Создать первое обращение'}
                 </Button>
               </div>
             ) : (
@@ -588,7 +641,7 @@ export default function SupportPage() {
                           {ticket.subject}
                         </span>
                         {ticket.unreadByCustomer && (
-                          <span className="w-2 h-2 rounded-full bg-[#DC2626] shrink-0" title="Новый ответ" />
+                          <span className="w-2 h-2 rounded-full bg-[#DC2626] shrink-0" title={locale === 'uz' ? 'Yangi javob' : 'Новый ответ'} />
                         )}
                       </div>
 
@@ -596,7 +649,7 @@ export default function SupportPage() {
                         {getTypeBadge(ticket.type)}
                         {getStatusBadge(ticket.status)}
                         <span className="text-[11px] text-[var(--text-muted)]">
-                          {new Date(ticket.createdAt).toLocaleDateString('ru-RU')}
+                          {new Date(ticket.createdAt).toLocaleDateString(locale === 'uz' ? 'uz-UZ' : 'ru-RU')}
                         </span>
                       </div>
                     </div>
@@ -610,11 +663,19 @@ export default function SupportPage() {
         </Card>
       )}
       {isCreating && !loading && !loadError && <Card>
-        <CardHeader><h2 className="text-lg font-semibold">История обращений</h2></CardHeader>
+        <CardHeader>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+            {locale === 'uz' ? 'Murojaatlar tarixi' : 'История обращений'}
+          </h2>
+        </CardHeader>
         <CardBody className="space-y-3">
-          {!tickets.length && <p className="text-sm text-[var(--text-secondary)]">Здесь появятся ваши обращения и ответы команды.</p>}
+          {!tickets.length && (
+            <p className="text-sm text-[var(--text-secondary)]">
+              {locale === 'uz' ? 'Bu yerda sizning murojaatlaringiz va jamoa javoblari paydo bo‘ladi.' : 'Здесь появятся ваши обращения и ответы команды.'}
+            </p>
+          )}
           {tickets.map((ticket) => <button type="button" key={ticket.id} onClick={() => loadTicketDetails(ticket.id)} className="w-full text-left flex items-center gap-3 p-3 border rounded-md hover:bg-[var(--surface-secondary)]">
-            <div className="min-w-0 flex-1"><p className="text-sm font-medium break-words">{ticket.subject}</p><p className="text-xs text-[var(--text-muted)] mt-1">{ticket.ticketNumber} · {new Date(ticket.createdAt).toLocaleDateString('ru-RU')}</p></div>
+            <div className="min-w-0 flex-1"><p className="text-sm font-medium break-words">{ticket.subject}</p><p className="text-xs text-[var(--text-muted)] mt-1">{ticket.ticketNumber} · {new Date(ticket.createdAt).toLocaleDateString(locale === 'uz' ? 'uz-UZ' : 'ru-RU')}</p></div>
             {getStatusBadge(ticket.status)}<ChevronRight size={16} className="shrink-0" />
           </button>)}
         </CardBody>
