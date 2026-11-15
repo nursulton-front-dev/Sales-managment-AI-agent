@@ -5,6 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { DataState } from '@/components/ui/DataState';
 import { useUnsavedChanges } from '@/lib/useUnsavedChanges';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SparrowMascot } from '@/components/ui/SparrowMascot';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -14,15 +15,12 @@ import {
   LifeBuoy,
   Plus,
   Send,
-  MessageSquare,
   AlertCircle,
   HelpCircle,
   Lightbulb,
   CheckCircle2,
   Clock,
   Paperclip,
-  X,
-  FileText,
   ChevronRight,
   ArrowLeft,
   RotateCcw,
@@ -55,7 +53,7 @@ interface Message {
 }
 
 export default function SupportPage() {
-  const { user, showToast, locale, t } = useApp();
+  const { showToast, locale, t } = useApp();
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -290,14 +288,17 @@ export default function SupportPage() {
   return (
     <div className="space-y-6 w-full pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <PageHeader
-          title={t.support.title}
-          description={
-            locale === 'uz'
-              ? 'Savol bering, rivojlantirish bo‘yicha taklif yuboring yoki muammoni xabar qiling'
-              : 'Задайте вопрос, отправьте пожелание по развитию или сообщите об инциденте'
-          }
-        />
+        <div className="flex min-w-0 items-center gap-3">
+          <SparrowMascot variant="help" size={64} priority />
+          <PageHeader
+            title={t.support.title}
+            description={
+              locale === 'uz'
+                ? 'Savol bering, rivojlantirish bo‘yicha taklif yuboring yoki muammoni xabar qiling'
+                : 'Задайте вопрос, отправьте пожелание по развитию или сообщите об инциденте'
+            }
+          />
+        </div>
 
         {!isCreating && (
           <Button

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,14 +17,62 @@ import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
 import { BrandLogo } from '@/components/ui/BrandLogo';
 import { SparrowMascot } from '@/components/ui/SparrowMascot';
 
+function subscribeToLocaleChange(callback: () => void) {
+  window.addEventListener('storage', callback);
+  window.addEventListener('gapcha-locale-change', callback);
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener('gapcha-locale-change', callback);
+  };
+}
+
+function getLocaleSnapshot(): 'ru' | 'uz' {
+  try {
+    const match = document.cookie.match(/(?:^|;\s*)gapcha_locale=(ru|uz)(?:;|$)/);
+    if (match?.[1] === 'uz') return 'uz';
+    if (match?.[1] === 'ru') return 'ru';
+    return localStorage.getItem('gapcha_locale') === 'uz' ? 'uz' : 'ru';
+  } catch {
+    return 'ru';
+  }
+}
+
+function getServerLocaleSnapshot(): 'ru' | 'uz' {
+  return 'ru';
+}
+
+function subscribeToAuthChange(callback: () => void) {
+  window.addEventListener('storage', callback);
+  window.addEventListener('gapcha-auth-change', callback);
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener('gapcha-auth-change', callback);
+  };
+}
+
+function getAuthSnapshot(): boolean {
+  try {
+    const hasCookie = document.cookie
+      .split('; ')
+      .some((row) => row.startsWith('ai_os_workspace_id=') && row.split('=')[1]?.length > 0);
+    return hasCookie || Boolean(localStorage.getItem('ai_os_user'));
+  } catch {
+    return false;
+  }
+}
+
+function getServerAuthSnapshot(): boolean | null {
+  return null;
+}
+
 export default function NotFound() {
   const router = useRouter();
 
   // Language state
-  const [locale, setLocale] = useState<'ru' | 'uz'>('ru');
+  const locale = useSyncExternalStore(subscribeToLocaleChange, getLocaleSnapshot, getServerLocaleSnapshot);
 
-  // Authentication state: null = checking, true = authenticated, false = guest
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  // null is the server snapshot; the browser checks its session hints after hydration.
+  const isAuthenticated = useSyncExternalStore(subscribeToAuthChange, getAuthSnapshot, getServerAuthSnapshot);
 
   // Public support modal state for unauthenticated guests
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,32 +82,13 @@ export default function NotFound() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    try {
-      const match = document.cookie.match(/(?:^|;\s*)gapcha_locale=(ru|uz)(?:;|$)/);
-      if (match && (match[1] === 'ru' || match[1] === 'uz')) {
-        setLocale(match[1]);
-      } else {
-        const local = localStorage.getItem('gapcha_locale');
-        if (local === 'ru' || local === 'uz') setLocale(local);
-      }
-      const hasCookie = document.cookie
-        .split('; ')
-        .some((row) => row.startsWith('ai_os_workspace_id=') && row.split('=')[1]?.length > 0);
-      const hasLocalStorage = !!localStorage.getItem('ai_os_user');
-      setIsAuthenticated(hasCookie || hasLocalStorage);
-    } catch {
-      setIsAuthenticated(false);
-    }
-  }, []);
-
   const handleLocaleChange = (newLocale: 'ru' | 'uz') => {
-    setLocale(newLocale);
     try {
       document.cookie = `gapcha_locale=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
       localStorage.setItem('gapcha_locale', newLocale);
       document.documentElement.lang = newLocale;
     } catch {}
+    window.dispatchEvent(new Event('gapcha-locale-change'));
   };
 
   const handleSupportClick = () => {
@@ -104,8 +133,8 @@ export default function NotFound() {
 
       setSubmitSuccess(data.message || 'Ваше обращение принято! Мы ответим на ваш email.');
       setSupportMessage('');
-    } catch (err: any) {
-      setSubmitError(err.message || 'Не удалось отправить обращение. Попробуйте позже.');
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : 'Не удалось отправить обращение. Попробуйте позже.');
     } finally {
       setIsSubmitting(false);
     }
@@ -158,7 +187,7 @@ export default function NotFound() {
           {locale === 'uz' ? '404-xatolik' : 'Ошибка 404'}
         </div>
 
-        {/* Mascot with signpost: one short head-tilt gesture, then calm */}
+        {/* The available support pose is used here as a calm, static guide. */}
         <div className="w-36 h-36 sm:w-40 sm:h-40 flex items-center justify-center mb-4">
           <SparrowMascot variant="look" size={140} priority />
         </div>
