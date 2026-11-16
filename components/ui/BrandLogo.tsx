@@ -41,7 +41,6 @@ export function BrandLogo({
   variant = 'full',
   theme = 'auto',
   width,
-  height,
   href,
   className = '',
   ariaLabel = 'gapcha AI',
@@ -116,12 +115,12 @@ export function BrandLogo({
       theme === 'white'
         ? 'text-white'
         : theme === 'light'
-        ? 'text-[#0F172A]'
+        ? 'text-[var(--text-primary)]'
         : theme === 'dark'
         ? 'text-white'
-        : 'text-slate-900 dark:text-white';
+        : 'text-[var(--text-primary)] dark:text-white';
 
-    const aiThemeClass = theme === 'white' ? 'text-white' : 'text-[#DC2626]';
+    const aiThemeClass = theme === 'white' ? 'text-white' : 'text-[var(--accent)]';
 
     content = (
       <span className="inline-flex items-center gap-2 select-none">
@@ -150,7 +149,7 @@ export function BrandLogo({
     return (
       <Link
         href={href}
-        className="inline-flex items-center shrink-0 rounded-[6px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2 transition-opacity hover:opacity-90 cursor-pointer"
+        className="inline-flex items-center shrink-0 rounded-[6px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 transition-opacity hover:opacity-90 cursor-pointer"
         aria-label={ariaLabel}
       >
         {container}

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Node CommonJS test runner. */
 const puppeteer = require('puppeteer-core');
 const fs = require('node:fs');
 const path = require('node:path');

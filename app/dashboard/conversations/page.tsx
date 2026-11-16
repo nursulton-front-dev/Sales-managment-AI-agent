@@ -1,13 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { DataState } from '@/components/ui/DataState';
 import { messageText } from '@/lib/message-text';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { SparrowMascot } from '@/components/ui/SparrowMascot';
 import {
@@ -16,15 +14,8 @@ import {
   Send,
   PauseCircle,
   PlayCircle,
-  ShieldAlert,
   ArrowLeft,
   ArrowRight,
-  Headphones,
-  CheckCircle2,
-  Clock,
-  Sparkles,
-  User,
-  Bot,
 } from 'lucide-react';
 
 interface Conversation {
@@ -50,7 +41,7 @@ interface Message {
 }
 
 export default function ConversationsPage() {
-  const { user, workspace, openSandbox, showToast, locale, t } = useApp();
+  const { workspace, openSandbox, showToast, locale, t } = useApp();
   const hasConnectedChannels = Boolean(
     workspace?.telegramBusinessConnected ||
     workspace?.instagramConnected
@@ -105,19 +96,59 @@ export default function ConversationsPage() {
   }, []);
 
   useEffect(() => {
-    void loadConversations();
+    let ignore = false;
+    async function init() {
+      try {
+        const res = await fetch('/api/conversations');
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Не удалось загрузить диалоги');
+        }
+        if (!ignore) {
+          setConversations(data.conversations || []);
+          setActiveConvId((current) => {
+            if (
+              current &&
+              data.conversations.some(
+                (conversation: Conversation) => conversation.id === current
+              )
+            ) {
+              return current;
+            }
+            const requested = new URLSearchParams(window.location.search).get('conversation');
+            return (
+              data.conversations.find(
+                (conversation: Conversation) => conversation.id === requested
+              )?.id ||
+              data.conversations[0]?.id ||
+              null
+            );
+          });
+        }
+      } catch (err) {
+        if (!ignore) {
+          setLoadError(err instanceof Error ? err.message : 'Ошибка сети');
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void init();
     const timer = setInterval(() => {
       if (!document.hidden) void loadConversations();
     }, 5000);
-    return () => clearInterval(timer);
+    return () => {
+      ignore = true;
+      clearInterval(timer);
+    };
   }, [loadConversations]);
 
   useEffect(() => {
     if (!activeConvId) return;
     const controller = new AbortController();
-    setMessages([]);
-    setMessagesLoading(true);
-    setMessageError(null);
 
     const refresh = () =>
       fetch(`/api/conversations/${activeConvId}`, { signal: controller.signal })
@@ -269,25 +300,25 @@ export default function ConversationsPage() {
           {/* LEFT COLUMN: CONVERSATION LIST (INBOX) */}
           {/* ========================================================================= */}
           <div
-            className={`md:col-span-5 lg:col-span-4 xl:col-span-4 2xl:col-span-3 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex flex-col overflow-hidden shadow-xs ${
+            className={`md:col-span-5 lg:col-span-4 xl:col-span-4 2xl:col-span-3 rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] flex flex-col overflow-hidden shadow-xs ${
               mobileView === 'chat' ? 'hidden md:flex' : 'flex'
             }`}
           >
             {/* Search and Filters */}
-            <div className="p-3.5 border-b border-[var(--border)] dark:border-[#29374C] space-y-2.5 bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E]">
+            <div className="p-3.5 border-b border-[var(--border)] dark:border-[var(--border)] space-y-2.5 bg-[var(--surface-secondary)]/40 dark:bg-[var(--surface)]">
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-[var(--text-muted)] dark:text-[#AABAD0] absolute left-3 top-2.5" />
+                <Search className="w-3.5 h-3.5 text-[var(--text-muted)] dark:text-[var(--text-secondary)] absolute left-3 top-2.5" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t.conversations.searchPlaceholder}
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] rounded-xl text-[var(--text-primary)] dark:text-[#F4F7FB] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
+                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] rounded-xl text-[var(--text-primary)] dark:text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
                 />
               </div>
 
               {/* Status Tabs */}
-              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-xs">
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] text-xs">
                 {[
                   { id: 'ALL', label: locale === 'uz' ? `Barchasi (${conversations.length})` : `Все (${conversations.length})` },
                   { id: 'active', label: locale === 'uz' ? 'Avto-AI' : 'Авто-ИИ' },
@@ -303,8 +334,8 @@ export default function ConversationsPage() {
                     }
                     className={`flex-1 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
                       statusFilter === tabItem.id
-                        ? 'bg-[#FF7277] text-[#0B1220] font-bold shadow-2xs'
-                        : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)]'
+                        ? 'bg-[var(--accent-link)] text-[var(--background)] font-bold shadow-2xs'
+                        : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     {tabItem.label}
@@ -316,13 +347,9 @@ export default function ConversationsPage() {
             {/* Conversations List */}
             <div className="flex-1 overflow-y-auto divide-y divide-[var(--border)] dark:divide-[#29374C]">
               {filteredConversations.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/70 space-y-3">
+                <div className="p-8 text-center text-xs text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 space-y-3">
                   <div className="w-16 h-14 mx-auto flex items-center justify-center">
-                    <SparrowMascot
-                      variant={searchQuery ? 'look' : 'idle'}
-                      size={52}
-                      animate={false}
-                    />
+                    <MessageSquare size={28} aria-hidden="true" />
                   </div>
                   <p>
                     {searchQuery
@@ -349,20 +376,24 @@ export default function ConversationsPage() {
                       aria-pressed={isSelected}
                       key={conv.id}
                       onClick={() => {
+                        if (conv.id !== activeConvId) {
+                          setMessages([]);
+                          setMessagesLoading(true);
+                        }
                         setActiveConvId(conv.id);
                         setMobileView('chat');
                       }}
                       className={`w-full p-3.5 transition-colors cursor-pointer text-left ${
                         isSelected
-                          ? 'bg-red-500/10 dark:bg-[#101B2E] border-l-3 border-[#FF7277]'
-                          : 'hover:bg-[var(--surface-secondary)]/50 dark:hover:bg-[#101B2E]/50'
+                          ? 'bg-red-500/10 dark:bg-[var(--surface)] border-l-3 border-[var(--accent-link)]'
+                          : 'hover:bg-[var(--surface-secondary)]/50 dark:hover:bg-[var(--surface)]/50'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="font-semibold text-xs sm:text-sm text-[var(--text-primary)] dark:text-[#F4F7FB] truncate">
+                        <span className="font-semibold text-xs sm:text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate">
                           {conv.clientName}
                         </span>
-                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 shrink-0 font-mono">
+                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 shrink-0 font-mono">
                           {new Date(conv.lastMessageAt).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -370,12 +401,12 @@ export default function ConversationsPage() {
                         </span>
                       </div>
 
-                      <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] truncate mb-1.5">
+                      <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] truncate mb-1.5">
                         {messageText(conv.lastMessageText || (locale === 'uz' ? 'Xabarlar yo‘q' : 'Нет сообщений'))}
                       </p>
 
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0] px-2 py-0.5 rounded-full border border-[var(--border)] dark:border-[#29374C] font-medium">
+                        <span className="text-[10px] bg-[var(--surface-secondary)] dark:bg-[var(--surface)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] px-2 py-0.5 rounded-full border border-[var(--border)] dark:border-[var(--border)] font-medium">
                           {conv.channel === 'WebWidget' ? (locale === 'uz' ? 'Sayt' : 'Сайт') : conv.channel}
                         </span>
 
@@ -402,33 +433,33 @@ export default function ConversationsPage() {
           {/* RIGHT COLUMN: ACTIVE CONVERSATION THREAD */}
           {/* ========================================================================= */}
           <div
-            className={`md:col-span-7 lg:col-span-8 xl:col-span-8 2xl:col-span-9 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex flex-col overflow-hidden shadow-xs ${
+            className={`md:col-span-7 lg:col-span-8 xl:col-span-8 2xl:col-span-9 rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] flex flex-col overflow-hidden shadow-xs ${
               mobileView === 'list' ? 'hidden md:flex' : 'flex'
             }`}
           >
             {activeConversation ? (
               <>
                 {/* Chat Top Header */}
-                <div className="p-4 border-b border-[var(--border)] dark:border-[#29374C] flex flex-wrap items-center justify-between gap-3 bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] shrink-0">
+                <div className="p-4 border-b border-[var(--border)] dark:border-[var(--border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--surface-secondary)]/40 dark:bg-[var(--surface)] shrink-0">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       aria-label={locale === 'uz' ? 'Suhbatlar ro‘yxatiga qaytish' : 'Вернуться к списку диалогов'}
                       onClick={() => setMobileView('list')}
-                      className="md:hidden size-8 rounded-xl flex items-center justify-center text-[var(--text-secondary)] dark:text-[#AABAD0] hover:bg-[var(--border)] cursor-pointer"
+                      className="md:hidden size-8 rounded-xl flex items-center justify-center text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:bg-[var(--border)] cursor-pointer"
                     >
                       <ArrowLeft className="w-4 h-4" />
                     </button>
 
-                    <div className="size-10 rounded-xl bg-red-500/10 text-[#FF7277] flex items-center justify-center font-bold text-sm shrink-0">
+                    <div className="size-10 rounded-xl bg-red-500/10 text-[var(--accent-link)] flex items-center justify-center font-bold text-sm shrink-0">
                       {activeConversation.clientName.slice(0, 1).toUpperCase()}
                     </div>
 
                     <div>
-                      <h3 className="font-bold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB] leading-tight">
+                      <h3 className="font-bold text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)] leading-tight">
                         {activeConversation.clientName}
                       </h3>
-                      <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] font-mono mt-0.5">
+                      <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] font-mono mt-0.5">
                         {activeConversation.clientPhone} · {activeConversation.channel === 'WebWidget' ? (locale === 'uz' ? 'Sayt chati' : 'Чат на сайте') : activeConversation.channel}
                       </p>
                     </div>
@@ -465,11 +496,11 @@ export default function ConversationsPage() {
                 {/* Messages List Area */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
                   {messagesLoading ? (
-                    <div className="py-12 text-center text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <div className="py-12 text-center text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz' ? 'Xabarlar yuklanmoqda…' : 'Загрузка сообщений…'}
                     </div>
                   ) : messages.length === 0 ? (
-                    <div className="py-12 text-center text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                    <div className="py-12 text-center text-xs text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                       {locale === 'uz' ? 'Ushbu suhbatda hali xabarlar yo‘q.' : 'В этой беседе пока нет сохранённых реплик.'}
                     </div>
                   ) : (
@@ -484,7 +515,7 @@ export default function ConversationsPage() {
                             isClient ? 'items-start' : 'items-end'
                           }`}
                         >
-                          <div className="flex items-center gap-1.5 mb-1 px-1 text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                          <div className="flex items-center gap-1.5 mb-1 px-1 text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                             <span>
                               {isClient
                                 ? activeConversation.clientName
@@ -504,10 +535,10 @@ export default function ConversationsPage() {
                           <div
                             className={`max-w-[80%] p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-2xs ${
                               isClient
-                                ? 'bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] rounded-tl-xs'
+                                ? 'bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] text-[var(--text-primary)] dark:text-[var(--text-primary)] rounded-tl-xs'
                                 : isHuman
-                                ? 'bg-amber-500 text-[#0B1220] font-medium rounded-tr-xs'
-                                : 'bg-[#FF7277] text-[#0B1220] font-medium rounded-tr-xs'
+                                ? 'bg-amber-500 text-[var(--background)] font-medium rounded-tr-xs'
+                                : 'bg-[var(--accent-link)] text-[var(--background)] font-medium rounded-tr-xs'
                             }`}
                           >
                             <p className="whitespace-pre-wrap break-words">
@@ -523,7 +554,7 @@ export default function ConversationsPage() {
                 {/* Input Area */}
                 <form
                   onSubmit={handleSendMessage}
-                  className="p-3 border-t border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex items-center gap-2.5 shrink-0"
+                  className="p-3 border-t border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] flex items-center gap-2.5 shrink-0"
                 >
                   <input
                     type="text"
@@ -536,7 +567,7 @@ export default function ConversationsPage() {
                         ? (locale === 'uz' ? 'Operator sifatida javob yozing…' : 'Напишите ответ клиенту как оператор...')
                         : (locale === 'uz' ? 'Qo‘lda javob berish (avtomatik qo‘l rejimini yoqadi)…' : 'Ответить вручную (автоматически включит ручной режим)...')
                     }
-                    className="min-w-0 flex-1 px-3.5 py-2 text-xs bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] placeholder:text-[var(--text-muted)] text-[var(--text-primary)] dark:text-[#F4F7FB]"
+                    className="min-w-0 flex-1 px-3.5 py-2 text-xs bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] placeholder:text-[var(--text-muted)] text-[var(--text-primary)] dark:text-[var(--text-primary)]"
                   />
                   <Button
                     type="submit"
@@ -548,7 +579,7 @@ export default function ConversationsPage() {
                       Boolean(messageError) ||
                       activeConversation.status === 'closed'
                     }
-                    className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
+                    className="bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>{t.conversations.send}</span>
@@ -563,10 +594,10 @@ export default function ConversationsPage() {
                     <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
                       <SparrowMascot variant="look" size={96} animate={false} />
                     </div>
-                    <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       {locale === 'uz' ? 'Hech narsa topilmadi' : 'Ничего не найдено'}
                     </h3>
-                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1 max-w-sm">
                       {locale === 'uz'
                         ? `«${searchQuery}» so‘rovi bo‘yicha suhbatlar topilmadi.`
                         : `По поисковому запросу «${searchQuery}» диалогов не найдено.`}
@@ -585,10 +616,10 @@ export default function ConversationsPage() {
                       <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
                         <SparrowMascot variant="idle" size={96} animate={false} />
                       </div>
-                      <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                         {locale === 'uz' ? 'Aloqa kanallari ulangan' : 'Каналы связи подключены'}
                       </h3>
-                      <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
+                      <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1 max-w-sm">
                         {locale === 'uz'
                           ? 'Mijozlarning kiruvchi xabarlarini kutmoqdamiz. Javoblarni hoziroq interaktiv test-drayvda tekshirib ko‘rishingiz mumkin.'
                           : 'Ожидаем входящие сообщения клиентов. Вы можете проверить ответы прямо сейчас в интерактивной песочнице.'}
@@ -596,7 +627,7 @@ export default function ConversationsPage() {
                       <button
                         type="button"
                         onClick={() => openSandbox()}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs mt-4 shadow-2xs cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs mt-4 shadow-2xs cursor-pointer"
                       >
                         <PlayCircle size={14} />
                         <span>{t.common.testDrive}</span>
@@ -607,17 +638,17 @@ export default function ConversationsPage() {
                       <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
                         <SparrowMascot variant="hello" size={96} animate={false} />
                       </div>
-                      <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                         {locale === 'uz' ? 'Bu yerda mijozlar xabarlari bo‘ladi' : 'Здесь будут сообщения клиентов'}
                       </h3>
-                      <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
+                      <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1 max-w-sm">
                         {locale === 'uz'
                           ? 'Bot mijozlarga javob berishni boshlashi uchun aloqa kanalini ulang.'
                           : 'Подключите канал связи, чтобы бот начал отвечать клиентам.'}
                       </p>
                       <Link
                         href="/dashboard/integrations"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs mt-4 shadow-2xs"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs mt-4 shadow-2xs"
                       >
                         <span>{locale === 'uz' ? 'Kanalni ulash' : 'Подключить канал'}</span>
                         <ArrowRight size={14} />
@@ -629,10 +660,10 @@ export default function ConversationsPage() {
                     <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
                       <SparrowMascot variant="hint" size={88} animate={false} />
                     </div>
-                    <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       {locale === 'uz' ? 'Suhbat tanlanmagan' : 'Диалог не выбран'}
                     </h3>
-                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm">
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1 max-w-sm">
                       {t.conversations.selectConversation}
                     </p>
                   </>

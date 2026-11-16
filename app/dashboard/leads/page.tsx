@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { useApp } from '@/context/AppContext';
 import { DataState } from '@/components/ui/DataState';
 import { Badge } from '@/components/ui/Badge';
@@ -13,9 +12,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { useUnsavedChanges } from '@/lib/useUnsavedChanges';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import {
-  CalendarCheck,
   Search,
-  Clock,
   Calendar,
   Table as TableIcon,
   CalendarDays,
@@ -191,12 +188,12 @@ export default function LeadsCalendarPage() {
   return (
     <div className="space-y-6 w-full pb-10 text-left">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)] dark:border-[#29374C]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)] dark:border-[var(--border)]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] dark:text-[#F4F7FB] leading-tight">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] dark:text-[var(--text-primary)] leading-tight">
             {t.leads.title}
           </h1>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
             {t.leads.subtitle}
           </p>
         </div>
@@ -205,21 +202,21 @@ export default function LeadsCalendarPage() {
           <Button
             size="sm"
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs flex items-center gap-1.5 shadow-xs"
+            className="bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs flex items-center gap-1.5 shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>{t.leads.addLead}</span>
           </Button>
 
           {/* View Mode Toggle */}
-          <div className="flex items-center bg-[var(--surface-secondary)] dark:bg-[#101B2E] p-1 rounded-xl text-xs font-semibold border border-[var(--border)] dark:border-[#29374C]">
+          <div className="flex items-center bg-[var(--surface-secondary)] dark:bg-[var(--surface)] p-1 rounded-xl text-xs font-semibold border border-[var(--border)] dark:border-[var(--border)]">
             <button
               type="button"
               onClick={() => setViewMode('table')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 viewMode === 'table'
-                  ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-bold'
-                  : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)]'
+                  ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-2xs font-bold'
+                  : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
               <TableIcon className="w-3.5 h-3.5" />
@@ -232,8 +229,8 @@ export default function LeadsCalendarPage() {
               onClick={() => setViewMode('kanban')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 viewMode === 'kanban'
-                  ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-bold'
-                  : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)]'
+                  ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-2xs font-bold'
+                  : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
@@ -244,11 +241,11 @@ export default function LeadsCalendarPage() {
               onClick={() => setViewMode('calendar')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 viewMode === 'calendar'
-                  ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-bold'
-                  : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)]'
+                  ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-2xs font-bold'
+                  : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <CalendarDays className="w-3.5 h-3.5 text-[#FF7277]" />
+              <CalendarDays className="w-3.5 h-3.5 text-[var(--accent-link)]" />
               <span>{locale === 'uz' ? 'Taqvim' : 'Календарь'}</span>
             </button>
           </div>
@@ -257,23 +254,23 @@ export default function LeadsCalendarPage() {
 
       {/* Filter and Search Bar */}
       {viewMode !== 'calendar' && (
-        <div className="bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] rounded-2xl p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] rounded-2xl p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Search */}
           <div className="relative w-full md:w-80">
-            <Search className="w-3.5 h-3.5 text-[var(--text-muted)] dark:text-[#AABAD0] absolute left-3 top-3 sm:top-2.5" />
+            <Search className="w-3.5 h-3.5 text-[var(--text-muted)] dark:text-[var(--text-secondary)] absolute left-3 top-3 sm:top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label={locale === 'uz' ? 'Lidlarni qidirish' : 'Поиск лидов'}
               placeholder={t.leads.searchPlaceholder}
-              className="w-full pl-8 pr-3 py-1.5 min-h-[36px] bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-xl text-xs text-[var(--text-primary)] dark:text-[#F4F7FB] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] font-medium"
+              className="w-full pl-8 pr-3 py-1.5 min-h-[36px] bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] rounded-xl text-xs text-[var(--text-primary)] dark:text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] font-medium"
             />
           </div>
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <div className="flex flex-wrap items-center gap-1 bg-[var(--surface-secondary)] dark:bg-[#101B2E] p-1 rounded-xl text-xs">
+            <div className="flex flex-wrap items-center gap-1 bg-[var(--surface-secondary)] dark:bg-[var(--surface)] p-1 rounded-xl text-xs">
               {[
                 { id: 'ALL', label: t.leads.allStatuses },
                 { id: 'Новый', label: t.leads.statuses.new },
@@ -286,8 +283,8 @@ export default function LeadsCalendarPage() {
                   onClick={() => setStatusFilter(s.id)}
                   className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
                     statusFilter === s.id
-                      ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-bold'
-                      : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)]'
+                      ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-2xs font-bold'
+                      : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {s.label}
@@ -298,7 +295,7 @@ export default function LeadsCalendarPage() {
             <select
               value={channelFilter}
               onChange={(e) => setChannelFilter(e.target.value)}
-              className="bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-xl px-3 py-1.5 min-h-[36px] text-xs text-[var(--text-primary)] dark:text-[#F4F7FB] font-medium focus:outline-none cursor-pointer"
+              className="bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] rounded-xl px-3 py-1.5 min-h-[36px] text-xs text-[var(--text-primary)] dark:text-[var(--text-primary)] font-medium focus:outline-none cursor-pointer"
             >
               <option value="ALL">{t.leads.allChannels}</option>
               <option value="Telegram">Telegram</option>
@@ -311,11 +308,11 @@ export default function LeadsCalendarPage() {
 
       {/* ================= VIEW 1: TABLE ================= */}
       {viewMode === 'table' && (
-        <div className="bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] rounded-2xl shadow-xs overflow-hidden">
+        <div className="bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] rounded-2xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-[var(--surface-secondary)] dark:bg-[#101B2E] border-b border-[var(--border)] dark:border-[#29374C] text-[var(--text-secondary)] dark:text-[#AABAD0] font-semibold uppercase tracking-wider text-[10px]">
+            <table className={`w-full text-left border-collapse text-xs ${filteredLeads.length ? 'min-w-[760px]' : ''}`}>
+              <thead className={filteredLeads.length ? '' : 'hidden'}>
+                <tr className="bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border-b border-[var(--border)] dark:border-[var(--border)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] font-semibold uppercase tracking-wider text-[10px]">
                   <th className="py-3.5 px-4">{t.leads.client}</th>
                   <th className="py-3.5 px-3">{t.leads.channel}</th>
                   <th className="py-3.5 px-3">{locale === 'uz' ? 'Voronka holati' : 'Статус воронки'}</th>
@@ -333,10 +330,10 @@ export default function LeadsCalendarPage() {
                           <div className="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
                             <SparrowMascot variant="look" size={88} animate={false} />
                           </div>
-                          <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                          <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                             {locale === 'uz' ? 'Lidlar topilmadi' : 'Лиды не найдены'}
                           </h4>
-                          <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
+                          <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
                             {t.leads.noLeadsFound}
                           </p>
                           <Button
@@ -364,12 +361,12 @@ export default function LeadsCalendarPage() {
                               animate={false}
                             />
                           </div>
-                          <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                          <h4 className="text-sm font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                             {workspace?.telegramBusinessConnected || workspace?.instagramConnected
                               ? (locale === 'uz' ? 'Kanallar ulangan · Arizalarni kutmoqdamiz' : 'Каналы подключены · Ожидаем заявки')
                               : (locale === 'uz' ? 'Lidlar ro‘yxati bo‘sh' : 'Список лидов пуст')}
                           </h4>
-                          <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
+                          <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
                             {workspace?.telegramBusinessConnected || workspace?.instagramConnected
                               ? (locale === 'uz'
                                   ? 'AI-xodim mijoz bilan birinchi muloqot va saralashdan so‘ng uni avtomatik tarzda lidlar ro‘yxatiga qo‘shadi.'
@@ -382,7 +379,7 @@ export default function LeadsCalendarPage() {
                             <Button
                               size="sm"
                               variant="primary"
-                              className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
+                              className="bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs"
                               onClick={() => setIsAddModalOpen(true)}
                             >
                               <Plus className="w-3.5 h-3.5" />
@@ -399,19 +396,19 @@ export default function LeadsCalendarPage() {
                   {filteredLeads.map((lead) => (
                     <tr
                       key={lead.id}
-                      className="hover:bg-[var(--surface-secondary)]/50 dark:hover:bg-[#101B2E]/60 transition-colors"
+                      className="hover:bg-[var(--surface-secondary)]/50 dark:hover:bg-[var(--surface)]/60 transition-colors"
                     >
                       <td className="py-3.5 px-4">
-                        <div className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                        <div className="font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                           {lead.clientName}
                         </div>
-                        <div className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 font-mono mt-0.5">
+                        <div className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 font-mono mt-0.5">
                           {lead.contact}
                         </div>
                       </td>
 
                       <td className="py-3.5 px-3">
-                        <span className="text-[10px] bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0] px-2 py-0.5 rounded-full font-medium border border-[var(--border)] dark:border-[#29374C]">
+                        <span className="text-[10px] bg-[var(--surface-secondary)] dark:bg-[var(--surface)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] px-2 py-0.5 rounded-full font-medium border border-[var(--border)] dark:border-[var(--border)]">
                           {lead.channel === 'WebWidget' ? 'Сайт' : lead.channel}
                         </span>
                       </td>
@@ -432,17 +429,17 @@ export default function LeadsCalendarPage() {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-[var(--text-muted)] dark:text-[#AABAD0]/60 text-[11px]">
+                          <span className="text-[var(--text-muted)] dark:text-[var(--text-secondary)]/60 text-[11px]">
                             —
                           </span>
                         )}
                       </td>
 
-                      <td className="py-3.5 px-3 text-[var(--text-secondary)] dark:text-[#AABAD0] max-w-xs truncate">
+                      <td className="py-3.5 px-3 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] max-w-xs truncate">
                         {lead.notes || '—'}
                       </td>
 
-                      <td className="py-3.5 px-3 text-right font-mono font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <td className="py-3.5 px-3 text-right font-mono font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                         {lead.tokensSpent > 0 ? `-${lead.tokensSpent}` : '0'}
                       </td>
                     </tr>
@@ -476,14 +473,14 @@ export default function LeadsCalendarPage() {
             return (
               <div
                 key={col.id}
-                className="bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-2xl p-4 flex flex-col min-h-[460px]"
+                className="bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] rounded-2xl p-4 flex flex-col min-h-[460px]"
               >
                 {/* Column Header */}
-                <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)] dark:border-[#29374C]">
-                  <div className="font-bold text-xs text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)] dark:border-[var(--border)]">
+                  <div className="font-bold text-xs text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {col.title}
                   </div>
-                  <span className="text-[10px] font-mono font-bold bg-[var(--surface)] dark:bg-[#142137] px-2 py-0.5 rounded-full border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <span className="text-[10px] font-mono font-bold bg-[var(--surface)] dark:bg-[var(--surface-secondary)] px-2 py-0.5 rounded-full border border-[var(--border)] dark:border-[var(--border)] text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {colLeads.length}
                   </span>
                 </div>
@@ -491,25 +488,25 @@ export default function LeadsCalendarPage() {
                 {/* Cards List */}
                 <div className="space-y-2.5 flex-1 overflow-y-auto">
                   {colLeads.length === 0 ? (
-                    <div className="p-8 text-center text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/60 border border-dashed border-[var(--border)] dark:border-[#29374C] rounded-xl">
+                    <div className="p-8 text-center text-xs text-[var(--text-muted)] dark:text-[var(--text-secondary)]/60 border border-dashed border-[var(--border)] dark:border-[var(--border)] rounded-xl">
                       {locale === 'uz' ? 'Ushbu bosqichda lidlar yo‘q' : 'Нет лидов на этом этапе'}
                     </div>
                   ) : (
                     colLeads.map((l) => (
                       <div
                         key={l.id}
-                        className="p-3.5 bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] rounded-xl shadow-2xs space-y-2 text-left hover:border-[var(--border-strong)] transition-all"
+                        className="p-3.5 bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] rounded-xl shadow-2xs space-y-2 text-left hover:border-[var(--border-strong)] transition-all"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold text-xs text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                          <span className="font-semibold text-xs text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                             {l.clientName}
                           </span>
-                          <span className="text-[10px] bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0] px-1.5 py-0.5 rounded border border-[var(--border)] dark:border-[#29374C]">
+                          <span className="text-[10px] bg-[var(--surface-secondary)] dark:bg-[var(--surface)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] px-1.5 py-0.5 rounded border border-[var(--border)] dark:border-[var(--border)]">
                             {l.channel === 'WebWidget' ? (locale === 'uz' ? 'Sayt' : 'Сайт') : l.channel}
                           </span>
                         </div>
 
-                        <div className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 font-mono">
+                        <div className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 font-mono">
                           {l.contact}
                         </div>
 
@@ -528,18 +525,18 @@ export default function LeadsCalendarPage() {
                         )}
 
                         {l.notes && (
-                          <div className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] line-clamp-2">
+                          <div className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] line-clamp-2">
                             {l.notes}
                           </div>
                         )}
 
                         {/* Quick Kanban Action Buttons */}
-                        <div className="pt-2 border-t border-[var(--border)] dark:border-[#29374C] flex items-center justify-end gap-1.5">
+                        <div className="pt-2 border-t border-[var(--border)] dark:border-[var(--border)] flex items-center justify-end gap-1.5">
                           {col.id === 'Новый' && (
                             <button
                               type="button"
                               onClick={() => updateLeadStatus(l.id, 'Квалифицирован')}
-                              className="text-[10px] font-semibold text-[#FF7277] hover:underline cursor-pointer"
+                              className="text-[10px] font-semibold text-[var(--accent-link)] hover:underline cursor-pointer"
                             >
                               {locale === 'uz' ? 'Saralash →' : 'Квалифицировать →'}
                             </button>
@@ -567,18 +564,18 @@ export default function LeadsCalendarPage() {
       {/* ================= VIEW 3: CALENDAR GRID ================= */}
       {viewMode === 'calendar' && (
         <div className="space-y-4">
-          <div className="bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-red-500/10 text-[#FF7277] flex items-center justify-center font-bold shrink-0">
+              <div className="size-10 rounded-xl bg-red-500/10 text-[var(--accent-link)] flex items-center justify-center font-bold shrink-0">
                 <Calendar className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-[var(--text-primary)] dark:text-[#F4F7FB] text-sm">
+                <h3 className="font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)] text-sm">
                   {locale === 'uz'
                     ? 'Google Taqvim kataklari — Ish vaqtlari'
                     : 'Сетка Google Календаря — Рабочие часы'}
                 </h3>
-                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {locale === 'uz'
                     ? 'Vaqtlarni avtomatik tekshirish va AI-xodimlar orqali band qilish'
                     : 'Автоматическая проверка пересечения слотов и бронирование через ИИ-сотрудников'}
@@ -592,21 +589,21 @@ export default function LeadsCalendarPage() {
               onClick={() => openSandbox()}
               className="text-xs font-semibold"
             >
-              <Terminal className="w-3.5 h-3.5 text-[#FF7277]" />
+              <Terminal className="w-3.5 h-3.5 text-[var(--accent-link)]" />
               <span>{locale === 'uz' ? 'Test-drayvda sinash' : 'Проверить через песочницу'}</span>
             </Button>
           </div>
 
-          <div className="bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] rounded-2xl p-4 shadow-2xs overflow-x-auto">
+          <div className="bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] rounded-2xl p-4 shadow-2xs overflow-x-auto">
             <div className="min-w-[760px] grid grid-cols-7 gap-3">
               {daysOfWeek.map((day, dayIdx) => (
                 <div key={dayIdx} className="space-y-2">
                   {/* Day Header */}
-                  <div className="p-2.5 rounded-xl bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-center">
-                    <div className="text-xs font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <div className="p-2.5 rounded-xl bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] text-center">
+                    <div className="text-xs font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       {day.name}
                     </div>
-                    <div className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 font-mono mt-0.5">
+                    <div className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 font-mono mt-0.5">
                       {day.date}
                     </div>
                   </div>
@@ -633,10 +630,10 @@ export default function LeadsCalendarPage() {
                             minute: '2-digit',
                           })}
                         </time>
-                        <p className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] truncate">
+                        <p className="font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate">
                           {lead.clientName}
                         </p>
-                        <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] truncate font-mono">
+                        <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] truncate font-mono">
                           {lead.contact}
                         </p>
                       </div>
@@ -646,7 +643,7 @@ export default function LeadsCalendarPage() {
                       new Date(lead.appointmentDate!).toLocaleDateString('en-CA') ===
                       day.isoDate
                   ) && (
-                    <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 p-3 text-center">
+                    <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/60 p-3 text-center">
                       {locale === 'uz' ? 'Yozuvlar yo‘q' : 'Нет записей'}
                     </p>
                   )}
@@ -662,11 +659,11 @@ export default function LeadsCalendarPage() {
         open={isAddModalOpen}
         onClose={closeLeadForm}
         label={locale === 'uz' ? 'Mijoz murojaatini qo‘shish' : 'Добавить обращение клиента'}
-        className="w-[calc(100vw-32px)] sm:w-[460px] max-w-[460px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+        className="w-[calc(100vw-32px)] sm:w-[460px] max-w-[460px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[var(--border)] shadow-2xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)]"
       >
         <form onSubmit={handleCreateManualLead} className="p-5 sm:p-6 space-y-4">
-          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3">
-            <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[var(--border)] pb-3">
+            <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
               {locale === 'uz' ? 'Yangi mijoz murojaati' : 'Новое обращение клиента'}
             </h3>
             <button
@@ -689,7 +686,7 @@ export default function LeadsCalendarPage() {
             />
 
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] mb-1.5">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] mb-1.5">
                 {locale === 'uz' ? 'Telefon raqami' : 'Номер телефона'}
               </label>
               <PhoneInput
@@ -733,21 +730,21 @@ export default function LeadsCalendarPage() {
 
             {newStatus === 'Записан в календарь' && (
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] mb-1.5">
+                <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] mb-1.5">
                   {locale === 'uz' ? 'Uchrashuv vaqti va sanasi' : 'Дата и время слота встречи'}
                 </label>
                 <input
                   type="datetime-local"
                   value={newAppointmentDate}
                   onChange={(e) => setNewAppointmentDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-xl text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
+                  className="w-full px-3 py-2 text-xs bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] rounded-xl text-[var(--text-primary)] dark:text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
                   required
                 />
               </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[#29374C]">
+          <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[var(--border)]">
             <Button
               type="button"
               variant="ghost"
@@ -760,7 +757,7 @@ export default function LeadsCalendarPage() {
               type="submit"
               variant="primary"
               isLoading={isSavingLead}
-              className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
+              className="bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs"
             >
               {t.common.save}
             </Button>

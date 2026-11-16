@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Node CommonJS test runner. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -57,7 +56,7 @@ async function main() {
     check('Database inserts succeed without writable local disk', (await databaseOnly.createWorkspace(workspace)).id === workspace.id);
     check('Database edits return the persisted row without a local mirror', (await databaseOnly.updateWorkspace(workspace.id, { companyName: databaseRow.companyName })).companyName === databaseRow.companyName);
 
-    async function sandbox(env, debitSuccess = true) {
+    async function sandbox(env, debitSuccess = true, isSandbox = true) {
       const effects = []; const requests = [];
       const agent = { id: 'agent-test', workspaceId: 'workspace-test', name: 'Test', systemPrompt: 'Use the knowledge base', knowledgeBase: 'Consultation', qualificationQuestions: [] };
       const forbidden = (name) => async () => { effects.push(name); throw new Error('Unexpected live side effect'); };
@@ -72,25 +71,26 @@ async function main() {
       });
       const gateway = load('lib/ai/gateway.ts');
       let response, error;
-      try { response = await gateway.processAgentMessage({ agentId: agent.id, workspaceId: agent.workspaceId, message: 'Запиши завтра в 14:00', history: [{ role: 'user', content: 'Earlier question' }, { role: 'assistant', content: 'Earlier response' }], isSandbox: true }); }
+      try { response = await gateway.processAgentMessage({ agentId: agent.id, workspaceId: agent.workspaceId, message: 'Запиши завтра в 14:00', history: [{ role: 'user', content: 'Earlier question' }, { role: 'assistant', content: 'Earlier response' }], isSandbox }); }
       catch (failure) { error = failure; }
       return { effects, requests, response, error };
     }
 
     const openai = await sandbox({ OPENAI_API_KEY: 'unit-test-key' });
-    check('Successful booking-intent sandbox never writes leads, conversations or calendar events', !openai.error && openai.effects.length === 1 && openai.effects[0].actionType === 'chat_reply' && openai.effects[0].tokensDelta === -1);
-    check('Sandbox charges the response policy and preserves history', openai.response.tokensCost === 1 && openai.requests[0].body.messages.some((m) => m.content === 'Earlier response'));
+    check('Successful booking-intent sandbox never writes leads, conversations or calendar events', !openai.error && openai.effects.length === 0 && openai.response.tokensCost === 0);
+    check('Sandbox preserves history without debiting tokens', openai.response.tokensCost === 0 && openai.requests[0].body.messages.some((m) => m.content === 'Earlier response'));
     const gemini = await sandbox({ GEMINI_API_KEY: 'unit-test-key' });
     check('Fallback model receives the conversation history', !gemini.error && JSON.stringify(gemini.requests[0].body).includes('Earlier response'));
-    const unavailable = await sandbox({});
+    const unavailable = await sandbox({}, true, false);
     check('Unavailable model returns an error without charging or fabricated answers', unavailable.error && !unavailable.response && unavailable.effects.length === 0);
-    const rejectedDebit = await sandbox({ OPENAI_API_KEY: 'unit-test-key' }, false);
+    const rejectedDebit = await sandbox({ OPENAI_API_KEY: 'unit-test-key' }, false, false);
     check('Rejected debit cannot be reported as a successful paid response', rejectedDebit.error && !rejectedDebit.response);
 
     // Real support storage and handlers; identity is injected to exercise each role without email delivery.
     let identity = { workspaceId: workspace.id, userEmail: 'ledger@example.test', userName: 'Customer', isSuperAdmin: false };
     const supportLoader = loader({ CHORLA_DATA_DIR: directory }, {
       '@/src/db': { db: null },
+      '@/src/server/admin/access': { adminCan: async () => identity.isSuperAdmin ? identity : null },
       '@/src/server/auth/session': { getServerSessionContext: async () => identity },
       'next/server': { NextResponse: require('next/server').NextResponse, connection: async () => {} },
     });

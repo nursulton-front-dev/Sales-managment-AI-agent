@@ -1,32 +1,45 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  CreditCard,
   Percent,
   Search,
   RefreshCw,
-  Coins,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Calendar,
-  AlertCircle,
-  HelpCircle,
 } from 'lucide-react';
-import { useApp } from '@/context/AppContext';
+
+interface AdminBillingStats {
+  mrrUsd?: number;
+  mrrUzs?: number;
+  totalReceivedIncome?: number;
+  receivedSubscriptionIncome?: number;
+  receivedTopupIncome?: number;
+  openAiDirectCost?: number;
+  gatewayFees?: number;
+  partnerShareUsd?: number | string;
+  partnerShareUzs?: number;
+}
+
+interface AdminTokenLog {
+  id: string;
+  createdAt: string;
+  workspaceId: string;
+  actionType: string;
+  tokensDelta: number;
+  amountUsd?: string;
+  paymentMethod: string;
+  description: string;
+}
 
 export default function AdminBillingPage() {
-  const { showToast } = useApp();
-
-  const [stats, setStats] = useState<any | null>(null);
-  const [tokenLogs, setTokenLogs] = useState<any[]>([]);
+  const [stats, setStats] = useState<AdminBillingStats | null>(null);
+  const [tokenLogs, setTokenLogs] = useState<AdminTokenLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'subscriptions' | 'topups' | 'usage'>('all');
   const [search, setSearch] = useState('');
 
-  const fetchBillingData = async () => {
+  const fetchBillingData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await fetch('/api/admin/workspaces');
       const data = await res.json();
       if (data.success) {
@@ -43,10 +56,35 @@ export default function AdminBillingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchBillingData();
+    let ignore = false;
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/workspaces');
+        const data = await res.json();
+        if (!ignore && data.success) {
+          setStats(data.stats);
+        }
+
+        const logsRes = await fetch('/api/admin/token-logs');
+        const logsData = await logsRes.json();
+        if (!ignore && logsData.success) {
+          setTokenLogs(logsData.tokenLogs || []);
+        }
+      } catch (err) {
+        console.error('Fetch billing error:', err);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    void load();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const filteredLogs = tokenLogs.filter((log) => {

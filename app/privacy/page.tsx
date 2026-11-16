@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/ui/BrandLogo';
-import { ShieldCheck, ArrowLeft, Mail } from 'lucide-react';
+import { ShieldCheck, ArrowLeft } from 'lucide-react';
 
 export const metadata = {
   title: 'Политика конфиденциальности — gapcha AI',

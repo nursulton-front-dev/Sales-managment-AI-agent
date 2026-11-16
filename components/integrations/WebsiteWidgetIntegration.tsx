@@ -127,8 +127,47 @@ export function WebsiteWidgetSettingsView({
   }, [agents, locale]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let ignore = false;
+    async function loadWidget() {
+      try {
+        const res = await fetch('/api/integrations/widget');
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || (locale === 'uz' ? 'Vidjet sozlamalarini yuklab bo‘lmadi' : 'Не удалось загрузить настройки виджета'));
+        }
+        if (!ignore) {
+          if (data.widget) {
+            setWidget(data.widget);
+            setForm(settingsOnly(data.widget));
+            setOrigins(data.widget.allowedOrigins?.join('\n') || '');
+          } else {
+            // Pick first active agent by default
+            const firstAgent = agents.find((a) => a.isActive) || agents[0];
+            setForm((prev) => ({
+              ...prev,
+              agentId: firstAgent?.id || '',
+            }));
+          }
+          const origin = data.embedOrigin || (typeof window !== 'undefined' ? window.location.origin : 'https://chorla-ai.vercel.app');
+          setEmbedOrigin(origin);
+          setError(null);
+        }
+      } catch (err) {
+        if (!ignore) {
+          setError(err instanceof Error ? err.message : (locale === 'uz' ? 'Tarmoq xatosi' : 'Ошибка сети'));
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadWidget();
+    return () => {
+      ignore = true;
+    };
+  }, [agents, locale]);
 
   // Track unsaved changes
   const parsedOrigins = useMemo(() => {
@@ -268,14 +307,14 @@ export function WebsiteWidgetSettingsView({
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-fade-in">
       {/* 1. Header with Breadcrumbs & Back Link */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border)] dark:border-[#29374C] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border)] dark:border-[var(--border)] pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/70 mb-1.5">
+          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 mb-1.5">
             {onBack ? (
               <button
                 type="button"
                 onClick={onBack}
-                className="hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] transition-colors flex items-center gap-1 cursor-pointer"
+                className="hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)] transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <ArrowLeft size={13} />
                 <span>{locale === 'uz' ? 'Barcha integratsiyalar' : 'Все интеграции'}</span>
@@ -283,18 +322,18 @@ export function WebsiteWidgetSettingsView({
             ) : (
               <Link
                 href="/dashboard/integrations"
-                className="hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] transition-colors"
+                className="hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)] transition-colors"
               >
                 {t.integrations.title}
               </Link>
             )}
             <span>/</span>
-            <span className="text-[var(--text-primary)] dark:text-[#F4F7FB] font-medium">
+            <span className="text-[var(--text-primary)] dark:text-[var(--text-primary)] font-medium">
               {locale === 'uz' ? 'Saytdagi chat' : 'Чат на сайте'}
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+            <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
               {t.integrations.widgetTitle}
             </h1>
             <Badge variant={widget?.enabled ? 'success' : 'neutral'}>
@@ -303,7 +342,7 @@ export function WebsiteWidgetSettingsView({
                 : (locale === 'uz' ? '○ Sozlanmagan' : '○ Не настроен')}
             </Badge>
           </div>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1">
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1">
             {locale === 'uz'
               ? 'Tashqi ko‘rinishni sozlang, sayt uchun kodni nusxalang va ulanish holatini tekshiring.'
               : 'Настройте внешний вид, скопируйте код для сайта и проверьте статус подключения.'}
@@ -324,7 +363,7 @@ export function WebsiteWidgetSettingsView({
             disabled={busy || loading}
             isLoading={busy}
             onClick={() => handleSave()}
-            className="bg-[#DC2626] hover:bg-[#b91c1c] text-white font-semibold text-xs px-4 py-2"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold text-xs px-4 py-2"
           >
             {locale === 'uz' ? 'O‘zgarishlarni saqlash' : 'Сохранить изменения'}
           </Button>
@@ -340,14 +379,14 @@ export function WebsiteWidgetSettingsView({
           {/* ========================================================= */}
           <div className="lg:col-span-7 space-y-5">
             {/* Nav Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-xl text-xs font-medium">
+            <div className="flex items-center gap-1 p-1 bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] rounded-xl text-xs font-medium">
               <button
                 type="button"
                 onClick={() => setTab('appearance')}
                 className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   tab === 'appearance'
-                    ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
-                    : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                    ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-xs font-semibold'
+                    : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)]'
                 }`}
               >
                 <Sliders size={14} />
@@ -359,8 +398,8 @@ export function WebsiteWidgetSettingsView({
                 onClick={() => setTab('install')}
                 className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   tab === 'install'
-                    ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
-                    : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                    ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-xs font-semibold'
+                    : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)]'
                 }`}
               >
                 <Code2 size={14} />
@@ -372,8 +411,8 @@ export function WebsiteWidgetSettingsView({
                 onClick={() => setTab('check')}
                 className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   tab === 'check'
-                    ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
-                    : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                    ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-xs font-semibold'
+                    : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)]'
                 }`}
               >
                 <CheckCircle2 size={14} />
@@ -383,7 +422,7 @@ export function WebsiteWidgetSettingsView({
 
             {/* TAB 1: ОФОРМЛЕНИЕ */}
             {tab === 'appearance' && (
-              <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 sm:p-6 space-y-5 shadow-xs">
+              <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-5 sm:p-6 space-y-5 shadow-xs">
                 {/* Agent select */}
                 <div>
                   <Select
@@ -399,7 +438,7 @@ export function WebsiteWidgetSettingsView({
                     ]}
                     required
                   />
-                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-1">
+                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 mt-1">
                     {locale === 'uz'
                       ? 'AI-xodim vidjetda sayt tashrif buyuruvchilarining savollariga javob beradi.'
                       : 'ИИ-сотрудник будет отвечать на сообщения посетителей в виджете.'}
@@ -416,14 +455,14 @@ export function WebsiteWidgetSettingsView({
                     placeholder={locale === 'uz' ? 'Savolingiz bo‘yicha yordam beramiz' : 'Поможем с вашим вопросом'}
                     required
                   />
-                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-1">
+                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 mt-1">
                     {locale === 'uz' ? 'Chat oynasi yuqorisida ko‘rinadi.' : 'Отображается в шапке окна чата.'}
                   </p>
                 </div>
 
                 {/* Greeting text */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {locale === 'uz' ? 'Salomlashuv xabari' : 'Приветственное сообщение'}
                   </label>
                   <textarea
@@ -432,17 +471,17 @@ export function WebsiteWidgetSettingsView({
                     onChange={(e) => update('greeting', e.target.value)}
                     maxLength={500}
                     placeholder={locale === 'uz' ? 'Assalomu alaykum! Men AI-maslahatchiman. Sizga qanday yordam bera olaman?' : 'Здравствуйте! Я ИИ-помощник компании. Чем могу помочь?'}
-                    className="w-full rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#101B2E] p-3 text-xs sm:text-sm text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-hidden focus:ring-2 focus:ring-[#DC2626]/30 transition-colors resize-none"
+                    className="w-full rounded-xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface)] p-3 text-xs sm:text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)] focus:outline-hidden focus:ring-2 focus:ring-[var(--accent)]/30 transition-colors resize-none"
                     required
                   />
-                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                     {locale === 'uz' ? 'Foydalanuvchi chatni ochganda ko‘radigan birinchi xabar.' : 'Первая реплика, которую видит пользователь при открытии чата.'}
                   </p>
                 </div>
 
                 {/* Color swatches */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {locale === 'uz' ? 'Rang mavzusi' : 'Цветовая тема'}
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -455,8 +494,8 @@ export function WebsiteWidgetSettingsView({
                           onClick={() => update('color', preset.value)}
                           className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all text-xs font-medium cursor-pointer ${
                             selected
-                              ? 'border-[#DC2626] bg-[#DC2626]/5 dark:bg-rose-950/20 shadow-2xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]'
-                              : 'border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0] hover:border-[var(--border-strong)]'
+                              ? 'border-[var(--accent)] bg-[var(--accent)]/5 dark:bg-rose-950/20 shadow-2xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]'
+                              : 'border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface-secondary)]/40 dark:bg-[var(--surface)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
                           }`}
                         >
                           <span
@@ -472,7 +511,7 @@ export function WebsiteWidgetSettingsView({
 
                 {/* Widget Position */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {locale === 'uz' ? 'Saytdagi joylashuvi' : 'Расположение на сайте'}
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -481,12 +520,12 @@ export function WebsiteWidgetSettingsView({
                       onClick={() => update('position', 'right')}
                       className={`p-3 rounded-xl border text-xs font-medium transition-all text-left cursor-pointer ${
                         form.position === 'right'
-                          ? 'border-[#DC2626] bg-[#DC2626]/5 dark:bg-rose-950/20 text-[var(--text-primary)] dark:text-[#F4F7FB] font-semibold'
-                          : 'border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0]'
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/5 dark:bg-rose-950/20 text-[var(--text-primary)] dark:text-[var(--text-primary)] font-semibold'
+                          : 'border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface-secondary)]/40 dark:bg-[var(--surface)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)]'
                       }`}
                     >
                       <div className="font-semibold">{locale === 'uz' ? 'O‘ngda (Tavsiya etiladi)' : 'Справа (Рекомендуется)'}</div>
-                      <div className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-0.5">
+                      <div className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 mt-0.5">
                         {locale === 'uz' ? 'Odatdagi pastki o‘ng burchak' : 'Привычный нижний правый угол'}
                       </div>
                     </button>
@@ -496,12 +535,12 @@ export function WebsiteWidgetSettingsView({
                       onClick={() => update('position', 'left')}
                       className={`p-3 rounded-xl border text-xs font-medium transition-all text-left cursor-pointer ${
                         form.position === 'left'
-                          ? 'border-[#DC2626] bg-[#DC2626]/5 dark:bg-rose-950/20 text-[var(--text-primary)] dark:text-[#F4F7FB] font-semibold'
-                          : 'border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] text-[var(--text-secondary)] dark:text-[#AABAD0]'
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/5 dark:bg-rose-950/20 text-[var(--text-primary)] dark:text-[var(--text-primary)] font-semibold'
+                          : 'border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface-secondary)]/40 dark:bg-[var(--surface)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)]'
                       }`}
                     >
                       <div className="font-semibold">{locale === 'uz' ? 'Chapda' : 'Слева'}</div>
-                      <div className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-0.5">
+                      <div className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 mt-0.5">
                         {locale === 'uz' ? 'Pastki chap burchak' : 'Нижний левый угол страницы'}
                       </div>
                     </button>
@@ -509,12 +548,12 @@ export function WebsiteWidgetSettingsView({
                 </div>
 
                 {/* Enabled toggle */}
-                <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
+                <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] dark:border-[var(--border)]">
                   <div>
-                    <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                    <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                       {locale === 'uz' ? 'Vidjet holati' : 'Статус виджета'}
                     </span>
-                    <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                    <span className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                       {locale === 'uz'
                         ? 'Vidjet ko‘rinishi va tashrif buyuruvchilarga javob berishi uchun yoqing'
                         : 'Включите, чтобы виджет отображался и отвечал посетителям'}
@@ -528,7 +567,7 @@ export function WebsiteWidgetSettingsView({
                       disabled={busy}
                       className="sr-only peer"
                     />
-                    <div className="w-10 h-5.5 bg-slate-200 peer-focus:outline-hidden peer-focus:ring-2 peer-focus:ring-[#DC2626]/30 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all dark:border-slate-600 peer-checked:bg-[#DC2626]" />
+                    <div className="w-10 h-5.5 bg-slate-200 peer-focus:outline-hidden peer-focus:ring-2 peer-focus:ring-[var(--accent)]/30 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all dark:border-slate-600 peer-checked:bg-[var(--accent)]" />
                   </label>
                 </div>
               </div>
@@ -536,22 +575,22 @@ export function WebsiteWidgetSettingsView({
 
             {/* TAB 2: УСТАНОВКА */}
             {tab === 'install' && (
-              <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 sm:p-6 space-y-5 shadow-xs">
+              <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-5 sm:p-6 space-y-5 shadow-xs">
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {locale === 'uz' ? 'Saytga joylashtirish uchun kod' : 'Код для размещения на сайте'}
                   </h3>
-                  <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                  <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                     {locale === 'uz' ? (
-                      <>Skriptni nusxalang va uni saytingizning <code className="px-1.5 py-0.5 rounded bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[#DC2626] font-mono text-[11px]">&lt;/body&gt;</code> yopuvchi tegidan oldin joylashtiring.</>
+                      <>Skriptni nusxalang va uni saytingizning <code className="px-1.5 py-0.5 rounded bg-[var(--surface-secondary)] dark:bg-[var(--surface)] text-[var(--accent)] font-mono text-[11px]">&lt;/body&gt;</code> yopuvchi tegidan oldin joylashtiring.</>
                     ) : (
-                      <>Скопируйте скрипт и вставьте его перед закрывающим тегом <code className="px-1.5 py-0.5 rounded bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[#DC2626] font-mono text-[11px]">&lt;/body&gt;</code> вашего сайта.</>
+                      <>Скопируйте скрипт и вставьте его перед закрывающим тегом <code className="px-1.5 py-0.5 rounded bg-[var(--surface-secondary)] dark:bg-[var(--surface)] text-[var(--accent)] font-mono text-[11px]">&lt;/body&gt;</code> вашего сайта.</>
                     )}
                   </p>
                 </div>
 
                 {/* Code block */}
-                <div className="relative rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-slate-900 text-slate-100 p-4 font-mono text-xs overflow-x-auto shadow-inner">
+                <div className="relative rounded-xl border border-[var(--border)] dark:border-[var(--border)] bg-slate-900 text-slate-100 p-4 font-mono text-xs overflow-x-auto shadow-inner">
                   <pre className="pr-12 text-[11px] leading-relaxed select-all">{snippet}</pre>
                   <button
                     type="button"
@@ -564,11 +603,11 @@ export function WebsiteWidgetSettingsView({
                 </div>
 
                 {/* Placement instructions */}
-                <div className="p-4 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] space-y-2 text-xs">
-                  <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                <div className="p-4 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] space-y-2 text-xs">
+                  <span className="font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                     {locale === 'uz' ? 'Mashhur platformalar uchun o‘rnatish ko‘rsatmalari:' : 'Инструкции по установке для популярных платформ:'}
                   </span>
-                  <ul className="list-disc pl-4 space-y-1 text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                  <ul className="list-disc pl-4 space-y-1 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-snug">
                     <li><strong>Tilda:</strong> {locale === 'uz' ? 'Sayt sozlamalari → Yana → HEAD yoki </body> oldidan HTML-kod.' : 'Настройки сайта → Еще → HTML-код для вставки внутри HEAD или перед </body>.'}</li>
                     <li><strong>WordPress:</strong> {locale === 'uz' ? 'Tashqi ko‘rinish → Mavzular muharriri → footer.php yoki «Insert Headers and Footers» plagini orqali.' : 'Внешний вид → Редактор тем → footer.php или через плагин «Insert Headers and Footers».'}</li>
                     <li><strong>Taplink / Creatium:</strong> {locale === 'uz' ? 'Sozlamalar → Kod qo‘yish → BODY yopilishidan oldin.' : 'Настройки → Вставки кода → Перед закрывающим тегом BODY.'}</li>
@@ -576,8 +615,8 @@ export function WebsiteWidgetSettingsView({
                 </div>
 
                 {/* Allowed domains whitelist */}
-                <div className="space-y-1.5 pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
-                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <div className="space-y-1.5 pt-2 border-t border-[var(--border)] dark:border-[var(--border)]">
+                  <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {locale === 'uz' ? 'Ruxsat berilgan domenlar (Allowed Origins)' : 'Разрешённые домены (Allowed Origins)'}
                   </label>
                   <textarea
@@ -585,9 +624,9 @@ export function WebsiteWidgetSettingsView({
                     value={origins}
                     onChange={(e) => setOrigins(e.target.value)}
                     placeholder="https://example.com&#10;https://mycompany.uz"
-                    className="w-full rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#101B2E] p-3 text-xs font-mono text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-hidden focus:ring-2 focus:ring-[#DC2626]/30 transition-colors resize-none"
+                    className="w-full rounded-xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface)] p-3 text-xs font-mono text-[var(--text-primary)] dark:text-[var(--text-primary)] focus:outline-hidden focus:ring-2 focus:ring-[var(--accent)]/30 transition-colors resize-none"
                   />
-                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                  <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                     {locale === 'uz'
                       ? 'Vidjetni yuklashga ruxsat berilgan saytlar manzillarini (har bir qatorda bittadan) kiriting.'
                       : 'Укажите адреса сайтов (по одному на строку), с которых разрешено загружать виджет.'}
@@ -598,12 +637,12 @@ export function WebsiteWidgetSettingsView({
 
             {/* TAB 3: ПРОВЕРКА */}
             {tab === 'check' && (
-              <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 sm:p-6 space-y-5 shadow-xs">
+              <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-5 sm:p-6 space-y-5 shadow-xs">
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {locale === 'uz' ? 'Vidjet o‘rnatilishini tekshirish' : 'Проверка установки виджета'}
                   </h3>
-                  <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                  <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                     {locale === 'uz'
                       ? 'Server saytingizdagi vidjet skriptidan so‘rovlar kelishini tekshiradi.'
                       : 'Сервер проверяет поступление запросов от скрипта виджета с вашего сайта.'}
@@ -631,7 +670,7 @@ export function WebsiteWidgetSettingsView({
                     </span>
                   </div>
 
-                  <p className="text-xs leading-relaxed text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                  <p className="text-xs leading-relaxed text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                     {widget?.lastSeenAt
                       ? (locale === 'uz'
                           ? `So‘nggi aloqa: ${new Date(widget.lastSeenAt).toLocaleString('uz-UZ')} manbadan: ${widget.lastSeenOrigin || 'sayt'}`
@@ -650,7 +689,7 @@ export function WebsiteWidgetSettingsView({
                     disabled={checking}
                     isLoading={checking}
                     onClick={handleCheck}
-                    className="bg-[#DC2626] hover:bg-[#b91c1c] text-white text-xs font-semibold"
+                    className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold"
                   >
                     <RefreshCw size={14} className="mr-1.5" />
                     <span>{locale === 'uz' ? 'Ulanishni tekshirish' : 'Проверить подключение'}</span>
@@ -678,17 +717,17 @@ export function WebsiteWidgetSettingsView({
           <div className="lg:col-span-5 flex flex-col items-center space-y-3">
             {/* Preview Toolbar */}
             <div className="w-full flex items-center justify-between text-xs px-1">
-              <span className="font-semibold text-[var(--text-secondary)] dark:text-[#AABAD0]">
+              <span className="font-semibold text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                 {locale === 'uz' ? 'Saytda oldindan ko‘rish' : 'Предпросмотр на сайте'}
               </span>
-              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
                 <button
                   type="button"
                   onClick={() => setPreviewDevice('desktop')}
                   className={`p-1.5 rounded-md transition-all cursor-pointer ${
                     previewDevice === 'desktop'
-                      ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-semibold'
-                      : 'text-[var(--text-muted)] dark:text-[#AABAD0]/70 hover:text-[var(--text-primary)]'
+                      ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-2xs font-semibold'
+                      : 'text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 hover:text-[var(--text-primary)]'
                   }`}
                   aria-label={locale === 'uz' ? 'Kompyuter' : 'Компьютер'}
                   title={locale === 'uz' ? 'Kompyuter' : 'Компьютер'}
@@ -700,8 +739,8 @@ export function WebsiteWidgetSettingsView({
                   onClick={() => setPreviewDevice('mobile')}
                   className={`p-1.5 rounded-md transition-all cursor-pointer ${
                     previewDevice === 'mobile'
-                      ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-2xs font-semibold'
-                      : 'text-[var(--text-muted)] dark:text-[#AABAD0]/70 hover:text-[var(--text-primary)]'
+                      ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-2xs font-semibold'
+                      : 'text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 hover:text-[var(--text-primary)]'
                   }`}
                   aria-label={locale === 'uz' ? 'Telefon' : 'Телефон'}
                   title={locale === 'uz' ? 'Telefon' : 'Телефон'}
@@ -713,24 +752,24 @@ export function WebsiteWidgetSettingsView({
 
             {/* Mock Device Container */}
             <div
-              className={`w-full rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] p-3 shadow-md transition-all ${
+              className={`w-full rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface-secondary)]/40 dark:bg-[var(--surface)] p-3 shadow-md transition-all ${
                 previewDevice === 'mobile' ? 'max-w-xs' : 'max-w-md'
               }`}
             >
               {/* Mock Browser Header */}
-              <div className="rounded-xl bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] p-2 flex items-center gap-2 mb-2">
+              <div className="rounded-xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] p-2 flex items-center gap-2 mb-2">
                 <div className="flex gap-1.5 shrink-0 pl-1">
                   <span className="size-2 rounded-full bg-red-400" />
                   <span className="size-2 rounded-full bg-amber-400" />
                   <span className="size-2 rounded-full bg-emerald-400" />
                 </div>
-                <div className="flex-1 rounded-md bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 px-2 py-0.5 truncate text-center font-mono">
+                <div className="flex-1 rounded-md bg-[var(--surface-secondary)] dark:bg-[var(--surface)] text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/60 px-2 py-0.5 truncate text-center font-mono">
                   vash-sayt.uz
                 </div>
               </div>
 
               {/* Mock Page Content Backdrop */}
-              <div className="relative rounded-xl bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] p-3 min-h-[360px] overflow-hidden flex flex-col justify-between">
+              <div className="relative rounded-xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] p-3 min-h-[360px] overflow-hidden flex flex-col justify-between">
                 {/* Dummy page skeleton */}
                 <div className="space-y-2 opacity-30 select-none pointer-events-none">
                   <div className="h-4 w-1/3 rounded bg-slate-300 dark:bg-slate-700" />
@@ -741,7 +780,7 @@ export function WebsiteWidgetSettingsView({
 
                 {/* Live Mock Chat Window (Expanded) */}
                 <div
-                  className={`w-full rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] shadow-lg overflow-hidden flex flex-col ${
+                  className={`w-full rounded-xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] shadow-lg overflow-hidden flex flex-col ${
                     form.position === 'left' ? 'self-start' : 'self-end'
                   }`}
                 >
@@ -766,7 +805,7 @@ export function WebsiteWidgetSettingsView({
                   </div>
 
                   {/* Chat Body */}
-                  <div className="p-3 space-y-2.5 text-xs bg-[var(--surface)] dark:bg-[#142137]">
+                  <div className="p-3 space-y-2.5 text-xs bg-[var(--surface)] dark:bg-[var(--surface-secondary)]">
                     {/* Bot greeting */}
                     <div className="flex items-start gap-1.5 max-w-[90%]">
                       <div
@@ -775,7 +814,7 @@ export function WebsiteWidgetSettingsView({
                       >
                         AI
                       </div>
-                      <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] text-[11px] leading-relaxed">
+                      <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] text-[var(--text-primary)] dark:text-[var(--text-primary)] text-[11px] leading-relaxed">
                         {form.greeting || (locale === 'uz' ? 'Assalomu alaykum! Sizga qanday yordam bera olaman?' : 'Здравствуйте! Чем могу помочь?')}
                       </div>
                     </div>
@@ -798,16 +837,16 @@ export function WebsiteWidgetSettingsView({
                       >
                         AI
                       </div>
-                      <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] text-[11px] leading-relaxed">
+                      <div className="rounded-xl rounded-tl-xs p-2 bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] text-[var(--text-primary)] dark:text-[var(--text-primary)] text-[11px] leading-relaxed">
                         {locale === 'uz' ? 'Narx sizning vazifalaringizga bog‘liq. Qaysi kanal sizni qiziqtirmoqda?' : 'Стоимость зависит от ваших задач. Подскажите, какой канал вас интересует?'}
                       </div>
                     </div>
                   </div>
 
                   {/* Chat Input Bar */}
-                  <div className="p-2 border-t border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137]">
-                    <div className="flex items-center gap-1.5 p-1 rounded-lg bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 pl-2 flex-1 truncate">
+                  <div className="p-2 border-t border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)]">
+                    <div className="flex items-center gap-1.5 p-1 rounded-lg bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/60 pl-2 flex-1 truncate">
                         {locale === 'uz' ? 'Xabar yozing…' : 'Напишите сообщение…'}
                       </span>
                       <div
@@ -836,7 +875,7 @@ export function WebsiteWidgetSettingsView({
               </div>
             </div>
 
-            <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 text-center">
+            <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 text-center">
               {locale === 'uz'
                 ? 'Interaktiv vidjet foydalanuvchi mavzusi va qurilmasiga moslashadi.'
                 : 'Интерактивный виджет адаптируется под тему и устройство пользователя.'}
@@ -866,7 +905,7 @@ export function WebsiteWidgetModal({
       open={open}
       onClose={onClose}
       label={locale === 'uz' ? 'Saytdagi chat vidjeti sozlamalari' : 'Настройки виджета чата на сайте'}
-      className="w-[calc(100vw-32px)] lg:w-[1020px] max-w-[1020px] p-6 rounded-2xl overflow-y-auto max-h-[90dvh] border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+      className="w-[calc(100vw-32px)] lg:w-[1020px] max-w-[1020px] p-6 rounded-2xl overflow-y-auto max-h-[90dvh] border border-[var(--border)] dark:border-[var(--border)] shadow-2xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)]"
     >
       <div className="relative">
         <button

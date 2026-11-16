@@ -4,8 +4,6 @@ import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useApp, type Agent } from '@/context/AppContext';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -24,9 +22,6 @@ import {
   CalendarDays,
   X,
   ArrowRight,
-  Sparkles,
-  ShieldCheck,
-  CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
 
@@ -93,21 +88,21 @@ function AgentList() {
   return (
     <div className="space-y-6 w-full pb-10 text-left">
       {/* Header with Quota Counter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)] dark:border-[#29374C]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)] dark:border-[var(--border)]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] dark:text-[#F4F7FB] leading-tight">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] dark:text-[var(--text-primary)] leading-tight">
             {t.agents.title}
           </h1>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
             {t.agents.subtitle}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="px-3 py-1.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] flex items-center gap-2">
+          <div className="px-3 py-1.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] flex items-center gap-2">
             <span>
               {locale === 'uz' ? 'Xodimlar:' : 'Сотрудники:'}{' '}
-              <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {agents.length}
               </strong>{' '}
               {locale === 'uz' ? 'dan' : 'из'} {maxAgents}
@@ -117,7 +112,7 @@ function AgentList() {
           {!isLimitReached ? (
             <Link
               href="/dashboard/agents/new"
-              className="px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-all"
+              className="px-4 py-2 rounded-xl bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-all"
             >
               <Plus size={16} />
               <span>{t.agents.createButton}</span>
@@ -125,7 +120,7 @@ function AgentList() {
           ) : (
             <Link
               href="/dashboard/billing"
-              className="px-4 py-2 rounded-xl border border-[#FF7277] text-[#FF7277] hover:bg-red-500/10 font-semibold text-xs flex items-center gap-1.5 transition-all"
+              className="px-4 py-2 rounded-xl border border-[var(--accent-link)] text-[var(--accent-link)] hover:bg-red-500/10 font-semibold text-xs flex items-center gap-1.5 transition-all"
             >
               <span>{locale === 'uz' ? 'Tarifni oshirish →' : 'Повысить тариф →'}</span>
             </Link>
@@ -135,16 +130,16 @@ function AgentList() {
 
       {/* Plan Limit Warning Notice if reached */}
       {isLimitReached && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-[#142137] dark:border-amber-500/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-[var(--surface-secondary)] dark:border-amber-500/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
             <div>
-              <p className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <p className="font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {locale === 'uz'
                   ? `${plan?.toUpperCase()} tarifi bo‘yicha xodimlar limiti to‘ldi (${maxAgents} dan ${maxAgents})`
                   : `Достигнут лимит сотрудников для тарифа ${plan?.toUpperCase()} (${maxAgents} из ${maxAgents})`}
               </p>
-              <p className="text-[var(--text-secondary)] dark:text-[#AABAD0]">
+              <p className="text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                 {locale === 'uz'
                   ? '3 tagacha xodim ulash uchun BUSINESS, 10 tagacha — PRO tarifini tanlang.'
                   : 'Для подключения до 3 сотрудников выберите тариф BUSINESS, до 10 — тариф PRO.'}
@@ -153,7 +148,7 @@ function AgentList() {
           </div>
           <Link
             href="/dashboard/billing"
-            className="text-xs font-semibold text-[#FF7277] hover:underline shrink-0"
+            className="text-xs font-semibold text-[var(--accent-link)] hover:underline shrink-0"
           >
             {locale === 'uz' ? 'Tariflarga o‘tish →' : 'Перейти к тарифам →'}
           </Link>
@@ -185,16 +180,16 @@ function AgentList() {
 
       {/* Main Content Layout */}
       {!filtered.length ? (
-        <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-12 text-center shadow-xs">
-          <div className="size-14 rounded-2xl bg-red-500/10 text-[#FF7277] flex items-center justify-center mx-auto mb-4 font-bold">
+        <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-12 text-center shadow-xs">
+          <div className="size-14 rounded-2xl bg-red-500/10 text-[var(--accent-link)] flex items-center justify-center mx-auto mb-4 font-bold">
             <Users size={28} />
           </div>
-          <h2 className="font-bold text-lg text-[var(--text-primary)] dark:text-[#F4F7FB]">
+          <h2 className="font-bold text-lg text-[var(--text-primary)] dark:text-[var(--text-primary)]">
             {agents.length
               ? (locale === 'uz' ? 'Xodimlar topilmadi' : 'Сотрудники не найдены')
               : (locale === 'uz' ? 'Birinchi AI-xodimni yarating' : 'Создайте первого ИИ-сотрудника')}
           </h2>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1.5 max-w-sm mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1.5 max-w-sm mx-auto leading-relaxed">
             {agents.length
               ? (locale === 'uz' ? 'Qidiruv so‘rovi yoki holat filtrini o‘zgartirib ko‘ring.' : 'Попробуйте изменить поисковый запрос или фильтр статуса.')
               : (locale === 'uz' ? 'Yordamchi mijozlarni saralashni boshlashi uchun ko‘rsatmalar va narxlarni qo‘shing.' : 'Добавьте инструкции и прайс-лист, чтобы ассистент начал квалифицировать клиентов.')}
@@ -202,7 +197,7 @@ function AgentList() {
           {!agents.length && (
             <Link
               href="/dashboard/agents/new"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs mt-4 shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs mt-4 shadow-2xs"
             >
               <Plus size={16} />
               <span>{t.agents.createButton}</span>
@@ -218,19 +213,19 @@ function AgentList() {
               return (
               <div
                 key={agent.id}
-                className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs space-y-5 hover:border-[var(--border-strong)] transition-all"
+                className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-6 shadow-xs space-y-5 hover:border-[var(--border-strong)] transition-all"
               >
                 {/* Agent Header */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="size-13 rounded-2xl bg-red-500/10 dark:bg-red-500/20 text-[#FF7277] flex items-center justify-center font-bold text-base shrink-0 border border-red-500/20">
+                    <div className="size-13 rounded-2xl bg-red-500/10 dark:bg-red-500/20 text-[var(--accent-link)] flex items-center justify-center font-bold text-base shrink-0 border border-red-500/20">
                       AI
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-base sm:text-lg font-bold text-[var(--text-primary)] dark:text-[#F4F7FB] truncate">
+                      <h2 className="text-base sm:text-lg font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate">
                         {agent.name}
                       </h2>
-                      <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] truncate mt-0.5">
+                      <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] truncate mt-0.5">
                         {agent.niche}
                       </p>
                     </div>
@@ -242,14 +237,14 @@ function AgentList() {
                 </div>
 
                 {/* Readiness Checklist */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 py-3 border-y border-[var(--border)] dark:border-[#29374C] text-xs">
-                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E]">
-                    <BookOpen size={16} className="text-[#FF7277] shrink-0" />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 py-3 border-y border-[var(--border)] dark:border-[var(--border)] text-xs">
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)]">
+                    <BookOpen size={16} className="text-[var(--accent-link)] shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
+                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 block">
                         {locale === 'uz' ? 'Bilimlar bazasi' : 'База знаний'}
                       </span>
-                      <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block">
+                      <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate block">
                         {agent.priceList.trim()
                           ? (locale === 'uz' ? 'Qo‘shilgan' : 'Добавлена')
                           : (locale === 'uz' ? 'To‘ldirish kerak' : 'Нужно заполнить')}
@@ -257,25 +252,25 @@ function AgentList() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E]">
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)]">
                     <Plug size={16} className="text-[#229ED9] shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
+                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 block">
                         {locale === 'uz' ? 'Aloqa kanallari' : 'Каналы связи'}
                       </span>
-                      <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block" title={statusInfo.primaryChannelText}>
+                      <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate block" title={statusInfo.primaryChannelText}>
                         {statusInfo.channels.length > 0 ? statusInfo.primaryChannelText : (locale === 'uz' ? 'Ulanmagan' : 'Не подключены')}
                       </strong>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E]">
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)]">
                     <CalendarDays size={16} className="text-emerald-500 shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
+                      <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 block">
                         Google {locale === 'uz' ? 'Taqvim' : 'Календарь'}
                       </span>
-                      <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block">
+                      <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate block">
                         {workspace?.googleCalendarConnected && agent.googleCalendarEnabled
                           ? (locale === 'uz' ? 'Sinxronlangan' : 'Синхронизирован')
                           : (locale === 'uz' ? 'Ulanmagan' : 'Не подключён')}
@@ -340,14 +335,14 @@ function AgentList() {
 
           {/* Right Column: Tips & Next Steps */}
           <div className="xl:col-span-4 space-y-5">
-            <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 shadow-xs space-y-4">
-              <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+            <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-5 shadow-xs space-y-4">
+              <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {locale === 'uz' ? 'Ishga tushirish bo‘yicha tavsiyalar' : 'Рекомендации по запуску'}
               </h3>
 
               <div className="space-y-3 text-xs leading-relaxed">
-                <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-                  <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] block mb-1">
+                <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+                  <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] block mb-1">
                     {locale === 'uz' ? '1. Aniq narxlar ro‘yxati' : '1. Актуальный прайс-лист'}
                   </strong>
                   {locale === 'uz'
@@ -355,8 +350,8 @@ function AgentList() {
                     : 'Укажите точные цены, длительность услуг и правила записи, чтобы ИИ отвечал клиентам уверенно.'}
                 </div>
 
-                <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-                  <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] block mb-1">
+                <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+                  <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] block mb-1">
                     {locale === 'uz' ? '2. Saralash savollari' : '2. Квалификационные вопросы'}
                   </strong>
                   {locale === 'uz'
@@ -364,8 +359,8 @@ function AgentList() {
                     : 'Задайте 2–3 вопроса для определения потребностей клиента (например: город, бюджет, удобный день).'}
                 </div>
 
-                <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-                  <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] block mb-1">
+                <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+                  <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] block mb-1">
                     {locale === 'uz' ? '3. Test-drayv orqali tekshirish' : '3. Проверка через тест-драйв'}
                   </strong>
                   {locale === 'uz'
@@ -376,7 +371,7 @@ function AgentList() {
 
               <Link
                 href="/dashboard/integrations"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF7277] hover:underline pt-1"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-link)] hover:underline pt-1"
               >
                 <span>{locale === 'uz' ? 'Integratsiyalar katalogiga o‘tish' : 'Перейти в каталог интеграций'}</span>
                 <ArrowRight size={14} />
@@ -439,7 +434,7 @@ function AgentEditor({
       open
       onClose={closeEditor}
       label={locale === 'uz' ? 'AI-xodimni sozlash' : 'Настройка ИИ-сотрудника'}
-      className="w-[calc(100vw-32px)] sm:w-[600px] max-w-[600px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+      className="w-[calc(100vw-32px)] sm:w-[600px] max-w-[600px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[var(--border)] shadow-2xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)]"
     >
       <form
         className="p-5 sm:p-6 space-y-4"
@@ -479,8 +474,8 @@ function AgentEditor({
           }
         }}
       >
-        <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3">
-          <h2 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+        <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[var(--border)] pb-3">
+          <h2 className="font-bold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
             {locale === 'uz' ? `${agent.name} xodimini sozlash` : `Настройка сотрудника ${agent.name}`}
           </h2>
           <Button
@@ -503,12 +498,12 @@ function AgentEditor({
           />
 
           <div>
-            <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] mb-1.5">
+            <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] mb-1.5">
               {locale === 'uz' ? 'Xizmatlar, narxlar va qoidalar' : 'Услуги, прайс-лист и регламенты'}
             </label>
             <textarea
               rows={4}
-              className="w-full border border-[var(--border)] dark:border-[#29374C] rounded-xl bg-[var(--surface-secondary)] dark:bg-[#101B2E] p-3 text-xs text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
+              className="w-full border border-[var(--border)] dark:border-[var(--border)] rounded-xl bg-[var(--surface-secondary)] dark:bg-[var(--surface)] p-3 text-xs text-[var(--text-primary)] dark:text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
               value={knowledge}
               onChange={(e) => setKnowledge(e.target.value)}
               placeholder={locale === 'uz' ? 'Mahsulotlar, xizmatlar, narxlar, manzil va tez-tez so‘raladigan savollarni tavsiflang...' : 'Опишите товары, услуги, цены, адрес и часто задаваемые вопросы...'}
@@ -516,12 +511,12 @@ function AgentEditor({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] mb-1.5">
+            <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] mb-1.5">
               {locale === 'uz' ? 'Saralash savollari (har bir qatorda bittadan)' : 'Вопросы квалификации (по одному на строке)'}
             </label>
             <textarea
               rows={3}
-              className="w-full border border-[var(--border)] dark:border-[#29374C] rounded-xl bg-[var(--surface-secondary)] dark:bg-[#101B2E] p-3 text-xs text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
+              className="w-full border border-[var(--border)] dark:border-[var(--border)] rounded-xl bg-[var(--surface-secondary)] dark:bg-[var(--surface)] p-3 text-xs text-[var(--text-primary)] dark:text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
               value={questions}
               onChange={(e) => setQuestions(e.target.value)}
               placeholder={locale === 'uz' ? 'Sizni qaysi xizmat qiziqtiradi?&#10;Tashrif uchun qaysi kun qulay?' : 'Какая услуга вас интересует?&#10;Какой день удобен для визита?'}
@@ -529,12 +524,12 @@ function AgentEditor({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] mb-1.5">
+            <label className="block text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] mb-1.5">
               {locale === 'uz' ? 'Xodim uchun ko‘rsatmalar (tizimli promt)' : 'Инструкции сотруднику (системный промпт)'}
             </label>
             <textarea
               rows={4}
-              className="w-full border border-[var(--border)] dark:border-[#29374C] rounded-xl bg-[var(--surface-secondary)] dark:bg-[#101B2E] p-3 text-xs text-[var(--text-primary)] dark:text-[#F4F7FB] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] font-mono"
+              className="w-full border border-[var(--border)] dark:border-[var(--border)] rounded-xl bg-[var(--surface-secondary)] dark:bg-[var(--surface)] p-3 text-xs text-[var(--text-primary)] dark:text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] font-mono"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               required
@@ -542,7 +537,7 @@ function AgentEditor({
           </div>
         </div>
 
-        <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[#29374C]">
+        <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[var(--border)]">
           <Button type="button" variant="ghost" onClick={closeEditor} disabled={saving}>
             {t.common.cancel}
           </Button>
@@ -551,7 +546,7 @@ function AgentEditor({
             variant="primary"
             isLoading={saving}
             disabled={!dirty}
-            className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
+            className="bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs"
           >
             {t.common.save}
           </Button>

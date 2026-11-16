@@ -4,7 +4,8 @@
  */
 
 const assert = require('assert');
-const path = require('path');
+const loader = require('./helpers/load-typescript.cjs');
+const load = loader(process.env);
 
 // Set dummy env vars for isolated test execution
 process.env.NODE_ENV = 'test';
@@ -16,7 +17,7 @@ async function runTests() {
 
   // 1. Test Knowledge Base
   console.log('--- 1. Knowledge Base & Search ---');
-  const { PLATFORM_KNOWLEDGE, searchPlatformKnowledge } = await import('../lib/assistant/knowledge.ts');
+  const { PLATFORM_KNOWLEDGE, searchPlatformKnowledge } = load('lib/assistant/knowledge.ts');
 
   assert(Array.isArray(PLATFORM_KNOWLEDGE) && PLATFORM_KNOWLEDGE.length >= 10, 'Knowledge base must contain at least 10 core sections');
   console.log(`✅ PASS: Knowledge base contains ${PLATFORM_KNOWLEDGE.length} verified sections`);
@@ -44,7 +45,7 @@ async function runTests() {
 
   // 2. Test Assistant Tools & Diagnostics
   console.log('\n--- 2. Assistant Diagnostic & Action Tools ---');
-  const { prepareSupportTicketAction, executeSupportTicketCreation } = await import('../lib/assistant/tools.ts');
+  const { prepareSupportTicketAction } = load('lib/assistant/tools.ts');
 
   const mockDiagnostics = {
     workspaceId: 'ws_test_123',
@@ -96,7 +97,7 @@ async function runTests() {
 
   // 3. Test Wizard Archetypes & Initial Drafts
   console.log('\n--- 3. AI Setup Wizard Archetypes & Draft Schema ---');
-  const { ARCHETYPES, createInitialDraft } = await import('../lib/wizard/archetypes.ts');
+  const { ARCHETYPES, createInitialDraft } = load('lib/wizard/archetypes.ts');
 
   const niches = ['courses', 'marketing', 'services', 'other'];
   for (const n of niches) {
@@ -120,7 +121,7 @@ async function runTests() {
 
   // 4. Test Prompt Compilation
   console.log('\n--- 4. Prompt Compilation from Draft ---');
-  const { compileAgentDraft } = await import('../lib/wizard/prompt-builder.ts');
+  const { compileAgentDraft } = load('lib/wizard/prompt-builder.ts');
 
   const draftToCompile = createInitialDraft('courses', 'ru');
   draftToCompile.name = 'Менеджер Академии';

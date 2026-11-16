@@ -83,8 +83,8 @@ export async function POST(req: NextRequest) {
         googleCalendarConnected: body.googleCalendarConnected ?? false,
         isActive: body.isActive ?? true,
       }, maxAgents);
-    } catch (createErr: any) {
-      if (createErr.message === 'AGENT_LIMIT_REACHED') {
+    } catch (createErr: unknown) {
+      if (createErr instanceof Error && createErr.message === 'AGENT_LIMIT_REACHED') {
         return NextResponse.json(
           {
             success: false,

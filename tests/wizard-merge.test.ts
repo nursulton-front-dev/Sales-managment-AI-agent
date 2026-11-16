@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { mergeAssistantDraft } from '../lib/wizard/merge-draft';
+import { createInitialDraft } from '../lib/wizard/archetypes';
+const initial = createInitialDraft('courses', 'ru');
+const edited = { ...initial, name: 'Ручное имя', servicesAndPricing: 'Ручные цены', qualificationQuestions: ['Ручной вопрос'] };
+const answer = { ...initial, name: 'Имя ИИ', servicesAndPricing: 'Цены ИИ', qualificationQuestions: ['Вопрос ИИ'], currentStep: 2 as const };
+const merged = mergeAssistantDraft(edited, answer, {}, { name: 1, servicesAndPricing: 2, qualificationQuestions: 3 });
+assert.equal(merged.name, edited.name);
+assert.equal(merged.servicesAndPricing, edited.servicesAndPricing);
+assert.deepEqual(merged.qualificationQuestions, edited.qualificationQuestions);
+assert.equal(merged.currentStep, 2);
+assert.equal(mergeAssistantDraft(initial, answer, {}, { name: 2 }).name, initial.name);
+assert.equal(mergeAssistantDraft(initial, answer, {}, {}).name, 'Имя ИИ');
+console.log('Draft merge: manual edits preserved, including edits changed back');

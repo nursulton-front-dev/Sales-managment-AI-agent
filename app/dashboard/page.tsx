@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useApp } from '@/context/AppContext';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SparrowMascot } from '@/components/ui/SparrowMascot';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { DataState } from '@/components/ui/DataState';
@@ -20,11 +21,7 @@ import {
   Headphones,
   ArrowRight,
   X,
-  UserRound,
-  Sparkles,
-  Zap,
   AlertTriangle,
-  Eye,
 } from 'lucide-react';
 import { getWorkspaceChannelsSummary } from '@/lib/channels/status';
 
@@ -33,6 +30,7 @@ export default function DashboardOverviewPage() {
     leads,
     agents,
     workspace,
+    setWorkspace,
     activeAgent,
     openSandbox,
     emailVerified,
@@ -77,7 +75,10 @@ export default function DashboardOverviewPage() {
       });
       setForceShowQuickStart(!dismiss);
       if (workspace) {
-        workspace.settings = { ...(workspace.settings || {}), quickStartDismissed: dismiss };
+        setWorkspace({
+          ...workspace,
+          settings: { ...(workspace.settings || {}), quickStartDismissed: dismiss },
+        });
       }
     } catch {
       // ignore
@@ -115,18 +116,18 @@ export default function DashboardOverviewPage() {
 
       {/* Email Verification Banner */}
       {!emailVerified && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-[#142137] dark:border-amber-500/30 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-[var(--surface-secondary)] dark:border-amber-500/30 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
               <Mail size={20} />
             </div>
             <div>
-              <p className="font-semibold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <p className="font-semibold text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {locale === 'uz'
                   ? 'Bonus hisoblanishi uchun emailingizni tasdiqlang'
                   : 'Подтвердите ваш email для начисления бонуса'}
               </p>
-              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+              <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                 {locale === 'uz'
                   ? 'Manzil tasdiqlangandan so‘ng hisobingizga 100 ta bepul test AI-javoblari o‘tkaziladi.'
                   : 'После подтверждения адреса на ваш счёт будут начислены 100 тестовых ИИ-ответов.'}
@@ -152,52 +153,52 @@ export default function DashboardOverviewPage() {
           className="grid grid-cols-1 sm:grid-cols-3 gap-4"
           aria-label={locale === 'uz' ? 'Kompaniya ko‘rsatkichlari' : 'Показатели компании'}
         >
-          <div className="p-5 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex items-center gap-4 shadow-xs">
+          <div className="p-5 rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] flex items-center gap-4 shadow-xs">
             <div className="size-12 rounded-xl bg-blue-500/10 text-[#229ED9] flex items-center justify-center shrink-0 border border-blue-500/20">
               <Users size={22} />
             </div>
             <div>
-              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+              <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                 {locale === 'uz' ? 'Voronkadagi lidlar' : 'Лиды в воронке'}
               </p>
-              <p className="text-3xl font-extrabold text-[var(--text-primary)] dark:text-[#F4F7FB] my-0.5 tabular-nums">
+              <p className="text-3xl font-extrabold text-[var(--text-primary)] dark:text-[var(--text-primary)] my-0.5 tabular-nums">
                 {leads.length}
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+              <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                 {locale === 'uz' ? 'Jami murojaatlar' : 'Всего обращений'}
               </p>
             </div>
           </div>
 
-          <div className="p-5 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex items-center gap-4 shadow-xs">
+          <div className="p-5 rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] flex items-center gap-4 shadow-xs">
             <div className="size-12 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
               <CalendarDays size={22} />
             </div>
             <div>
-              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+              <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                 {locale === 'uz' ? 'Uchrashuvlarga yozuvlar' : 'Записи на встречи'}
               </p>
-              <p className="text-3xl font-extrabold text-[var(--text-primary)] dark:text-[#F4F7FB] my-0.5 tabular-nums">
+              <p className="text-3xl font-extrabold text-[var(--text-primary)] dark:text-[var(--text-primary)] my-0.5 tabular-nums">
                 {booked}
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+              <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                 {locale === 'uz' ? 'Taqvimdagi band joylar' : 'Слоты в календаре'}
               </p>
             </div>
           </div>
 
-          <div className="p-5 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex items-center gap-4 shadow-xs">
-            <div className="size-12 rounded-xl bg-red-500/10 text-[#FF7277] flex items-center justify-center shrink-0 border border-red-500/20">
+          <div className="p-5 rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] flex items-center gap-4 shadow-xs">
+            <div className="size-12 rounded-xl bg-red-500/10 text-[var(--accent-link)] flex items-center justify-center shrink-0 border border-red-500/20">
               <ChartNoAxesColumn size={22} />
             </div>
             <div>
-              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+              <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                 {locale === 'uz' ? 'Yozuvga konversiya' : 'Конверсия в запись'}
               </p>
-              <p className="text-3xl font-extrabold text-[var(--text-primary)] dark:text-[#F4F7FB] my-0.5 tabular-nums">
+              <p className="text-3xl font-extrabold text-[var(--text-primary)] dark:text-[var(--text-primary)] my-0.5 tabular-nums">
                 {leads.length ? `${((booked / leads.length) * 100).toFixed(1)}%` : '—'}
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+              <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                 {locale === 'uz' ? 'Saralanganlar ulushi' : 'Доля квалифицированных'}
               </p>
             </div>
@@ -237,12 +238,12 @@ export default function DashboardOverviewPage() {
                     <Check size={20} strokeWidth={2.5} />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    <h3 className="font-semibold text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       {locale === 'uz'
                         ? 'Tezkor boshlash yakunlandi · gapcha AI ishlashga tayyor'
                         : 'Быстрый старт завершён · gapcha AI готов к работе'}
                     </h3>
-                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       {locale === 'uz'
                         ? 'Xodim o‘qitilgan, aloqa kanali faol va sinovdan o‘tgan. Kiruvchi arizalar kechayu kunduz qabul qilinadi.'
                         : 'Сотрудник обучен, канал связи активен и протестирован. Входящие заявки принимаются круглосуточно.'}
@@ -264,29 +265,29 @@ export default function DashboardOverviewPage() {
           ) : (
             <>
               {/* Launch Hero Banner with Illustration */}
-              <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs overflow-hidden relative">
+              <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-6 shadow-xs overflow-hidden relative">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                   <div className="space-y-3 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-[#FF7277] border border-red-500/20">
+                      <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-[var(--accent-link)] border border-red-500/20">
                         {locale === 'uz' ? 'Tezkor boshlash' : 'Быстрый старт'}
                       </span>
                       <button
                         type="button"
                         disabled={dismissing}
                         onClick={() => void handleToggleQuickStart(true)}
-                        className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[#AABAD0] dark:hover:text-[#F4F7FB] transition-colors cursor-pointer"
+                        className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[var(--text-secondary)] dark:hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                         title={locale === 'uz' ? 'Tezkor boshlash blokini yashirish' : 'Скрыть блок быстрого старта'}
                       >
                         {locale === 'uz' ? 'Yo‘riqnomani yashirish' : 'Скрыть инструкцию'}
                       </button>
                     </div>
-                    <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       {locale === 'uz'
                         ? 'Birinchi AI-xodimni ishga tushiring'
                         : 'Запустите первого ИИ-сотрудника'}
                     </h2>
-                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
                       {locale === 'uz'
                         ? 'Yordamchini kompaniya narxlari bo‘yicha o‘qiting, aloqa kanalini ulang va arizalarni kechayu kunduz qabul qiling.'
                         : 'Обучите ассистента на прайсе компании, подключите канал связи и принимайте заявки круглосуточно.'}
@@ -294,7 +295,7 @@ export default function DashboardOverviewPage() {
                     <div className="pt-1 flex items-center gap-3">
                       <Link
                         href={agents.length ? '/dashboard/agents' : '/dashboard/agents/new'}
-                        className="px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs shadow-xs transition-all inline-flex items-center gap-1.5"
+                        className="px-4 py-2 rounded-xl bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs shadow-xs transition-all inline-flex items-center gap-1.5"
                       >
                         <span>
                           {agents.length
@@ -316,22 +317,15 @@ export default function DashboardOverviewPage() {
 
                   {/* Decorative Image */}
                   <div className="shrink-0 w-44 sm:w-56 h-36 relative flex items-center justify-center">
-                    <Image
-                      src="/illustrations/gapchi-ai/onboarding-conversations.png"
-                      alt=""
-                      width={220}
-                      height={150}
-                      className="object-contain max-h-36 drop-shadow-md"
-                      priority
-                    />
+                    <SparrowMascot variant="hello" size={112} priority />
                   </div>
                 </div>
               </div>
 
               {/* Stepper Checklist */}
-              <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs">
+              <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-6 shadow-xs">
                 <div className="flex items-center justify-between gap-2 mb-4">
-                  <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {locale === 'uz' ? 'Sotuvni sozlash bosqichlari' : 'Этапы настройки продаж'}
                   </h3>
                   {forceShowQuickStart && (
@@ -377,22 +371,22 @@ export default function DashboardOverviewPage() {
                     ].map((step, idx) => (
                       <li
                         key={step.title}
-                        className="flex items-start gap-3.5 p-3.5 rounded-xl bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]"
+                        className="flex items-start gap-3.5 p-3.5 rounded-xl bg-[var(--surface-secondary)]/40 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]"
                       >
                         <span
                           className={`size-7 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs mt-0.5 ${
                             step.done
                               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
-                              : 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-secondary)] dark:text-[#AABAD0] border border-[var(--border)] dark:border-[#29374C]'
+                              : 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] border border-[var(--border)] dark:border-[var(--border)]'
                           }`}
                         >
                           {step.done ? <Check size={16} strokeWidth={2.5} /> : idx + 1}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-xs text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                          <p className="font-semibold text-xs text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                             {step.title}
                           </p>
-                          <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                          <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                             {step.note}
                           </p>
                         </div>
@@ -401,7 +395,7 @@ export default function DashboardOverviewPage() {
                             {step.href ? (
                               <Link
                                 href={step.href}
-                                className="text-xs font-semibold text-[#FF7277] hover:underline inline-flex items-center gap-1"
+                                className="text-xs font-semibold text-[var(--accent-link)] hover:underline inline-flex items-center gap-1"
                               >
                                 <span>{step.action}</span>
                                 <ArrowRight size={12} />
@@ -410,7 +404,7 @@ export default function DashboardOverviewPage() {
                               <button
                                 type="button"
                                 onClick={() => openSandbox()}
-                                className="text-xs font-semibold text-[#FF7277] hover:underline cursor-pointer"
+                                className="text-xs font-semibold text-[var(--accent-link)] hover:underline cursor-pointer"
                               >
                                 {step.action}
                               </button>
@@ -430,28 +424,28 @@ export default function DashboardOverviewPage() {
         <div className="xl:col-span-5 space-y-5">
           {/* Active Agent Card */}
           {activeAgent && (
-            <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 shadow-xs">
+            <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-5 shadow-xs">
               <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                   {locale === 'uz' ? 'Asosiy xodim' : 'Основной сотрудник'}
                 </span>
                 <Link
                   href={`/dashboard/agents?edit=${activeAgent.id}`}
-                  className="text-xs font-semibold text-[#FF7277] hover:underline"
+                  className="text-xs font-semibold text-[var(--accent-link)] hover:underline"
                 >
                   {locale === 'uz' ? 'Sozlash →' : 'Настроить →'}
                 </Link>
               </div>
 
-              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-                <div className="size-11 rounded-xl bg-red-500/10 text-[#FF7277] flex items-center justify-center shrink-0 border border-red-500/20 font-bold">
+              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+                <div className="size-11 rounded-xl bg-red-500/10 text-[var(--accent-link)] flex items-center justify-center shrink-0 border border-red-500/20 font-bold">
                   AI
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB] truncate">
+                  <p className="font-bold text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate">
                     {activeAgent.name}
                   </p>
-                  <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] truncate">
+                  <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] truncate">
                     {activeAgent.niche}
                   </p>
                 </div>
@@ -467,16 +461,16 @@ export default function DashboardOverviewPage() {
           )}
 
           {/* Recent Leads Activity Card */}
-          <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 shadow-xs flex flex-col justify-between">
+          <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-5 shadow-xs flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between gap-2 mb-3">
-                <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {locale === 'uz' ? 'So‘nggi murojaatlar' : 'Последние обращения'}
                 </h3>
                 {leads.length > 0 && (
                   <Link
                     href="/dashboard/leads"
-                    className="text-xs font-semibold text-[#FF7277] hover:underline"
+                    className="text-xs font-semibold text-[var(--accent-link)] hover:underline"
                   >
                     {locale === 'uz' ? 'Barcha lidlar →' : 'Все лиды →'}
                   </Link>
@@ -484,7 +478,7 @@ export default function DashboardOverviewPage() {
               </div>
 
               {leadsLoading || leadsError ? (
-                <p className="py-8 text-center text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                <p className="py-8 text-center text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {locale === 'uz' ? 'Ma\'lumotlar yuklanmoqda…' : 'Загрузка данных…'}
                 </p>
               ) : recent.length > 0 ? (
@@ -497,11 +491,11 @@ export default function DashboardOverviewPage() {
                       <div className="min-w-0 flex-1">
                         <Link
                           href="/dashboard/leads"
-                          className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] hover:text-[#FF7277] block truncate"
+                          className="font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] hover:text-[var(--accent-link)] block truncate"
                         >
                           {lead.clientName}
                         </Link>
-                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                           {lead.channel} · {lead.contact}
                         </span>
                       </div>
@@ -527,17 +521,17 @@ export default function DashboardOverviewPage() {
                       className="object-contain max-h-20"
                     />
                   </div>
-                  <h4 className="font-semibold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <h4 className="font-semibold text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {locale === 'uz' ? 'Hozircha murojaatlar yo‘q' : 'Пока нет обращений'}
                   </h4>
-                  <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-xs mx-auto">
+                  <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">
                     {locale === 'uz'
                       ? 'Kiruvchi arizalar shu yerda ko‘rinishi uchun aloqa kanalini ulang.'
                       : 'Подключите канал связи, чтобы входящие заявки появлялись здесь.'}
                   </p>
                   <Link
                     href="/dashboard/integrations"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF7277] hover:underline mt-3"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-link)] hover:underline mt-3"
                   >
                     <span>{locale === 'uz' ? 'Integratsiyalarga o‘tish' : 'Перейти к интеграциям'}</span>
                     <ArrowRight size={12} />
@@ -550,16 +544,16 @@ export default function DashboardOverviewPage() {
           {/* Help Support Row */}
           <Link
             href="/dashboard/support"
-            className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] hover:bg-[var(--surface-secondary)]/50 dark:hover:bg-[#101B2E] p-4 flex items-center gap-3.5 transition-colors shadow-2xs group"
+            className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] hover:bg-[var(--surface-secondary)]/50 dark:hover:bg-[var(--surface)] p-4 flex items-center gap-3.5 transition-colors shadow-2xs group"
           >
-            <div className="size-10 rounded-xl bg-slate-100 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] flex items-center justify-center text-[var(--text-secondary)] dark:text-[#AABAD0] group-hover:text-[#FF7277] transition-colors shrink-0">
+            <div className="size-10 rounded-xl bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] dark:text-[var(--text-secondary)] group-hover:text-[var(--accent-link)] transition-colors shrink-0">
               <Headphones size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-xs text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <p className="font-semibold text-xs text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {locale === 'uz' ? 'Boshlashda yordam kerakmi?' : 'Нужна помощь с запуском?'}
               </p>
-              <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] truncate">
+              <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] truncate">
                 {locale === 'uz'
                   ? 'Yordamga yozing — xodimni bepul sozlab beramiz'
                   : 'Напишите в поддержку — поможем настроить сотрудника бесплатно'}
@@ -567,7 +561,7 @@ export default function DashboardOverviewPage() {
             </div>
             <ArrowRight
               size={15}
-              className="text-[var(--text-muted)] dark:text-[#AABAD0] group-hover:text-[#FF7277] shrink-0"
+              className="text-[var(--text-muted)] dark:text-[var(--text-secondary)] group-hover:text-[var(--accent-link)] shrink-0"
             />
           </Link>
         </div>
@@ -580,7 +574,7 @@ export default function DashboardOverviewPage() {
           if (!saving) setVerifyOpen(false);
         }}
         label={locale === 'uz' ? 'Emailni tasdiqlash' : 'Подтверждение email'}
-        className="w-[calc(100vw-32px)] sm:w-[440px] max-w-[440px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+        className="w-[calc(100vw-32px)] sm:w-[440px] max-w-[440px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[var(--border)] shadow-2xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)]"
       >
         <form
           className="p-5 sm:p-6 space-y-4"
@@ -598,8 +592,8 @@ export default function DashboardOverviewPage() {
             }
           }}
         >
-          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3">
-            <h3 className="text-base font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[var(--border)] pb-3">
+            <h3 className="text-base font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
               {locale === 'uz' ? 'Emailni tasdiqlang' : 'Подтвердите email'}
             </h3>
             <Button
@@ -613,11 +607,11 @@ export default function DashboardOverviewPage() {
             </Button>
           </div>
 
-          <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+          <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
             {locale === 'uz' ? (
               <>
                 Ushbu manzilga yuborilgan 6 xonali tasdiqlash kodini kiriting:{' '}
-                <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {user?.email}
                 </strong>
                 .
@@ -625,7 +619,7 @@ export default function DashboardOverviewPage() {
             ) : (
               <>
                 Введите 6-значный проверочный код, отправленный на адрес{' '}
-                <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {user?.email}
                 </strong>
                 .
@@ -646,7 +640,7 @@ export default function DashboardOverviewPage() {
             className="font-mono text-center tracking-widest text-lg"
           />
 
-          <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--border)] dark:border-[var(--border)]">
             <Button
               type="button"
               variant="ghost"
@@ -668,7 +662,7 @@ export default function DashboardOverviewPage() {
               type="submit"
               variant="primary"
               isLoading={saving}
-              className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
+              className="bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs"
             >
               {locale === 'uz' ? 'Tasdiqlash' : 'Подтвердить'}
             </Button>

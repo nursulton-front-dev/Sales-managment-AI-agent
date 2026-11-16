@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 const assert = require('node:assert/strict');
 const { NextResponse } = require('next/server');
 const loader = require('./helpers/load-typescript.cjs');

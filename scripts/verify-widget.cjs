@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Isolated browser acceptance runner. */
 const http = require('node:http');
 const fs = require('node:fs');
 const os = require('node:os');

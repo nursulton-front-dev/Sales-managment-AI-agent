@@ -51,10 +51,64 @@ export interface WorkspaceChannelsSummary {
   disconnectedAlerts: string[];
 }
 
+export interface WorkspaceChannelData {
+  id?: string;
+  telegramBusinessConnected?: boolean;
+  telegramBusinessUserId?: string | number | null;
+  telegramBusinessEnabled?: boolean;
+  telegramBusinessCanReply?: boolean;
+  telegramBusinessAgentId?: string | null;
+  telegramBusinessUsername?: string | null;
+  instagramConnected?: boolean;
+  instagramUserId?: string | null;
+  instagramAccountId?: string | null;
+  instagramUsername?: string | null;
+  instagramEnabled?: boolean;
+  instagramAutoReply?: boolean;
+  instagramAgentId?: string | null;
+  instagramTokenExpired?: boolean;
+  instagramStatus?: string | null;
+  instagramLastError?: string | null;
+  googleCalendarConnected?: boolean;
+  googleRefreshToken?: string | null;
+  googleCalendarEmail?: string | null;
+  googleCalendarWorkingHours?: string | null;
+  googleCalendarSlotDuration?: number | null;
+  settings?: Record<string, unknown> | null;
+}
+
+export interface AgentChannelData {
+  id: string;
+  name?: string;
+  isActive?: boolean;
+  telegramBotToken?: string | null;
+  telegramBotUsername?: string | null;
+  telegramUsername?: string | null;
+  telegramToken?: string | null;
+  tgBotToken?: string | null;
+  telegramConnected?: boolean;
+  googleCalendarConnected?: boolean;
+}
+
+export interface WidgetChannelData {
+  id?: string;
+  domain?: string | null;
+  allowedOrigins?: string[];
+  isEnabled?: boolean;
+  assignedAgentId?: string | null;
+  enabled?: boolean;
+  agentId?: string | null;
+  lastSeenAt?: string | Date | null;
+  lastSeenOrigin?: string | null;
+}
+
 /**
  * Resolves Telegram Business status for a workspace
  */
-export function resolveTelegramBusinessStatus(workspace: any, agents: any[] = []): ChannelStatusInfo {
+export function resolveTelegramBusinessStatus(
+  workspace: WorkspaceChannelData | null | undefined,
+  agents: AgentChannelData[] = []
+): ChannelStatusInfo {
   const isConnected = Boolean(workspace?.telegramBusinessConnected && workspace?.telegramBusinessUserId);
   const isEnabled = Boolean(workspace?.telegramBusinessEnabled);
   const canReply = Boolean(workspace?.telegramBusinessCanReply);
@@ -127,7 +181,10 @@ export function resolveTelegramBusinessStatus(workspace: any, agents: any[] = []
 /**
  * Resolves Instagram Direct status for a workspace
  */
-export function resolveInstagramStatus(workspace: any, agents: any[] = []): ChannelStatusInfo {
+export function resolveInstagramStatus(
+  workspace: WorkspaceChannelData | null | undefined,
+  agents: AgentChannelData[] = []
+): ChannelStatusInfo {
   const isConnected = Boolean(workspace?.instagramConnected && workspace?.instagramUserId);
   const autoReply = Boolean(workspace?.instagramAutoReply);
   const statusStr = (workspace?.instagramStatus || 'disconnected').toLowerCase();
@@ -216,7 +273,10 @@ export function resolveInstagramStatus(workspace: any, agents: any[] = []): Chan
 /**
  * Resolves WebWidget (Чат на сайте) status
  */
-export function resolveWebWidgetStatus(widget: any, agents: any[] = []): ChannelStatusInfo {
+export function resolveWebWidgetStatus(
+  widget: WidgetChannelData | null | undefined,
+  agents: AgentChannelData[] = []
+): ChannelStatusInfo {
   if (!widget) {
     return {
       id: 'web_widget',
@@ -274,7 +334,7 @@ export function resolveWebWidgetStatus(widget: any, agents: any[] = []): Channel
 /**
  * Resolves Google Calendar status (SCHEDULING integration, not a messaging channel)
  */
-export function resolveGoogleCalendarStatus(workspace: any): ChannelStatusInfo {
+export function resolveGoogleCalendarStatus(workspace: WorkspaceChannelData | null | undefined): ChannelStatusInfo {
   const isConnected = Boolean(workspace?.googleCalendarConnected && workspace?.googleRefreshToken);
   const email = workspace?.googleCalendarEmail || null;
 
@@ -308,7 +368,11 @@ export function resolveGoogleCalendarStatus(workspace: any): ChannelStatusInfo {
 /**
  * Resolves full channel summary for a specific agent
  */
-export function getAgentChannelStatuses(agent: any, workspace: any, widget: any = null): AgentChannelSummary {
+export function getAgentChannelStatuses(
+  agent: AgentChannelData,
+  workspace: WorkspaceChannelData | null | undefined,
+  widget: WidgetChannelData | null | undefined = null
+): AgentChannelSummary {
   const channels: ChannelStatusInfo[] = [];
 
   // 1. Custom Telegram Bot (assigned directly to agent)
@@ -400,9 +464,9 @@ export function getAgentChannelStatuses(agent: any, workspace: any, widget: any 
  * Resolves full workspace-level channels summary for Dashboard Overview and Metrics
  */
 export function getWorkspaceChannelsSummary(
-  workspace: any,
-  agents: any[] = [],
-  widget: any = null
+  workspace: WorkspaceChannelData | null | undefined,
+  agents: AgentChannelData[] = [],
+  widget: WidgetChannelData | null | undefined = null
 ): WorkspaceChannelsSummary {
   const tgBusiness = resolveTelegramBusinessStatus(workspace, agents);
   const instagram = resolveInstagramStatus(workspace, agents);

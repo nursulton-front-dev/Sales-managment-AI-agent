@@ -118,7 +118,6 @@ async function runBackup() {
     agents = await sql`SELECT * FROM agents WHERE workspace_id = ${targetWorkspaceId}`;
     websiteWidgets = await sql`SELECT * FROM website_widgets WHERE workspace_id = ${targetWorkspaceId}`;
   } else {
-    workspaces;
     agents = await sql`SELECT * FROM agents`;
     conversations = await sql`SELECT * FROM conversations`;
     messages = await sql`SELECT * FROM messages`;

@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useApp } from '@/context/AppContext';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card, CardBody } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -14,12 +13,7 @@ import { useUnsavedChanges } from '@/lib/useUnsavedChanges';
 import {
   Building2,
   Users,
-  CalendarDays,
-  CreditCard,
   ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
-  Clock,
 } from 'lucide-react';
 
 type Company = {
@@ -47,7 +41,8 @@ export default function CompanyPage() {
   );
   useUnsavedChanges(dirty);
 
-  const load = async () => {
+  const reload = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch('/api/workspace/settings');
       const data = await res.json();
@@ -64,10 +59,38 @@ export default function CompanyPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    void load();
+    let ignore = false;
+    async function fetchCompany() {
+      try {
+        const res = await fetch('/api/workspace/settings');
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error('Не удалось загрузить компанию');
+        if (!ignore) {
+          setCompany(data.workspace);
+          setForm({
+            companyName: data.workspace.companyName || '',
+            ownerPhone: data.workspace.ownerPhone || '',
+            niche: data.workspace.niche || '',
+          });
+          setError(null);
+        }
+      } catch (failure) {
+        if (!ignore) {
+          setError(failure instanceof Error ? failure.message : 'Ошибка сети');
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    void fetchCompany();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   return (
@@ -78,7 +101,7 @@ export default function CompanyPage() {
       />
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 p-1 bg-[var(--surface-secondary)]/70 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-2xl w-fit">
+      <div className="flex items-center gap-1 p-1 bg-[var(--surface-secondary)]/70 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] rounded-2xl w-fit">
         {[
           { id: 'company', label: locale === 'uz' ? 'Kompaniya' : 'Компания', icon: Building2 },
           { id: 'team', label: locale === 'uz' ? 'Jamoa' : 'Команда', icon: Users },
@@ -93,8 +116,8 @@ export default function CompanyPage() {
               onClick={() => setTab(tabItem.id as 'company' | 'team')}
               className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs'
-                  : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)]'
+                  ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-xs'
+                  : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
               <Icon size={16} />
@@ -104,7 +127,7 @@ export default function CompanyPage() {
         })}
       </div>
 
-      <DataState loading={loading} error={error} retry={load} />
+      <DataState loading={loading} error={error} retry={reload} />
 
       {!loading && !error && company && (
         <>
@@ -112,12 +135,12 @@ export default function CompanyPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Left Column: Edit Company Form */}
               <div className="lg:col-span-8">
-                <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs space-y-5">
-                  <div className="border-b border-[var(--border)] dark:border-[#29374C] pb-3">
-                    <h2 className="text-base font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-6 shadow-xs space-y-5">
+                  <div className="border-b border-[var(--border)] dark:border-[var(--border)] pb-3">
+                    <h2 className="text-base font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       {locale === 'uz' ? 'Tashkilot ma\'lumotlari' : 'Информация об организации'}
                     </h2>
-                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz'
                         ? 'Bu ma\'lumotlar AI-agentlarning mijozlar bilan muloqotida tanishtirish uchun ishlatiladi.'
                         : 'Эти данные используются в диалогах ИИ-агентов при представлении клиентам.'}
@@ -191,9 +214,9 @@ export default function CompanyPage() {
                           label={locale === 'uz' ? 'Egasining emaili' : 'Email владельца'}
                           value={company.ownerEmail}
                           readOnly
-                          className="bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] cursor-not-allowed text-[var(--text-muted)]"
+                          className="bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] cursor-not-allowed text-[var(--text-muted)]"
                         />
-                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/60 mt-1 block">
+                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/60 mt-1 block">
                           {locale === 'uz' ? 'Emailni o‘zgartirish uchun yordamga murojaat qiling' : 'Для изменения email обратитесь в поддержку'}
                         </span>
                       </div>
@@ -205,7 +228,7 @@ export default function CompanyPage() {
                         variant="primary"
                         isLoading={saving}
                         disabled={!dirty}
-                        className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs"
+                        className="bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs"
                       >
                         {t.common.save}
                       </Button>
@@ -217,16 +240,16 @@ export default function CompanyPage() {
               {/* Right Column: Workspace & Calendar Cards */}
               <div className="lg:col-span-4 space-y-5">
                 {/* Workspace Card */}
-                <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 shadow-xs space-y-3">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-5 shadow-xs space-y-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                     {locale === 'uz' ? 'Ish maydoni' : 'Рабочее пространство'}
                   </span>
-                  <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] flex items-center justify-between gap-3">
+                  <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)]/60 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB] truncate">
+                      <p className="font-bold text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate">
                         {company.companyName || (locale === 'uz' ? 'Nomsiz' : 'Без названия')}
                       </p>
-                      <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                      <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                         {locale === 'uz' ? 'Tarif:' : 'Тариф'} {plan?.toUpperCase()}
                       </p>
                     </div>
@@ -234,7 +257,7 @@ export default function CompanyPage() {
                   </div>
                   <Link
                     href="/dashboard/billing"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF7277] hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-link)] hover:underline"
                   >
                     <span>{locale === 'uz' ? 'Tariflar va balansga o‘tish' : 'Перейти к тарифам и балансу'}</span>
                     <ArrowRight size={13} />
@@ -242,9 +265,9 @@ export default function CompanyPage() {
                 </div>
 
                 {/* Calendar Schedule Card */}
-                <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 shadow-xs space-y-3">
+                <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-5 shadow-xs space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="size-11 rounded-xl bg-white dark:bg-slate-800 border border-[var(--border)] dark:border-[#29374C] flex items-center justify-center shrink-0">
+                    <div className="size-11 rounded-xl bg-white dark:bg-slate-800 border border-[var(--border)] dark:border-[var(--border)] flex items-center justify-center shrink-0">
                       <Image
                         src="/integrations/google-calendar.png"
                         width={26}
@@ -254,24 +277,24 @@ export default function CompanyPage() {
                       />
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <h3 className="font-bold text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                         {locale === 'uz' ? 'Ish jadvali va mijozlar yozuvi' : 'График и запись клиентов'}
                       </h3>
-                      <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                      <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                         {workspace?.googleCalendarConnected
                           ? (locale === 'uz' ? 'Google bilan sinxronizatsiya faol' : 'Синхронизация с Google активна')
                           : (locale === 'uz' ? 'Taqvim ulanmagan' : 'Календарь не подключён')}
                       </p>
                     </div>
                   </div>
-                  <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                  <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
                     {locale === 'uz'
                       ? 'Ulanishlar katalogida ish soatlari va konsultatsiya vaqtini sozlang.'
                       : 'Настройте рабочие часы и длительность слота консультаций в каталоге подключений.'}
                   </p>
                   <Link
                     href="/dashboard/integrations"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF7277] hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-link)] hover:underline"
                   >
                     <span>{locale === 'uz' ? 'Taqvim sozlamalarini ochish' : 'Открыть настройки календаря'}</span>
                     <ArrowRight size={13} />
@@ -283,27 +306,27 @@ export default function CompanyPage() {
             /* Team Tab */
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-8">
-                <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[var(--border)] dark:border-[#29374C]">
-                    <h2 className="text-base font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-6 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[var(--border)] dark:border-[var(--border)]">
+                    <h2 className="text-base font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       {locale === 'uz' ? 'Kompaniya a\'zolari' : 'Участники компании'}
                     </h2>
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz' ? '1 a\'zo' : '1 участник'}
                     </span>
                   </div>
 
                   {/* Owner Row */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-[var(--surface-secondary)]/40 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-[var(--surface-secondary)]/40 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
                     <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-full bg-red-500/10 text-[#FF7277] font-bold text-sm flex items-center justify-center shrink-0">
+                      <div className="size-10 rounded-full bg-red-500/10 text-[var(--accent-link)] font-bold text-sm flex items-center justify-center shrink-0">
                         {company.ownerName.slice(0, 1).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <strong className="text-sm text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                        <strong className="text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                           {company.ownerName}
                         </strong>
-                        <span className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] break-all">
+                        <span className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] break-all">
                           {company.ownerEmail}
                         </span>
                       </div>
@@ -316,8 +339,8 @@ export default function CompanyPage() {
                   </div>
 
                   {/* Team Invites Roadmap Notice */}
-                  <div className="p-4 rounded-xl border border-dashed border-[var(--border)] dark:border-[#29374C] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed space-y-1">
-                    <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                  <div className="p-4 rounded-xl border border-dashed border-[var(--border)] dark:border-[var(--border)] text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed space-y-1">
+                    <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                       {locale === 'uz' ? 'Hamkasblarni taklif qilish va jamoa rollari (Roadmap)' : 'Приглашение коллег и роли команды (Roadmap)'}
                     </strong>
                     <p>
@@ -331,15 +354,15 @@ export default function CompanyPage() {
 
               {/* Right Column: Roles & Permissions */}
               <div className="lg:col-span-4">
-                <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 shadow-xs space-y-3">
-                  <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-5 shadow-xs space-y-3">
+                  <h3 className="font-bold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {locale === 'uz' ? 'Rollar va kirish huquqlari' : 'Роли и права доступа'}
                   </h3>
-                  <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] space-y-1">
-                    <strong className="text-xs font-bold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                  <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] space-y-1">
+                    <strong className="text-xs font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                       {locale === 'uz' ? 'Egasi (Owner)' : 'Владелец (Owner)'}
                     </strong>
-                    <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                    <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
                       {locale === 'uz'
                         ? 'Barcha bo‘limlarga to‘liq kirish: xodimlarni boshqarish, lidlarni ko‘rish, mijozlarga qo‘lda javob berish, to‘lovlarni boshqarish.'
                         : 'Полный доступ ко всем разделам: управление сотрудниками, просмотр лидов, ручной ответ клиентам, списание и оплата тарифа.'}

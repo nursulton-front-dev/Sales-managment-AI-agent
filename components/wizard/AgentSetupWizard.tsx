@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { SparrowMascot } from '@/components/ui/SparrowMascot';
 import { Button } from '@/components/ui/Button';
@@ -8,23 +8,23 @@ import {
   Send,
   Paperclip,
   Check,
-  Edit3,
   Play,
-  RotateCcw,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
-  Sparkles,
   X,
-  Radio,
   FileText,
 } from 'lucide-react';
 import { AgentDraft, WizardMessage, WizardNiche, WizardTone } from '@/lib/wizard/types';
 import { ARCHETYPES } from '@/lib/wizard/archetypes';
+import type { DraftRevisions } from '@/lib/wizard/merge-draft';
 
 interface AgentSetupWizardProps {
   draft: AgentDraft;
-  onDraftChange: (updated: AgentDraft) => void;
+  onDraftChange: React.Dispatch<React.SetStateAction<AgentDraft>>;
+  autosaveStatus: 'saving' | 'saved' | 'error';
+  getDraftRevisions: () => DraftRevisions;
+  onAssistantDraft: (draft: AgentDraft, before: DraftRevisions) => void;
+  onRetrySave: () => void;
   onSaveAndLaunch: () => Promise<void>;
   isSaving: boolean;
   onOpenSandbox: () => void;
@@ -33,6 +33,10 @@ interface AgentSetupWizardProps {
 export function AgentSetupWizard({
   draft,
   onDraftChange,
+  autosaveStatus,
+  getDraftRevisions,
+  onAssistantDraft,
+  onRetrySave,
   onSaveAndLaunch,
   isSaving,
   onOpenSandbox,
@@ -50,8 +54,6 @@ export function AgentSetupWizard({
   const [sendError, setSendError] = useState<string | null>(null);
   const [suggestedAnswers, setSuggestedAnswers] = useState<string[]>([]);
 
-  // Autosave status state
-  const [autosaveStatus, setAutosaveStatus] = useState<'saving' | 'saved' | 'error'>('saved');
 
   // Edit Modal State for fields
   const [editingField, setEditingField] = useState<
@@ -62,7 +64,7 @@ export function AgentSetupWizard({
   // Refs for auto-scroll and manual edits timestamp protection
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const lastUserEditTimeRef = useRef<number>(0);
+
   const hasInitializedMessages = useRef<boolean>(false);
 
   // Initialize first greeting question
@@ -138,9 +140,7 @@ export function AgentSetupWizard({
 
     setMessages((prev) => [...prev, userMsg]);
     setIsSending(true);
-    setAutosaveStatus('saving');
-
-    const requestTime = Date.now();
+    const requestRevisions = getDraftRevisions();
 
     try {
       const historyPayload = messages.slice(-6).map((m) => ({
@@ -165,20 +165,7 @@ export function AgentSetupWizard({
         throw new Error(data.error || (isUz ? 'Server xatosi' : 'Ошибка сервера'));
       }
 
-      // Safeguard: if user edited a field manually while request was in-flight, preserve user's edits
-      let mergedDraft: AgentDraft = { ...data.updatedDraft };
-      if (lastUserEditTimeRef.current > requestTime) {
-        mergedDraft = {
-          ...data.updatedDraft,
-          name: draft.name,
-          targetGoal: draft.targetGoal,
-          servicesAndPricing: draft.servicesAndPricing,
-          tone: draft.tone,
-        };
-      }
-
-      onDraftChange(mergedDraft);
-      setAutosaveStatus('saved');
+      onAssistantDraft(data.updatedDraft, requestRevisions);
 
       const botMsg: WizardMessage = {
         id: `ast_${Date.now()}`,
@@ -190,9 +177,8 @@ export function AgentSetupWizard({
 
       setMessages((prev) => [...prev, botMsg]);
       setSuggestedAnswers(data.suggestedAnswers || []);
-    } catch (err: any) {
-      setSendError(err.message || (isUz ? 'Xatolik yuz berdi' : 'Произошла ошибка'));
-      setAutosaveStatus('error');
+    } catch (err: unknown) {
+      setSendError((err instanceof Error && err.message) || (isUz ? 'Xatolik yuz berdi' : 'Произошла ошибка'));
     } finally {
       setIsSending(false);
     }
@@ -216,15 +202,12 @@ export function AgentSetupWizard({
     reader.onload = async (event) => {
       const content = event.target?.result as string;
       if (content) {
-        lastUserEditTimeRef.current = Date.now();
-        const updatedServices = `${draft.servicesAndPricing}\n\n[${file.name}]:\n${content.slice(0, 5000)}`;
-        const nextDraft: AgentDraft = {
-          ...draft,
-          servicesAndPricing: updatedServices,
+        onDraftChange((current) => ({
+          ...current,
+          servicesAndPricing: `${current.servicesAndPricing}\n\n[${file.name}]:\n${content.slice(0, 5000)}`,
           pricingConfirmed: true,
           updatedAt: new Date().toISOString(),
-        };
-        onDraftChange(nextDraft);
+        }));
         showToast(
           isUz ? 'Fayl qo‘shildi' : 'Файл прикреплен',
           isUz ? `${file.name} xodim bilimlariga qo‘shildi` : `${file.name} добавлен в базу знаний`,
@@ -248,27 +231,22 @@ export function AgentSetupWizard({
   // Save manual edit from modal
   const saveFieldEdit = () => {
     if (!editingField) return;
-    lastUserEditTimeRef.current = Date.now();
 
-    const nextDraft: AgentDraft = { ...draft, updatedAt: new Date().toISOString() };
-
-    if (editingField === 'name') {
-      nextDraft.name = fieldValue.trim() || draft.name;
-    } else if (editingField === 'niche') {
-      nextDraft.nicheTemplate = (fieldValue as WizardNiche) || draft.nicheTemplate;
-    } else if (editingField === 'goal') {
-      nextDraft.targetGoal = fieldValue.trim() || draft.targetGoal;
-      nextDraft.goalConfirmed = true;
-    } else if (editingField === 'pricing') {
-      nextDraft.servicesAndPricing = fieldValue.trim();
-      nextDraft.pricingConfirmed = true;
-    } else if (editingField === 'tone') {
-      nextDraft.tone = (fieldValue as WizardTone) || draft.tone;
-    }
-
-    onDraftChange(nextDraft);
+    onDraftChange((current) => {
+      const nextDraft: AgentDraft = { ...current, updatedAt: new Date().toISOString() };
+      if (editingField === 'name') nextDraft.name = fieldValue.trim() || current.name;
+      else if (editingField === 'niche') nextDraft.nicheTemplate = (fieldValue as WizardNiche) || current.nicheTemplate;
+      else if (editingField === 'goal') {
+        nextDraft.targetGoal = fieldValue.trim() || current.targetGoal;
+        nextDraft.goalConfirmed = true;
+      } else if (editingField === 'pricing') {
+        nextDraft.servicesAndPricing = fieldValue.trim();
+        nextDraft.pricingConfirmed = true;
+      } else if (editingField === 'tone') nextDraft.tone = (fieldValue as WizardTone) || current.tone;
+      return nextDraft;
+    });
     setEditingField(null);
-    showToast(t.common.saved, undefined, 'success');
+
   };
 
   const currentArchetype = ARCHETYPES[draft.nicheTemplate] || ARCHETYPES.courses;
@@ -320,7 +298,7 @@ export function AgentSetupWizard({
                 <SparrowMascot
                   variant={isSending ? 'loading' : 'hello'}
                   size={36}
-                  animate={isSending}
+                  animate
                 />
               </div>
               <div>
@@ -360,7 +338,7 @@ export function AgentSetupWizard({
                     className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed shadow-2xs ${
                       isAssistant
                         ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)] rounded-tl-sm border border-[var(--border)]'
-                        : 'bg-[#ED262A] text-white rounded-tr-sm font-medium'
+                        : 'bg-[var(--accent)] text-white rounded-tr-sm font-medium'
                     }`}
                   >
                     <p className="whitespace-pre-line">{m.content}</p>
@@ -372,7 +350,6 @@ export function AgentSetupWizard({
             {/* Waiting/Inference indicator with Sparrow */}
             {isSending && (
               <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] pt-1 pl-9">
-                <SparrowMascot variant="loading" size={20} />
                 <span>{isUz ? 'Ma\'lumotlar tahlil qilinmoqda…' : 'Обрабатываю ответ…'}</span>
               </div>
             )}
@@ -447,13 +424,13 @@ export function AgentSetupWizard({
                 onChange={(e) => setInputVal(e.target.value)}
                 placeholder={t.wizard.inputPlaceholder}
                 disabled={isSending}
-                className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#ED262A] transition-all"
+                className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-all"
               />
 
               <button
                 type="submit"
                 disabled={!inputVal.trim() || isSending}
-                className="px-4 py-2.5 rounded-xl bg-[#ED262A] hover:bg-[#d01f23] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold transition-all inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-[var(--accent)] hover:bg-[#d01f23] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold transition-all inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer"
               >
                 <span>{t.wizard.send}</span>
                 <Send size={14} />
@@ -474,7 +451,7 @@ export function AgentSetupWizard({
           {/* Resume Header & Honest Autosave Indicator */}
           <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#ED262A]" />
+              <FileText className="w-4 h-4 text-[var(--accent)]" />
               <h3 className="font-bold text-sm text-[var(--text-primary)]">
                 {t.wizard.resumeTitle}
               </h3>
@@ -494,10 +471,10 @@ export function AgentSetupWizard({
                 </span>
               )}
               {autosaveStatus === 'error' && (
-                <span className="text-red-500 inline-flex items-center gap-1">
+                <button type="button" onClick={onRetrySave} className="text-red-500 inline-flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5" />
-                  {t.common.saveFailed}
-                </span>
+                  {t.common.saveFailed} · {isUz ? 'Qayta urinish' : 'Повторить'}
+                </button>
               )}
             </div>
           </div>
@@ -513,7 +490,7 @@ export function AgentSetupWizard({
                 <button
                   type="button"
                   onClick={() => openEditor('name')}
-                  className="text-[11px] font-semibold text-[#ED262A] hover:underline cursor-pointer"
+                  className="text-[11px] font-semibold text-[var(--accent)] hover:underline cursor-pointer"
                 >
                   {t.common.edit}
                 </button>
@@ -532,7 +509,7 @@ export function AgentSetupWizard({
                 <button
                   type="button"
                   onClick={() => openEditor('niche')}
-                  className="text-[11px] font-semibold text-[#ED262A] hover:underline cursor-pointer"
+                  className="text-[11px] font-semibold text-[var(--accent)] hover:underline cursor-pointer"
                 >
                   {t.common.edit}
                 </button>
@@ -556,7 +533,7 @@ export function AgentSetupWizard({
                 <button
                   type="button"
                   onClick={() => openEditor('goal')}
-                  className="text-[11px] font-semibold text-[#ED262A] hover:underline cursor-pointer"
+                  className="text-[11px] font-semibold text-[var(--accent)] hover:underline cursor-pointer"
                 >
                   {t.common.edit}
                 </button>
@@ -586,7 +563,7 @@ export function AgentSetupWizard({
                 <button
                   type="button"
                   onClick={() => openEditor('pricing')}
-                  className="text-[11px] font-semibold text-[#ED262A] hover:underline cursor-pointer"
+                  className="text-[11px] font-semibold text-[var(--accent)] hover:underline cursor-pointer"
                 >
                   {t.common.edit}
                 </button>
@@ -616,7 +593,7 @@ export function AgentSetupWizard({
                 <button
                   type="button"
                   onClick={() => openEditor('tone')}
-                  className="text-[11px] font-semibold text-[#ED262A] hover:underline cursor-pointer"
+                  className="text-[11px] font-semibold text-[var(--accent)] hover:underline cursor-pointer"
                 >
                   {t.common.edit}
                 </button>
@@ -653,8 +630,8 @@ export function AgentSetupWizard({
             <button
               type="button"
               onClick={onSaveAndLaunch}
-              disabled={isSaving}
-              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#ED262A] hover:bg-[#d01f23] disabled:opacity-50 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isSaving || isSending}
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-[var(--accent)] hover:bg-[#d01f23] disabled:opacity-50 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSaving ? (
                 <span>{t.common.saving}</span>
@@ -671,7 +648,7 @@ export function AgentSetupWizard({
               onClick={onOpenSandbox}
               className="w-full min-h-[42px] py-2 px-4 rounded-xl font-semibold text-xs sm:text-sm text-[var(--text-secondary)] bg-[var(--surface-secondary)] hover:bg-[var(--border)] border border-[var(--border)] transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Play size={15} className="text-[#ED262A]" />
+              <Play size={15} className="text-[var(--accent)]" />
               <span>{t.wizard.openSandbox}</span>
             </button>
           </div>
@@ -712,7 +689,7 @@ export function AgentSetupWizard({
                 type="text"
                 value={fieldValue}
                 onChange={(e) => setFieldValue(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             )}
 
@@ -720,7 +697,7 @@ export function AgentSetupWizard({
               <select
                 value={fieldValue}
                 onChange={(e) => setFieldValue(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               >
                 <option value="courses">{t.wizard.niches.courses}</option>
                 <option value="clinic">{t.wizard.niches.clinic}</option>
@@ -736,7 +713,7 @@ export function AgentSetupWizard({
                 rows={4}
                 value={fieldValue}
                 onChange={(e) => setFieldValue(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             )}
 
@@ -745,7 +722,7 @@ export function AgentSetupWizard({
                 rows={6}
                 value={fieldValue}
                 onChange={(e) => setFieldValue(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm font-mono text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-sm font-mono text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             )}
 
@@ -757,7 +734,7 @@ export function AgentSetupWizard({
                       key={toneKey}
                       className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                         fieldValue === toneKey
-                          ? 'border-[#ED262A] bg-red-500/10 text-[var(--text-primary)] font-bold'
+                          ? 'border-[var(--accent)] bg-red-500/10 text-[var(--text-primary)] font-bold'
                           : 'border-[var(--border)] bg-[var(--surface-secondary)]/50 text-[var(--text-secondary)]'
                       }`}
                     >
@@ -767,7 +744,7 @@ export function AgentSetupWizard({
                         value={toneKey}
                         checked={fieldValue === toneKey}
                         onChange={() => setFieldValue(toneKey)}
-                        className="text-[#ED262A]"
+                        className="text-[var(--accent)]"
                       />
                       <span className="text-xs sm:text-sm">{t.wizard.tones[toneKey]}</span>
                     </label>
@@ -784,7 +761,7 @@ export function AgentSetupWizard({
                 variant="primary"
                 size="sm"
                 onClick={saveFieldEdit}
-                className="bg-[#ED262A] text-white hover:bg-[#d01f23]"
+                className="bg-[var(--accent)] text-white hover:bg-[#d01f23]"
               >
                 {t.common.save}
               </Button>

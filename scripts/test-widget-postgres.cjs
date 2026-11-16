@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Test-only PostgreSQL transport adapter. */
 // Run against an empty LOCAL database with the exported Drizzle schema + widget-channels.sql applied.
 // Drizzle and the repositories are real; only Neon HTTP transport is replaced with local psql.
 const assert = require('node:assert/strict');

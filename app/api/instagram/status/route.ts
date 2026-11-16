@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse, connection } from 'next/server';
 import { getServerSessionContext } from '@/src/server/auth/session';
 import { getWorkspaceById, updateWorkspace, getAllAgents } from '@/src/db';
-import { decryptToken } from '@/lib/instagram/config';
-import { getInstagramUserProfile } from '@/lib/instagram/client';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   await connection();
   try {
     const session = await getServerSessionContext();
@@ -45,8 +43,8 @@ export async function GET(req: NextRequest) {
       lastError: ws.instagramLastError,
       agents: availableAgents.map((a) => ({ id: a.id, name: a.name, isActive: a.isActive })),
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Ошибка запроса' }, { status: 500 });
   }
 }
 
@@ -70,7 +68,14 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Организация не найдена' }, { status: 404 });
     }
 
-    const updates: any = {};
+    const updates: { instagramAgentId?: string | null; instagramAutoReply?: boolean } = {};
+
+    if (agentId !== undefined && agentId !== null && typeof agentId !== 'string') {
+      return NextResponse.json({ success: false, error: 'Некорректный агент' }, { status: 400 });
+    }
+    if (autoReply !== undefined && typeof autoReply !== 'boolean') {
+      return NextResponse.json({ success: false, error: 'Некорректное значение автоответов' }, { status: 400 });
+    }
 
     if (agentId !== undefined) {
       if (agentId) {
@@ -92,7 +97,7 @@ export async function PATCH(req: NextRequest) {
           { status: 400 }
         );
       }
-      if (autoReply && !updates.instagramAgentId && !ws.instagramAgentId) {
+      if (autoReply && !(updates.instagramAgentId === undefined ? ws.instagramAgentId : updates.instagramAgentId)) {
         return NextResponse.json(
           { success: false, error: 'Сначала выберите ответственного агента' },
           { status: 400 }
@@ -101,14 +106,20 @@ export async function PATCH(req: NextRequest) {
       updates.instagramAutoReply = Boolean(autoReply);
     }
 
+    const effectiveAgentId = updates.instagramAgentId === undefined ? ws.instagramAgentId : updates.instagramAgentId;
+    const effectiveAutoReply = updates.instagramAutoReply === undefined ? ws.instagramAutoReply : updates.instagramAutoReply;
+    if (effectiveAutoReply && !effectiveAgentId) {
+      return NextResponse.json({ success: false, error: 'Выключите автоответы перед удалением агента' }, { status: 400 });
+    }
+
     await updateWorkspace(session.workspaceId, updates);
 
     return NextResponse.json({
       success: true,
-      instagramAgentId: updates.instagramAgentId ?? ws.instagramAgentId,
-      instagramAutoReply: updates.instagramAutoReply ?? ws.instagramAutoReply,
+      instagramAgentId: effectiveAgentId,
+      instagramAutoReply: effectiveAutoReply,
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Ошибка запроса' }, { status: 500 });
   }
 }

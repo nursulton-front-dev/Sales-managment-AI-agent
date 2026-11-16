@@ -11,6 +11,7 @@ export interface GoogleTokens {
 }
 
 export interface CalendarEventPayload {
+  id?: string;
   summary: string;
   description: string;
   startTime: string; // ISO 8601 string
@@ -173,6 +174,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<string> 
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
     }),
+    signal: AbortSignal.timeout(12_000),
   });
 
   const data = await res.json();
@@ -193,7 +195,8 @@ export async function createGoogleCalendarEvent(
   const accessToken = await refreshAccessToken(refreshToken);
   const timeZone = event.timeZone || 'Asia/Tashkent';
 
-  const body: any = {
+  const body: Record<string, unknown> = {
+    ...(event.id ? { id: event.id } : {}),
     summary: event.summary,
     description: event.description,
     start: {
@@ -226,6 +229,7 @@ export async function createGoogleCalendarEvent(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(12_000),
     }
   );
 
@@ -242,6 +246,18 @@ export async function createGoogleCalendarEvent(
     endTime: data.end?.dateTime || event.endTime,
     status: data.status || 'confirmed',
   };
+}
+
+/** Read-only reconciliation after an uncertain create; absence never authorizes another POST. */
+export async function getGoogleCalendarEvent(refreshToken: string, eventId: string): Promise<GoogleCalendarEventResult | null> {
+  const accessToken = await refreshAccessToken(refreshToken);
+  const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(12_000),
+  });
+  if (res.status === 404 || res.status === 410) return null;
+  if (!res.ok) throw new Error('Calendar reconciliation unavailable');
+  const data = await res.json();
+  return { id: data.id, htmlLink: data.htmlLink || '', summary: data.summary || '', startTime: data.start?.dateTime || '', endTime: data.end?.dateTime || '', status: data.status };
 }
 
 /**
@@ -273,8 +289,13 @@ export async function getGoogleCalendarFreeBusy(
     throw new Error(data.error?.message || 'Ошибка проверки занятости Google Календаря');
   }
 
-  const busySlots = data.calendars?.primary?.busy || [];
-  return busySlots;
+  const primary = data.calendars?.primary;
+  if (!primary || primary.errors?.length || !Array.isArray(primary.busy) || primary.busy.some((slot: { start?: unknown; end?: unknown }) =>
+    typeof slot.start !== 'string' || typeof slot.end !== 'string' || !Number.isFinite(Date.parse(slot.start)) || !Number.isFinite(Date.parse(slot.end)) || Date.parse(slot.start) >= Date.parse(slot.end)
+  )) {
+    throw new Error('Google Calendar не подтвердил доступность времени');
+  }
+  return primary.busy;
 }
 
 /**
@@ -288,7 +309,7 @@ export async function updateGoogleCalendarEvent(
   const accessToken = await refreshAccessToken(refreshToken);
   const timeZone = updates.timeZone || 'Asia/Tashkent';
 
-  const body: any = {};
+  const body: Record<string, unknown> = {};
   if (updates.summary) body.summary = updates.summary;
   if (updates.description) body.description = updates.description;
   if (updates.startTime) {
@@ -390,7 +411,7 @@ export async function findExistingGoogleCalendarEvent(
   }
 
   const items = data.items || [];
-  const active = items.find((item: any) => item.status !== 'cancelled');
+  const active = items.find((item: { status?: string }) => item.status !== 'cancelled');
   if (!active) return null;
 
   return {

@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/ui/BrandLogo';
-import { Trash2, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { Trash2, ArrowLeft } from 'lucide-react';
 
 export const metadata = {
   title: 'Удаление данных пользователей — gapcha AI',

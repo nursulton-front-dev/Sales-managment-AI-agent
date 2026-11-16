@@ -19,10 +19,10 @@ const resend = new Resend(resendMatch[1]);
 const u = new URL(match[1]);
 u.pathname = '/chorla_test';
 const rawSql = neon(u.toString());
-async function testSql(strings: TemplateStringsArray, ...values: any[]): Promise<any[]> {
+async function testSql(strings: TemplateStringsArray, ...values: unknown[]): Promise<Record<string, unknown>[]> {
   for (let attempt = 1; attempt <= 5; attempt++) {
     try {
-      return (await (rawSql as any)(strings, ...values)) as any[];
+      return (await rawSql(strings, ...values)) as unknown as Record<string, unknown>[];
     } catch (err) {
       if (attempt === 5) throw err;
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -397,7 +397,6 @@ async function runPreviewVerification() {
     }),
   });
   const correctRecoveryData = await correctRecoveryRes.json();
-  const recoveryCookies = correctRecoveryRes.headers.getSetCookie();
   console.log('Correct recovery OTP status:', correctRecoveryRes.status, 'success:', correctRecoveryData.success);
   assert(correctRecoveryRes.status === 200 && correctRecoveryData.success === true, 'Password reset succeeded using real OTP from email', 'Legacy Recovery');
 

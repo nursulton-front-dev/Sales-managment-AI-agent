@@ -35,8 +35,6 @@ const load = loader(env, {
 
 const {
   resolveTelegramBusinessStatus,
-  resolveInstagramStatus,
-  resolveWebWidgetStatus,
   resolveGoogleCalendarStatus,
   getAgentChannelStatuses,
   getWorkspaceChannelsSummary
@@ -45,7 +43,6 @@ const {
 const {
   isSlotWithinWorkingHours,
   getAvailableDaySlots,
-  parseWorkingHours,
   normalizeWorkingHours
 } = load('lib/calendar/working-hours.ts');
 
@@ -212,9 +209,9 @@ async function runLaunchReadinessTests() {
 
     // Available day slots generation with busy interval
     const busyIntervals = [
-      { start: '2026-11-09T11:00:00+05:00', end: '2026-11-09T12:00:00+05:00' }
+      { start: '2099-11-09T11:00:00+05:00', end: '2099-11-09T12:00:00+05:00' }
     ];
-    const slots = getAvailableDaySlots('2026-11-09', whStr, 30, busyIntervals, 'Asia/Tashkent');
+    const slots = getAvailableDaySlots('2099-11-09', whStr, 30, busyIntervals, 'Asia/Tashkent');
     assert.ok(slots.length > 0);
     // Ensure 11:00 and 11:30 are not in slots
     const has11 = slots.includes('11:00') || slots.includes('11:30');
@@ -224,11 +221,12 @@ async function runLaunchReadinessTests() {
 
   // Test 6: AI Tools Definition & Schema
   {
-    assert.strictEqual(CALENDAR_TOOLS.length, 3);
+    assert.strictEqual(CALENDAR_TOOLS.length, 4);
     const toolNames = CALENDAR_TOOLS.map(t => t.function.name);
     assert.ok(toolNames.includes('check_calendar_slots'));
     assert.ok(toolNames.includes('book_appointment'));
     assert.ok(toolNames.includes('save_lead_qualification'));
+    assert.ok(toolNames.includes('request_owner_input'));
 
     // Check check_calendar_slots parameters
     const checkTool = CALENDAR_TOOLS.find(t => t.function.name === 'check_calendar_slots');

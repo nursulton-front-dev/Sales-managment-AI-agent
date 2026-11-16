@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse, connection } from 'next/server';
+import { NextResponse, connection } from 'next/server';
 import { getServerSessionContext } from '@/src/server/auth/session';
 import { getWorkspaceById, updateWorkspace } from '@/src/db';
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   await connection();
   try {
     const session = await getServerSessionContext();
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: 'Instagram-аккаунт успешно отключен. Все сохранённые токены удалены.',
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Ошибка запроса' }, { status: 500 });
   }
 }

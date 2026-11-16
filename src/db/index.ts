@@ -1,4 +1,4 @@
-import { neon, NeonQueryFunction } from '@neondatabase/serverless';
+import { neon } from '@neondatabase/serverless';
 import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import { asc, eq, sql, and } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
@@ -213,7 +213,7 @@ export async function createWorkspace(data: schema.NewWorkspace): Promise<schema
     telegramBusinessEnabled: data.telegramBusinessEnabled !== undefined ? data.telegramBusinessEnabled : false,
     telegramBusinessAgentId: data.telegramBusinessAgentId || null,
     telegramBusinessConnectedAt: data.telegramBusinessConnectedAt || null,
-    settings: (data as any).settings || {},
+    settings: (data as { settings?: Record<string, unknown> }).settings || {},
     createdAt: new Date(),
   };
 
@@ -468,7 +468,7 @@ export async function createAgent(
           WHERE (SELECT COUNT(*) FROM ${schema.agents} WHERE workspace_id = ${newAgent.workspaceId}) < ${maxAgents}
           RETURNING *
         `);
-        const rows = (res as any)?.rows || (Array.isArray(res) ? res : []);
+        const rows = Array.isArray(res) ? res : ((res && typeof res === 'object' && 'rows' in res && Array.isArray((res as { rows: unknown[] }).rows)) ? (res as { rows: unknown[] }).rows : []);
         if (rows.length === 0) {
           throw new Error('AGENT_LIMIT_REACHED');
         }
@@ -479,8 +479,8 @@ export async function createAgent(
         });
       }
       return newAgent;
-    } catch (err: any) {
-      if (err.message === 'AGENT_LIMIT_REACHED') throw err;
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'AGENT_LIMIT_REACHED') throw err;
       console.warn('Neon insert agent error:', err);
       throw err;
     }

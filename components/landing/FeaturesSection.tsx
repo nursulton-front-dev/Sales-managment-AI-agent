@@ -21,17 +21,17 @@ export function FeaturesSection({ content }: FeaturesSectionProps) {
   };
 
   return (
-    <section id="features" className="py-20 sm:py-28 bg-slate-50/70 border-t border-slate-200/80">
+    <section id="features" className="py-20 sm:py-28 bg-[var(--background)]/70 border-t border-[var(--border)]/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <span className="inline-block text-xs font-bold uppercase tracking-wider text-[#DC2626] px-3 py-1 bg-red-50 rounded-full border border-red-100">
+          <span className="inline-block text-xs font-bold uppercase tracking-wider text-[var(--accent)] px-3 py-1 bg-[var(--accent-soft)] rounded-full border border-[var(--accent)]/20">
             {features.tag}
           </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[var(--text-primary)] tracking-tight">
             {features.title}
           </h2>
-          <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
+          <p className="text-base sm:text-lg text-[var(--text-secondary)] leading-relaxed font-normal">
             {features.subtitle}
           </p>
         </div>
@@ -44,23 +44,23 @@ export function FeaturesSection({ content }: FeaturesSectionProps) {
             return (
               <div
                 key={idx}
-                className="rounded-2xl bg-white border border-slate-200/90 p-7 flex flex-col justify-between space-y-6 shadow-xs hover:border-slate-300 transition-colors"
+                className="rounded-2xl bg-[var(--surface)] border border-[var(--border)]/90 p-7 flex flex-col justify-between space-y-6 shadow-xs hover:border-[var(--border-strong)] transition-colors"
               >
                 <div className="space-y-4">
-                  <div className="size-11 rounded-xl bg-red-50 text-[#DC2626] flex items-center justify-center font-bold">
+                  <div className="size-11 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center font-bold">
                     <Icon size={22} />
                   </div>
 
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                  <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">
                     {feat.title}
                   </h3>
 
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                  <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed font-normal">
                     {feat.description}
                   </p>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100">
+                <div className="pt-4 border-t border-[var(--border)]">
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
                     <Check size={14} className="text-emerald-600 shrink-0" />
                     {feat.result}

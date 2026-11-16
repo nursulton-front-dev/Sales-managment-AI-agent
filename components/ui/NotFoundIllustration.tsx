@@ -66,7 +66,7 @@ export function NotFoundIllustration({ className = '' }: NotFoundIllustrationPro
         </defs>
 
         {/* 1. Background Secondary Trajectory with Hollow Nodes */}
-        <g className="text-[#CBD5E1] dark:text-[#334155] transition-colors duration-150">
+        <g className="text-[var(--border-strong)] dark:text-[#334155] transition-colors duration-150">
           {/* Dashed curved arc flowing behind the numbers */}
           <path
             d="M 40 310 C 120 180, 240 70, 395 85 C 490 95, 570 180, 600 270"

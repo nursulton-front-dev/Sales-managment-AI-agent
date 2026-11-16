@@ -1,0 +1,2381 @@
+{
+  "timestamp": "2026-11-16T07:26:46.286Z",
+  "cols": [
+    {
+      "table_name": "accounts",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "user_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "account_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "provider_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "access_token",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "refresh_token",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "access_token_expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "refresh_token_expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "scope",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "id_token",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "password",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "admin_email",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "admin_role",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "entity_type",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "entity_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "action",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "reason",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "diff_before",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "diff_after",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "result",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'success'::text"
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "agents",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "agents",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "agents",
+      "column_name": "name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "agents",
+      "column_name": "niche_template",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "agents",
+      "column_name": "knowledge_base",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text"
+    },
+    {
+      "table_name": "agents",
+      "column_name": "qualification_questions",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_name": "agents",
+      "column_name": "system_prompt",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "agents",
+      "column_name": "tg_bot_token",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "agents",
+      "column_name": "google_calendar_connected",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "agents",
+      "column_name": "is_active",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "agents",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "lead_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "agent_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "client_name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "client_phone",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "service_name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'Консультация / Пробный урок'::text"
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "specialist_name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": "'Дежурный специалист'::text"
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "start_time",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "end_time",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'scheduled'::text"
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "google_event_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "google_event_link",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "reminder_sent",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "sequence",
+      "data_type": "bigint",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": "nextval('channel_events_sequence_seq'::regclass)"
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "channel",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "conversation_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "payload",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'pending'::text"
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "stage",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'received'::text"
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "attempts",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "available_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "locked_until",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "error_code",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "agent_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "client_name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "client_phone",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "channel",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'Telegram'::text"
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'active'::text"
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "last_message_text",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": "''::text"
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "last_message_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "integration_rate_limits",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "integration_rate_limits",
+      "column_name": "count",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "integration_rate_limits",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "leads",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "leads",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "leads",
+      "column_name": "agent_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "leads",
+      "column_name": "client_name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "leads",
+      "column_name": "client_phone",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "leads",
+      "column_name": "channel",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "leads",
+      "column_name": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'new'::text"
+    },
+    {
+      "table_name": "leads",
+      "column_name": "appointment_time",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "leads",
+      "column_name": "tokens_spent",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "leads",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "leads",
+      "column_name": "google_event_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "leads",
+      "column_name": "google_event_link",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "conversation_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "sender",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "text",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "messages",
+      "column_name": "tokens_cost",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "messages",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "lead_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "client_name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "client_phone",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "items",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "total_amount",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "currency",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'UZS'::text"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "delivery_address",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": "''::text"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'new'::text"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "user_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "token",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "ip_address",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "user_agent",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "ticket_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "sender_role",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "sender_email",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "sender_name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "text",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "is_internal_note",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "attachments",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "support_sessions",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_sessions",
+      "column_name": "super_admin_email",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_sessions",
+      "column_name": "target_workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_sessions",
+      "column_name": "reason",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_sessions",
+      "column_name": "started_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "support_sessions",
+      "column_name": "ended_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "support_sessions",
+      "column_name": "is_active",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "ticket_number",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "author_email",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "author_name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "type",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "subject",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "description",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'new'::text"
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "assigned_to",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "unread_by_customer",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "unread_by_support",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "telegram_business_bindings",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "telegram_business_bindings",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "telegram_business_bindings",
+      "column_name": "agent_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "telegram_business_bindings",
+      "column_name": "verified_telegram_user_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "telegram_business_bindings",
+      "column_name": "verified_telegram_username",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "telegram_business_bindings",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "telegram_business_bindings",
+      "column_name": "redeemed_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "telegram_business_bindings",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "token_logs",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "token_logs",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "token_logs",
+      "column_name": "action_type",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "token_logs",
+      "column_name": "tokens_delta",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "token_logs",
+      "column_name": "amount_usd",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'0'::text"
+    },
+    {
+      "table_name": "token_logs",
+      "column_name": "payment_method",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'system'::text"
+    },
+    {
+      "table_name": "token_logs",
+      "column_name": "description",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text"
+    },
+    {
+      "table_name": "token_logs",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "trial_grants",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "trial_grants",
+      "column_name": "owner_email",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "trial_grants",
+      "column_name": "owner_phone",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "trial_grants",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "trial_grants",
+      "column_name": "granted_tokens",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "100"
+    },
+    {
+      "table_name": "trial_grants",
+      "column_name": "granted_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "users",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "email",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "email_verified",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "users",
+      "column_name": "image",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "users",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "users",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "verifications",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "verifications",
+      "column_name": "identifier",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "verifications",
+      "column_name": "value",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "verifications",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "verifications",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "verifications",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "workspace_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "agent_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "enabled",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "title",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "greeting",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "color",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "position",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'right'::text"
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "allowed_origins",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "last_seen_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "last_seen_origin",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "widget_sessions",
+      "column_name": "token_hash",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "widget_sessions",
+      "column_name": "widget_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "widget_sessions",
+      "column_name": "origin",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "widget_sessions",
+      "column_name": "conversation_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "widget_sessions",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "company_name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "niche",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "owner_name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "owner_email",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "owner_phone",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "password_hash",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "team_size",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "daily_leads_volume",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "plan",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'trial'::text"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "token_balance",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "100"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'active'::text"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "email_verified",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "verification_code",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "verification_sent_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "sub_expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "google_calendar_connected",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "google_calendar_email",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "google_refresh_token",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "google_calendar_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": "'primary'::text"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "google_calendar_working_hours",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": "'10:00-18:00'::text"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "google_calendar_slot_duration",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": "45"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "instagram_connected",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "instagram_user_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "instagram_username",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "instagram_access_token",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "instagram_token_expires_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "instagram_scopes",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "instagram_status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'disconnected'::text"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "instagram_last_error",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "instagram_agent_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "instagram_auto_reply",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "telegram_business_connected",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "telegram_business_connection_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "telegram_business_user_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "telegram_business_username",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "telegram_business_can_reply",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "telegram_business_enabled",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "telegram_business_agent_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "telegram_business_connected_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "settings",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": "'{}'::jsonb"
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "accounts",
+      "column_name": "id",
+      "constraint_name": "accounts_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "agents",
+      "column_name": "id",
+      "constraint_name": "agents_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "leads",
+      "column_name": "id",
+      "constraint_name": "leads_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "id",
+      "constraint_name": "sessions_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "token",
+      "constraint_name": "sessions_token_unique",
+      "constraint_type": "UNIQUE"
+    },
+    {
+      "table_name": "token_logs",
+      "column_name": "id",
+      "constraint_name": "token_logs_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "users",
+      "column_name": "id",
+      "constraint_name": "users_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "users",
+      "column_name": "email",
+      "constraint_name": "users_email_unique",
+      "constraint_type": "UNIQUE"
+    },
+    {
+      "table_name": "verifications",
+      "column_name": "id",
+      "constraint_name": "verifications_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "id",
+      "constraint_name": "workspaces_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "workspaces",
+      "column_name": "owner_email",
+      "constraint_name": "workspaces_owner_email_unique",
+      "constraint_type": "UNIQUE"
+    },
+    {
+      "table_name": "accounts",
+      "column_name": "user_id",
+      "constraint_name": "accounts_user_id_users_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "agents",
+      "column_name": "workspace_id",
+      "constraint_name": "agents_workspace_id_workspaces_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "leads",
+      "column_name": "workspace_id",
+      "constraint_name": "leads_workspace_id_workspaces_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "leads",
+      "column_name": "agent_id",
+      "constraint_name": "leads_agent_id_agents_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "sessions",
+      "column_name": "user_id",
+      "constraint_name": "sessions_user_id_users_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "token_logs",
+      "column_name": "workspace_id",
+      "constraint_name": "token_logs_workspace_id_workspaces_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "id",
+      "constraint_name": "appointments_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "id",
+      "constraint_name": "conversations_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "messages",
+      "column_name": "id",
+      "constraint_name": "messages_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "id",
+      "constraint_name": "orders_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "support_sessions",
+      "column_name": "id",
+      "constraint_name": "support_sessions_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "trial_grants",
+      "column_name": "id",
+      "constraint_name": "trial_grants_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "trial_grants",
+      "column_name": "owner_email",
+      "constraint_name": "trial_grants_owner_email_unique",
+      "constraint_type": "UNIQUE"
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "workspace_id",
+      "constraint_name": "appointments_workspace_id_workspaces_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "lead_id",
+      "constraint_name": "appointments_lead_id_leads_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "appointments",
+      "column_name": "agent_id",
+      "constraint_name": "appointments_agent_id_agents_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "workspace_id",
+      "constraint_name": "conversations_workspace_id_workspaces_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "conversations",
+      "column_name": "agent_id",
+      "constraint_name": "conversations_agent_id_agents_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "messages",
+      "column_name": "conversation_id",
+      "constraint_name": "messages_conversation_id_conversations_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "messages",
+      "column_name": "workspace_id",
+      "constraint_name": "messages_workspace_id_workspaces_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "workspace_id",
+      "constraint_name": "orders_workspace_id_workspaces_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "lead_id",
+      "constraint_name": "orders_lead_id_leads_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "support_sessions",
+      "column_name": "target_workspace_id",
+      "constraint_name": "support_sessions_target_workspace_id_workspaces_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "id",
+      "constraint_name": "support_messages_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "id",
+      "constraint_name": "support_tickets_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "support_messages",
+      "column_name": "ticket_id",
+      "constraint_name": "support_messages_ticket_id_support_tickets_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "support_tickets",
+      "column_name": "workspace_id",
+      "constraint_name": "support_tickets_workspace_id_workspaces_id_fk",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "admin_audit_logs",
+      "column_name": "id",
+      "constraint_name": "admin_audit_logs_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "id",
+      "constraint_name": "website_widgets_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "workspace_id",
+      "constraint_name": "website_widgets_workspace_id_key",
+      "constraint_type": "UNIQUE"
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "workspace_id",
+      "constraint_name": "website_widgets_workspace_id_fkey",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "website_widgets",
+      "column_name": "agent_id",
+      "constraint_name": "website_widgets_agent_id_fkey",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "widget_sessions",
+      "column_name": "token_hash",
+      "constraint_name": "widget_sessions_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "widget_sessions",
+      "column_name": "widget_id",
+      "constraint_name": "widget_sessions_widget_id_fkey",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "id",
+      "constraint_name": "channel_events_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "channel_events",
+      "column_name": "workspace_id",
+      "constraint_name": "channel_events_workspace_id_fkey",
+      "constraint_type": "FOREIGN KEY"
+    },
+    {
+      "table_name": "integration_rate_limits",
+      "column_name": "id",
+      "constraint_name": "integration_rate_limits_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "telegram_business_bindings",
+      "column_name": "id",
+      "constraint_name": "telegram_business_bindings_pkey",
+      "constraint_type": "PRIMARY KEY"
+    },
+    {
+      "table_name": "telegram_business_bindings",
+      "column_name": "workspace_id",
+      "constraint_name": "telegram_business_bindings_workspace_id_fkey",
+      "constraint_type": "FOREIGN KEY"
+    }
+  ],
+  "indexes": [
+    {
+      "tablename": "telegram_business_bindings",
+      "indexname": "telegram_business_bindings_pkey",
+      "indexdef": "CREATE UNIQUE INDEX telegram_business_bindings_pkey ON public.telegram_business_bindings USING btree (id)"
+    },
+    {
+      "tablename": "telegram_business_bindings",
+      "indexname": "idx_tg_business_bindings_workspace",
+      "indexdef": "CREATE INDEX idx_tg_business_bindings_workspace ON public.telegram_business_bindings USING btree (workspace_id)"
+    },
+    {
+      "tablename": "messages",
+      "indexname": "messages_pkey",
+      "indexdef": "CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id)"
+    },
+    {
+      "tablename": "agents",
+      "indexname": "agents_pkey",
+      "indexdef": "CREATE UNIQUE INDEX agents_pkey ON public.agents USING btree (id)"
+    },
+    {
+      "tablename": "appointments",
+      "indexname": "appointments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX appointments_pkey ON public.appointments USING btree (id)"
+    },
+    {
+      "tablename": "channel_events",
+      "indexname": "channel_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX channel_events_pkey ON public.channel_events USING btree (id)"
+    },
+    {
+      "tablename": "channel_events",
+      "indexname": "channel_events_due_idx",
+      "indexdef": "CREATE INDEX channel_events_due_idx ON public.channel_events USING btree (status, available_at)"
+    },
+    {
+      "tablename": "channel_events",
+      "indexname": "channel_events_workspace_idx",
+      "indexdef": "CREATE INDEX channel_events_workspace_idx ON public.channel_events USING btree (workspace_id, created_at)"
+    },
+    {
+      "tablename": "channel_events",
+      "indexname": "channel_events_conversation_sequence_idx",
+      "indexdef": "CREATE INDEX channel_events_conversation_sequence_idx ON public.channel_events USING btree (conversation_id, sequence)"
+    },
+    {
+      "tablename": "channel_events",
+      "indexname": "channel_events_processing_conversation_idx",
+      "indexdef": "CREATE UNIQUE INDEX channel_events_processing_conversation_idx ON public.channel_events USING btree (conversation_id) WHERE (status = 'processing'::text)"
+    },
+    {
+      "tablename": "conversations",
+      "indexname": "conversations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX conversations_pkey ON public.conversations USING btree (id)"
+    },
+    {
+      "tablename": "integration_rate_limits",
+      "indexname": "integration_rate_limits_pkey",
+      "indexdef": "CREATE UNIQUE INDEX integration_rate_limits_pkey ON public.integration_rate_limits USING btree (id)"
+    },
+    {
+      "tablename": "leads",
+      "indexname": "leads_pkey",
+      "indexdef": "CREATE UNIQUE INDEX leads_pkey ON public.leads USING btree (id)"
+    },
+    {
+      "tablename": "orders",
+      "indexname": "orders_pkey",
+      "indexdef": "CREATE UNIQUE INDEX orders_pkey ON public.orders USING btree (id)"
+    },
+    {
+      "tablename": "sessions",
+      "indexname": "sessions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX sessions_pkey ON public.sessions USING btree (id)"
+    },
+    {
+      "tablename": "sessions",
+      "indexname": "sessions_token_unique",
+      "indexdef": "CREATE UNIQUE INDEX sessions_token_unique ON public.sessions USING btree (token)"
+    },
+    {
+      "tablename": "support_sessions",
+      "indexname": "support_sessions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX support_sessions_pkey ON public.support_sessions USING btree (id)"
+    },
+    {
+      "tablename": "support_tickets",
+      "indexname": "support_tickets_pkey",
+      "indexdef": "CREATE UNIQUE INDEX support_tickets_pkey ON public.support_tickets USING btree (id)"
+    },
+    {
+      "tablename": "support_messages",
+      "indexname": "support_messages_pkey",
+      "indexdef": "CREATE UNIQUE INDEX support_messages_pkey ON public.support_messages USING btree (id)"
+    },
+    {
+      "tablename": "token_logs",
+      "indexname": "token_logs_pkey",
+      "indexdef": "CREATE UNIQUE INDEX token_logs_pkey ON public.token_logs USING btree (id)"
+    },
+    {
+      "tablename": "trial_grants",
+      "indexname": "trial_grants_pkey",
+      "indexdef": "CREATE UNIQUE INDEX trial_grants_pkey ON public.trial_grants USING btree (id)"
+    },
+    {
+      "tablename": "trial_grants",
+      "indexname": "trial_grants_owner_email_unique",
+      "indexdef": "CREATE UNIQUE INDEX trial_grants_owner_email_unique ON public.trial_grants USING btree (owner_email)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_pkey",
+      "indexdef": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_email_unique",
+      "indexdef": "CREATE UNIQUE INDEX users_email_unique ON public.users USING btree (email)"
+    },
+    {
+      "tablename": "verifications",
+      "indexname": "verifications_pkey",
+      "indexdef": "CREATE UNIQUE INDEX verifications_pkey ON public.verifications USING btree (id)"
+    },
+    {
+      "tablename": "website_widgets",
+      "indexname": "website_widgets_pkey",
+      "indexdef": "CREATE UNIQUE INDEX website_widgets_pkey ON public.website_widgets USING btree (id)"
+    },
+    {
+      "tablename": "website_widgets",
+      "indexname": "website_widgets_workspace_id_key",
+      "indexdef": "CREATE UNIQUE INDEX website_widgets_workspace_id_key ON public.website_widgets USING btree (workspace_id)"
+    },
+    {
+      "tablename": "widget_sessions",
+      "indexname": "widget_sessions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX widget_sessions_pkey ON public.widget_sessions USING btree (token_hash)"
+    },
+    {
+      "tablename": "workspaces",
+      "indexname": "workspaces_pkey",
+      "indexdef": "CREATE UNIQUE INDEX workspaces_pkey ON public.workspaces USING btree (id)"
+    },
+    {
+      "tablename": "workspaces",
+      "indexname": "workspaces_owner_email_unique",
+      "indexdef": "CREATE UNIQUE INDEX workspaces_owner_email_unique ON public.workspaces USING btree (owner_email)"
+    },
+    {
+      "tablename": "admin_audit_logs",
+      "indexname": "admin_audit_logs_pkey",
+      "indexdef": "CREATE UNIQUE INDEX admin_audit_logs_pkey ON public.admin_audit_logs USING btree (id)"
+    },
+    {
+      "tablename": "accounts",
+      "indexname": "accounts_pkey",
+      "indexdef": "CREATE UNIQUE INDEX accounts_pkey ON public.accounts USING btree (id)"
+    }
+  ]
+}

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Isolated CommonJS test loader. */
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');

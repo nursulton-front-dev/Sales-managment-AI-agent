@@ -2,7 +2,7 @@ import { NextRequest, NextResponse, connection } from 'next/server';
 import { getServerSessionContext } from '@/src/server/auth/session';
 import { getWorkspaceById, updateWorkspace, getAllAgents, createAgent } from '@/src/db';
 import { getMaxAgentsForPlan } from '@/lib/pricing';
-import { AgentDraft, WizardChatResponse } from '@/lib/wizard/types';
+import { AgentDraft } from '@/lib/wizard/types';
 import { ARCHETYPES, createInitialDraft } from '@/lib/wizard/archetypes';
 import { compileAgentDraft } from '@/lib/wizard/prompt-builder';
 import { getLLMProvider } from '@/lib/server/ai';
@@ -20,8 +20,8 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Организация не найдена' }, { status: 404 });
     }
 
-    const settings = (workspace.settings as Record<string, any>) || {};
-    const existingDraft: AgentDraft = settings.agentDraft || createInitialDraft('courses', 'ru');
+    const settings = (workspace.settings as Record<string, unknown>) || {};
+    const existingDraft: AgentDraft = (settings.agentDraft as AgentDraft | undefined) || createInitialDraft('courses', 'ru');
 
     return NextResponse.json({
       success: true,
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'Некорректный черновик' }, { status: 400 });
       }
 
-      const currentSettings = ((workspace.settings as Record<string, any>) || {});
+      const currentSettings = ((workspace.settings as Record<string, unknown>) || {});
       const updatedDraft: AgentDraft = {
         ...draft,
         updatedAt: new Date().toISOString(),
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       } else if (lower.includes('запис') || lower.includes('время') || lower.includes('kun') || lower.includes('soat')) {
         simulatedAction = {
           type: 'calendar_check',
-          details: isUz ? 'Bo\'sh vaqtlar tekshirildi (test taqvim)' : 'Свободные слоты проверены (тестовый календарь)',
+          details: isUz ? 'Vaqtni tekshirish soʻrovi aniqlandi; taqvim tekshirilmagan (test rejimi)' : 'Обнаружен запрос времени; календарь не проверялся (тестовый режим)',
         };
       }
 
@@ -107,9 +107,9 @@ ${tuningInstruction ? `\nДОПОЛНИТЕЛЬНАЯ ИНСТРУКЦИЯ ПО�
       try {
         const provider = getLLMProvider();
         const trimmedHistory = Array.isArray(history)
-          ? history.slice(-6).map((h: any) => ({
-              role: (h.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-              content: String(h.content || '').slice(0, 1000),
+          ? history.slice(-6).map((h: { role?: string; content?: unknown }) => ({
+              role: (h?.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+              content: String(h?.content || '').slice(0, 1000),
             }))
           : [];
 
@@ -174,7 +174,7 @@ ${tuningInstruction ? `\nДОПОЛНИТЕЛЬНАЯ ИНСТРУКЦИЯ ПО�
       }, maxAgents);
 
       // Clean up draft in workspace settings upon successful creation
-      const currentSettings = ((workspace.settings as Record<string, any>) || {});
+      const currentSettings = ((workspace.settings as Record<string, unknown>) || {});
       const newSettings = { ...currentSettings };
       delete newSettings.agentDraft;
 
@@ -192,7 +192,7 @@ ${tuningInstruction ? `\nДОПОЛНИТЕЛЬНАЯ ИНСТРУКЦИЯ ПО�
 
     // ACTION: INTERVIEW CHAT (Conversational setup wizard loop)
     if (action === 'chat') {
-      const { message, draft, history = [], lang = 'ru', attachedText } = body;
+      const { message, draft, lang = 'ru', attachedText } = body;
       const isUz = lang === 'uz';
 
       if (!message && !attachedText) {
@@ -200,7 +200,6 @@ ${tuningInstruction ? `\nДОПОЛНИТЕЛЬНАЯ ИНСТРУКЦИЯ ПО�
       }
 
       const currentDraft: AgentDraft = draft || createInitialDraft('courses', isUz ? 'uz' : 'ru');
-      const archetype = ARCHETYPES[currentDraft.nicheTemplate] || ARCHETYPES.courses;
 
       // Safe update based on user input
       const updatedDraft: AgentDraft = { ...currentDraft };
@@ -258,7 +257,6 @@ ${tuningInstruction ? `\nДОПОЛНИТЕЛЬНАЯ ИНСТРУКЦИЯ ПО�
           nextStep = 2;
           updatedDraft.currentStep = nextStep;
 
-          const arch = ARCHETYPES[updatedDraft.nicheTemplate] || ARCHETYPES.courses;
           reply = isUz
             ? `Qabul qilindi! Xodimning asosiy vazifasi belgilandi. Endi u bilishi kerak bo‘lgan asosiy xizmatlar va narxlar qanday? Namunadagi narxlarni tasdiqlashingiz, o‘z narxlaringizni yozishingiz yoki fayl yuklashingiz mumkin.`
             : `Принято! Главная задача сотрудника сохранена в резюме. Какие ключевые услуги и цены он должен знать? Вы можете подтвердить базовый прайс-лист, ввести свои цены или прикрепить файл.`;
@@ -330,15 +328,6 @@ ${tuningInstruction ? `\nДОПОЛНИТЕЛЬНАЯ ИНСТРУКЦИЯ ПО�
       }
 
       updatedDraft.updatedAt = new Date().toISOString();
-
-      // Auto-save draft into workspace settings
-      const currentSettings = ((workspace.settings as Record<string, any>) || {});
-      await updateWorkspace(workspaceId, {
-        settings: {
-          ...currentSettings,
-          agentDraft: updatedDraft,
-        },
-      });
 
       return NextResponse.json({
         success: true,

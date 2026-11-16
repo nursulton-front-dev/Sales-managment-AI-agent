@@ -1,44 +1,39 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Building2,
-  Users,
   Search,
-  Filter,
-  ArrowRight,
-  ShieldAlert,
-  Play,
-  Pause,
-  Plus,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  CreditCard,
-  RotateCcw,
   RefreshCw,
-  Eye,
-  Bot,
-  LifeBuoy,
-  History,
 } from 'lucide-react';
 import { useAdminRole } from '../AdminShell';
 import { useApp } from '@/context/AppContext';
+
+interface AdminWorkspace {
+  id: string;
+  companyName: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerPhone?: string;
+  plan: string;
+  status?: string;
+  tokenBalance: number;
+  googleCalendarConnected?: boolean;
+  createdAt: string;
+  subExpiresAt?: string | null;
+}
 
 export default function AdminOrganizationsPage() {
   const isOwner = useAdminRole() === 'super_admin';
   const { showToast } = useApp();
 
-  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [workspaces, setWorkspaces] = useState<AdminWorkspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
   // Selected workspace modal/drawer state
-  const [selectedWs, setSelectedWs] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'tokens' | 'history'>('overview');
+  const [selectedWs, setSelectedWs] = useState<AdminWorkspace | null>(null);
 
   // Action modals
   const [actionType, setActionType] = useState<string | null>(null);
@@ -48,9 +43,9 @@ export default function AdminOrganizationsPage() {
   const [trialDaysToAdd, setTrialDaysToAdd] = useState('7');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchWorkspaces = async () => {
+  const fetchWorkspaces = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await fetch('/api/admin/workspaces');
       const data = await res.json();
       if (data.success) {
@@ -61,10 +56,29 @@ export default function AdminOrganizationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchWorkspaces();
+    let ignore = false;
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/workspaces');
+        const data = await res.json();
+        if (!ignore && data.success) {
+          setWorkspaces(data.workspaces || []);
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    void load();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleExecuteAction = async () => {
@@ -100,8 +114,9 @@ export default function AdminOrganizationsPage() {
       } else {
         showToast('Ошибка', data.error || 'Сбой выполнения операции', 'error');
       }
-    } catch (err: any) {
-      showToast('Ошибка сети', err.message, 'error');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Ошибка сети';
+      showToast('Ошибка сети', msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -268,7 +283,6 @@ export default function AdminOrganizationsPage() {
                         <button
                           onClick={() => {
                             setSelectedWs(ws);
-                            setActiveTab('overview');
                           }}
                           className="px-2.5 py-1 text-xs font-medium rounded-[4px] border border-[var(--border)] hover:bg-[var(--surface-secondary)] text-[var(--text-primary)] transition-colors cursor-pointer"
                         >

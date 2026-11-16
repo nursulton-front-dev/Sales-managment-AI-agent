@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import React, { useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { LANDING_CONTENT, LandingLocale } from '@/lib/landing/content';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { HeroSection } from '@/components/landing/HeroSection';
@@ -18,29 +18,29 @@ import { useApp } from '@/context/AppContext';
 
 export function LandingPageClient() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const { user } = useApp();
 
-  // Detect locale from query params, localStorage, or default to 'ru'
-  const [locale, setLocale] = useState<LandingLocale>('ru');
+  const queryLang = searchParams?.get('lang');
+  const [prevQueryLang, setPrevQueryLang] = useState(queryLang);
 
-  useEffect(() => {
-    const queryLang = searchParams?.get('lang');
+  // Detect locale from query params, localStorage, or default to 'ru'
+  const [locale, setLocale] = useState<LandingLocale>(() => {
+    if (queryLang === 'uz' || queryLang === 'ru') return queryLang;
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('gapcha_landing_locale');
+        if (saved === 'uz' || saved === 'ru') return saved;
+      } catch {}
+    }
+    return 'ru';
+  });
+
+  if (queryLang !== prevQueryLang) {
+    setPrevQueryLang(queryLang);
     if (queryLang === 'uz' || queryLang === 'ru') {
       setLocale(queryLang);
-      try {
-        localStorage.setItem('gapcha_landing_locale', queryLang);
-      } catch {}
-      return;
     }
-
-    try {
-      const saved = localStorage.getItem('gapcha_landing_locale') as LandingLocale | null;
-      if (saved === 'uz' || saved === 'ru') {
-        setLocale(saved);
-      }
-    } catch {}
-  }, [searchParams]);
+  }
 
   const handleLocaleChange = useCallback((newLocale: LandingLocale) => {
     setLocale(newLocale);
@@ -59,7 +59,7 @@ export function LandingPageClient() {
   const isLoggedIn = Boolean(user?.id);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-[#DC2626] selection:text-white">
+    <div className="min-h-screen bg-[var(--surface)] text-[var(--text-primary)] font-sans antialiased selection:bg-[var(--accent)] selection:text-white">
       {/* 1. Header */}
       <LandingHeader
         content={content}

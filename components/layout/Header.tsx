@@ -15,7 +15,7 @@ export function Header({
   const known = !workspaceLoading && !workspaceError && user;
 
   return (
-    <header className="h-16 shrink-0 bg-[var(--surface)] dark:bg-[#101B2E] border-b border-[var(--border)] dark:border-[#29374C] px-3.5 sm:px-6 flex items-center justify-between gap-3 shadow-2xs">
+    <header className="h-16 shrink-0 bg-[var(--surface)] dark:bg-[var(--surface)] border-b border-[var(--border)] dark:border-[var(--border)] px-3.5 sm:px-6 flex items-center justify-between gap-3 shadow-2xs">
       {/* Left: Organization Title and Plan Badge */}
       <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
         <button
@@ -26,11 +26,11 @@ export function Header({
         >
           <Menu size={20} />
         </button>
-        <span className="font-bold truncate text-xs sm:text-sm max-w-28 sm:max-w-64 text-[var(--text-primary)] dark:text-[#F4F7FB]">
+        <span className="font-bold truncate text-xs sm:text-sm max-w-28 sm:max-w-64 text-[var(--text-primary)] dark:text-[var(--text-primary)]">
           {known ? user.companyName : t.common.loading}
         </span>
         {known && (
-          <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[11px] font-semibold text-[var(--text-secondary)] dark:text-[#AABAD0]">
+          <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] text-[11px] font-semibold text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
             {plan}
           </span>
         )}
@@ -42,7 +42,7 @@ export function Header({
         <div
           role="group"
           aria-label={t.nav.language}
-          className="inline-flex items-center p-0.5 rounded-xl bg-[var(--surface-secondary)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C]"
+          className="inline-flex items-center p-0.5 rounded-xl bg-[var(--surface-secondary)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)]"
         >
           <button
             type="button"
@@ -50,8 +50,8 @@ export function Header({
             aria-pressed={locale === 'ru'}
             className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               locale === 'ru'
-                ? 'bg-[#ED262A] text-white shadow-2xs'
-                : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                ? 'bg-[var(--accent)] text-white shadow-2xs'
+                : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)]'
             }`}
           >
             RU
@@ -62,8 +62,8 @@ export function Header({
             aria-pressed={locale === 'uz'}
             className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               locale === 'uz'
-                ? 'bg-[#ED262A] text-white shadow-2xs'
-                : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                ? 'bg-[var(--accent)] text-white shadow-2xs'
+                : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)]'
             }`}
           >
             UZ
@@ -73,18 +73,18 @@ export function Header({
         <Link
           href="/dashboard/billing"
           aria-label={t.nav.billing}
-          className="flex items-center text-xs sm:text-sm gap-1.5 tabular-nums text-[var(--text-primary)] dark:text-[#F4F7FB] px-2.5 py-1 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C]"
+          className="flex items-center text-xs sm:text-sm gap-1.5 tabular-nums text-[var(--text-primary)] dark:text-[var(--text-primary)] px-2.5 py-1 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)]"
         >
-          <Zap size={14} className="text-[#FF7277]" />
+          <Zap size={14} className="text-[var(--accent-link)]" />
           <strong>{known ? formatNumber(tokenBalance, locale) : '—'}</strong>
-          <span className="hidden md:inline text-[var(--text-secondary)] dark:text-[#AABAD0] text-xs">
+          <span className="hidden md:inline text-[var(--text-secondary)] dark:text-[var(--text-secondary)] text-xs">
             {t.common.responses}
           </span>
         </Link>
 
         <Link
           href="/dashboard/billing"
-          className="hidden md:flex items-center px-3.5 py-1.5 bg-[#ED262A] hover:bg-[#d01f23] text-white rounded-xl text-xs font-semibold shadow-2xs transition-all"
+          className="hidden md:flex items-center px-3.5 py-1.5 bg-[var(--accent)] hover:bg-[#d01f23] text-white rounded-xl text-xs font-semibold shadow-2xs transition-all"
         >
           {t.common.topup}
         </Link>
@@ -94,7 +94,7 @@ export function Header({
         <Link
           href="/dashboard/profile"
           aria-label={t.profile.title}
-          className="size-9 flex items-center justify-center rounded-xl bg-[var(--surface-secondary)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-bold text-xs text-[var(--text-primary)] dark:text-[#F4F7FB] hover:border-[var(--border-strong)] transition-all"
+          className="size-9 flex items-center justify-center rounded-xl bg-[var(--surface-secondary)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-bold text-xs text-[var(--text-primary)] dark:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-all"
         >
           {user?.name?.slice(0, 1).toUpperCase() || '—'}
         </Link>

@@ -10,8 +10,6 @@
  * 5. Owner Takeover: Message sent by business owner triggers human_takeover and cancels automation.
  */
 const { neon } = require('@neondatabase/serverless');
-const fs = require('fs');
-const path = require('path');
 const assert = require('assert');
 const crypto = require('crypto');
 

@@ -45,17 +45,17 @@ export function IntegrationsSection({ content }: IntegrationsSectionProps) {
   };
 
   return (
-    <section id="integrations" className="py-20 sm:py-28 bg-white border-t border-slate-100">
+    <section id="integrations" className="py-20 sm:py-28 bg-[var(--surface)] border-t border-[var(--border)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <span className="inline-block text-xs font-bold uppercase tracking-wider text-[#DC2626] px-3 py-1 bg-red-50 rounded-full border border-red-100">
+          <span className="inline-block text-xs font-bold uppercase tracking-wider text-[var(--accent)] px-3 py-1 bg-[var(--accent-soft)] rounded-full border border-[var(--accent)]/20">
             {integrations.tag}
           </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[var(--text-primary)] tracking-tight">
             {integrations.title}
           </h2>
-          <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
+          <p className="text-base sm:text-lg text-[var(--text-secondary)] leading-relaxed font-normal">
             {integrations.subtitle}
           </p>
         </div>
@@ -68,11 +68,11 @@ export function IntegrationsSection({ content }: IntegrationsSectionProps) {
             return (
               <div
                 key={item.id}
-                className="rounded-2xl bg-white border border-slate-200/90 p-6 sm:p-7 flex flex-col justify-between space-y-5 shadow-xs hover:border-slate-300 transition-colors"
+                className="rounded-2xl bg-[var(--surface)] border border-[var(--border)]/90 p-6 sm:p-7 flex flex-col justify-between space-y-5 shadow-xs hover:border-[var(--border-strong)] transition-colors"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="size-11 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center">
+                    <div className="size-11 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-center">
                       {renderIcon(item.id)}
                     </div>
                     <span
@@ -86,18 +86,18 @@ export function IntegrationsSection({ content }: IntegrationsSectionProps) {
                     </span>
                   </div>
 
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                  <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">
                     {item.name}
                   </h3>
 
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
                     {item.description}
                   </p>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100 space-y-2 text-xs">
-                  <div className="flex items-start gap-1.5 text-slate-500">
-                    <span className="font-semibold text-slate-700 shrink-0">Условие:</span>
+                <div className="pt-4 border-t border-[var(--border)] space-y-2 text-xs">
+                  <div className="flex items-start gap-1.5 text-[var(--text-muted)]">
+                    <span className="font-semibold text-[var(--text-secondary)] shrink-0">Условие:</span>
                     <span>{item.requirement}</span>
                   </div>
                   <div className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold text-[11px]">

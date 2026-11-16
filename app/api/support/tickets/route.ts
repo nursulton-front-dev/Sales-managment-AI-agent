@@ -3,7 +3,7 @@ import { NextRequest, NextResponse, connection } from 'next/server';
 import { getServerSessionContext } from '@/src/server/auth/session';
 import { createSupportTicket, getCustomerTickets } from '@/lib/server/support';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   await connection();
   try {
     const session = await getServerSessionContext();

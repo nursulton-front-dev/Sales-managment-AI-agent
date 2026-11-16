@@ -23,10 +23,7 @@ import {
   ExternalLink,
   Copy,
   Check,
-  ArrowRight,
-  Send,
   Flag,
-  CircleHelp,
   ShieldCheck,
   Eye,
   EyeOff,
@@ -55,13 +52,6 @@ type InstagramStatus = {
   autoReply?: boolean;
   status: string;
 };
-
-const TABS = [
-  { id: 'all', label: 'Все интеграции' },
-  { id: 'messages', label: 'Мессенджеры' },
-  { id: 'websites', label: 'Сайт' },
-  { id: 'calendar', label: 'Календари' },
-] as const;
 
 export default function IntegrationsPage() {
   const { agents, agentsError, refreshAgents, refreshWorkspace, showToast, t, locale } = useApp();
@@ -297,14 +287,14 @@ export default function IntegrationsPage() {
           title={t.integrations.title}
           description={locale === 'uz' ? 'Sotuvlar, qo‘llab-quvvatlash va mijozlarni avtomatik qabulga yozish ulanishlari katalogi.' : 'Каталог подключений для ваших продаж, поддержки и автоматической записи клиентов.'}
         />
-        <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] shadow-2xs self-start sm:self-auto">
+        <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] shadow-2xs self-start sm:self-auto">
           <span
             className={`inline-block size-2 rounded-full ${
               activeMessagingCount > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400 dark:bg-slate-500'
             }`}
           />
           <span>
-            {t.integrations.channelsSummary.connectedChannels}: <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] font-semibold">{activeMessagingCount}</strong> {locale === 'uz' ? 'ta ulangan' : 'подключено'}
+            {t.integrations.channelsSummary.connectedChannels}: <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] font-semibold">{activeMessagingCount}</strong> {locale === 'uz' ? 'ta ulangan' : 'подключено'}
             {calendar?.connected ? (locale === 'uz' ? ' · Jadval: Google Taqvim ulangan' : ' · Расписание: Google Календарь подключён') : ''}
           </span>
         </div>
@@ -314,57 +304,57 @@ export default function IntegrationsPage() {
       {/* 2. ONBOARDING SEQUENCE (IF 0 CONNECTED) OR ACTIVE SUMMARY */}
       {/* ========================================================================= */}
       {activeCount === 0 ? (
-        <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-5 sm:p-6 shadow-xs">
+        <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-5 sm:p-6 shadow-xs">
           <div className="flex items-center gap-2.5 mb-2">
-            <div className="size-8 rounded-xl bg-red-500/10 dark:bg-red-500/20 text-[#FF7277] flex items-center justify-center shrink-0">
+            <div className="size-8 rounded-xl bg-red-500/10 dark:bg-red-500/20 text-[var(--accent-link)] flex items-center justify-center shrink-0">
               <Flag size={18} />
             </div>
-            <h2 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+            <h2 className="font-semibold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
               {t.integrations.onboarding.title}
             </h2>
           </div>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] max-w-2xl mb-4 leading-relaxed">
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] max-w-2xl mb-4 leading-relaxed">
             {t.integrations.onboarding.desc}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-              <span className="size-6 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-bold text-xs flex items-center justify-center shrink-0 text-[#FF7277]">
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+              <span className="size-6 rounded-lg bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-bold text-xs flex items-center justify-center shrink-0 text-[var(--accent-link)]">
                 1
               </span>
               <div>
-                <p className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <p className="text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {t.integrations.onboarding.step1Title}
                 </p>
-                <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5 leading-snug">
+                <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5 leading-snug">
                   {t.integrations.onboarding.step1Desc}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-              <span className="size-6 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-bold text-xs flex items-center justify-center shrink-0 text-[#FF7277]">
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+              <span className="size-6 rounded-lg bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-bold text-xs flex items-center justify-center shrink-0 text-[var(--accent-link)]">
                 2
               </span>
               <div>
-                <p className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <p className="text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {t.integrations.onboarding.step2Title}
                 </p>
-                <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5 leading-snug">
+                <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5 leading-snug">
                   {t.integrations.onboarding.step2Desc}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-              <span className="size-6 rounded-lg bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-bold text-xs flex items-center justify-center shrink-0 text-[#FF7277]">
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+              <span className="size-6 rounded-lg bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-bold text-xs flex items-center justify-center shrink-0 text-[var(--accent-link)]">
                 3
               </span>
               <div>
-                <p className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <p className="text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {t.integrations.onboarding.step3Title}
                 </p>
-                <p className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5 leading-snug">
+                <p className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5 leading-snug">
                   {t.integrations.onboarding.step3Desc}
                 </p>
               </div>
@@ -372,14 +362,14 @@ export default function IntegrationsPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-[#142137] dark:border-emerald-500/30 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-[var(--surface-secondary)] dark:border-emerald-500/30 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="inline-block size-3 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <p className="text-sm font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {t.integrations.channelsSummary.activeDesc}
               </p>
-              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+              <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                 {connectedAgents.length > 0 && `Telegram: @${connectedAgents[0].telegramUsername || 'bot'}`}
                 {calendar?.connected && ` · Google ${locale === 'uz' ? 'Taqvim' : 'Календарь'}: ${calendar.email || (locale === 'uz' ? 'faol' : 'активен')}`}
                 {instagram?.connected && ` · Instagram: @${instagram.username || (locale === 'uz' ? 'faol' : 'активен')}`}
@@ -389,7 +379,7 @@ export default function IntegrationsPage() {
           <button
             type="button"
             onClick={() => setTab('events')}
-            className="text-xs font-semibold text-[#FF7277] hover:underline flex items-center gap-1 shrink-0 cursor-pointer self-start sm:self-auto"
+            className="text-xs font-semibold text-[var(--accent-link)] hover:underline flex items-center gap-1 shrink-0 cursor-pointer self-start sm:self-auto"
           >
             {t.integrations.channelsSummary.viewQueue}
           </button>
@@ -401,7 +391,7 @@ export default function IntegrationsPage() {
       {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div
-          className="flex items-center gap-1 p-1 bg-[var(--surface-secondary)]/70 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] rounded-2xl overflow-x-auto"
+          className="flex items-center gap-1 p-1 bg-[var(--surface-secondary)]/70 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] rounded-2xl overflow-x-auto"
           aria-label={locale === 'uz' ? 'Integratsiyalar toifalari' : 'Категории интеграций'}
         >
           {tabsList.map((item) => (
@@ -411,8 +401,8 @@ export default function IntegrationsPage() {
               aria-pressed={tab === item.id}
               className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                 tab === item.id
-                  ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
-                  : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                  ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-xs font-semibold'
+                  : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)]'
               }`}
               onClick={() => setTab(item.id)}
             >
@@ -427,8 +417,8 @@ export default function IntegrationsPage() {
           onClick={() => setTab(tab === 'events' ? 'all' : 'events')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium border transition-all cursor-pointer self-start sm:self-auto ${
             tab === 'events'
-              ? 'bg-[#FF7277] text-[#0B1220] border-[#FF7277] font-semibold'
-              : 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-secondary)] dark:text-[#AABAD0] border-[var(--border)] dark:border-[#29374C] hover:border-[var(--border-strong)]'
+              ? 'bg-[var(--accent-link)] text-[var(--background)] border-[var(--accent-link)] font-semibold'
+              : 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] border-[var(--border)] dark:border-[var(--border)] hover:border-[var(--border-strong)]'
           }`}
         >
           <History size={16} />
@@ -454,7 +444,7 @@ export default function IntegrationsPage() {
             {/* CARD 1: Telegram */}
             {['all', 'messages'].includes(tab) && (
               <div
-                className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
+                className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
                 onClick={() => {
                   if (connectedAgents[0]) setAgentId(connectedAgents[0].id);
                   setTelegramOpen(true);
@@ -478,14 +468,14 @@ export default function IntegrationsPage() {
 
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                         Telegram
                       </h3>
-                      <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                      <span className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                         {locale === 'uz' ? 'Shaxsiy hisob / Bot' : 'Личный аккаунт / Бот'}
                       </span>
                     </div>
-                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
                       {tgBusinessStatus?.connected
                         ? (locale === 'uz'
                             ? `Shaxsiy hisob: @${tgBusinessStatus.username || tgBusinessStatus.userId || 'ulangan'} · Xodim: ${tgBusinessStatus.agentName || 'AI'}`
@@ -505,7 +495,7 @@ export default function IntegrationsPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-[var(--border)] dark:border-[#29374C]">
+                <div className="pt-4 mt-4 border-t border-[var(--border)] dark:border-[var(--border)]">
                   <Button
                     type="button"
                     variant="outline"
@@ -526,7 +516,7 @@ export default function IntegrationsPage() {
             {/* CARD 2: Instagram Direct */}
             {['all', 'messages'].includes(tab) && (
               <div
-                className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
+                className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
                 onClick={() => setInstagramOpen(true)}
               >
                 <div className="space-y-4">
@@ -547,14 +537,14 @@ export default function IntegrationsPage() {
 
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                         Instagram Direct
                       </h3>
-                      <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                      <span className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                         {locale === 'uz' ? 'Ijtimoiy tarmoq' : 'Соцсеть'}
                       </span>
                     </div>
-                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
                       {instagram?.connected
                         ? (locale === 'uz'
                             ? `@${instagram.username || 'hisob'} · Avtojavoblar ${
@@ -570,7 +560,7 @@ export default function IntegrationsPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-[var(--border)] dark:border-[#29374C]">
+                <div className="pt-4 mt-4 border-t border-[var(--border)] dark:border-[var(--border)]">
                   <Button
                     type="button"
                     variant="outline"
@@ -590,12 +580,12 @@ export default function IntegrationsPage() {
             {/* CARD 3: Чат на сайте (Compact matching other cards) */}
             {['all', 'websites'].includes(tab) && (
               <div
-                className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
+                className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
                 onClick={() => setView('widget_settings')}
               >
                 <div className="space-y-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="size-12 rounded-2xl bg-[#DC2626]/10 flex items-center justify-center shrink-0 border border-[#DC2626]/20 group-hover:scale-105 transition-transform text-[#DC2626]">
+                    <div className="size-12 rounded-2xl bg-[var(--accent)]/10 flex items-center justify-center shrink-0 border border-[var(--accent)]/20 group-hover:scale-105 transition-transform text-[var(--accent)]">
                       <Globe size={28} />
                     </div>
                     <Badge variant="success">
@@ -605,20 +595,20 @@ export default function IntegrationsPage() {
 
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                         {t.integrations.widgetTitle}
                       </h3>
-                      <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                      <span className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                         {locale === 'uz' ? 'Vidjet' : 'Виджет'}
                       </span>
                     </div>
-                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
                       {t.integrations.widgetDesc}
                     </p>
                   </div>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-[var(--border)] dark:border-[#29374C]">
+                <div className="pt-4 mt-4 border-t border-[var(--border)] dark:border-[var(--border)]">
                   <Button
                     type="button"
                     variant="outline"
@@ -638,12 +628,12 @@ export default function IntegrationsPage() {
             {/* CARD 4: Google Calendar */}
             {['all', 'calendar'].includes(tab) && (
               <div
-                className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
+                className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-6 hover:border-[var(--border-strong)] dark:hover:border-slate-500 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
                 onClick={() => setCalendarOpen(true)}
               >
                 <div className="space-y-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="size-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 border border-[var(--border)] dark:border-[#29374C] group-hover:scale-105 transition-transform">
+                    <div className="size-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 border border-[var(--border)] dark:border-[var(--border)] group-hover:scale-105 transition-transform">
                       <Image src="/integrations/google-calendar.png" width={28} height={28} alt="Google Calendar" className="object-contain" />
                     </div>
                     <Badge variant={calendar?.connected ? 'success' : 'neutral'}>
@@ -659,14 +649,14 @@ export default function IntegrationsPage() {
 
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                         {t.integrations.calendarTitle}
                       </h3>
-                      <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                      <span className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                         {locale === 'uz' ? 'Mijozlarni yozish' : 'Запись клиентов'}
                       </span>
                     </div>
-                    <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+                    <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
                       {calendar?.connected
                         ? (locale === 'uz'
                             ? `${calendar.email || 'Sinxronlangan'} · ${calendar.workingHours} (${calendar.slotDuration} daq)`
@@ -678,7 +668,7 @@ export default function IntegrationsPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-[var(--border)] dark:border-[#29374C]">
+                <div className="pt-4 mt-4 border-t border-[var(--border)] dark:border-[var(--border)]">
                   <Button
                     type="button"
                     variant="outline"
@@ -708,22 +698,22 @@ export default function IntegrationsPage() {
       {/* ========================================================================= */}
       <Link
         href="/dashboard/support"
-        className="border border-[var(--border)] dark:border-[#29374C] rounded-2xl p-5 bg-[var(--surface)] dark:bg-[#142137] hover:bg-[var(--surface-secondary)]/50 dark:hover:bg-[#101B2E] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs group"
+        className="border border-[var(--border)] dark:border-[var(--border)] rounded-2xl p-5 bg-[var(--surface)] dark:bg-[var(--surface-secondary)] hover:bg-[var(--surface-secondary)]/50 dark:hover:bg-[var(--surface)] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs group"
       >
         <div className="flex items-center gap-4">
-          <div className="size-11 rounded-xl bg-slate-100 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] flex items-center justify-center text-[var(--text-secondary)] dark:text-[#AABAD0] group-hover:text-[#FF7277] transition-colors shrink-0">
+          <div className="size-11 rounded-xl bg-slate-100 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] dark:text-[var(--text-secondary)] group-hover:text-[var(--accent-link)] transition-colors shrink-0">
             <Headphones size={20} />
           </div>
           <div>
-            <p className="font-semibold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
+            <p className="font-semibold text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)]">
               {t.integrations.supportHelper.title}
             </p>
-            <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+            <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
               {t.integrations.supportHelper.desc}
             </p>
           </div>
         </div>
-        <span className="text-xs font-semibold text-[#FF7277] inline-flex items-center gap-1 shrink-0">
+        <span className="text-xs font-semibold text-[var(--accent-link)] inline-flex items-center gap-1 shrink-0">
           {t.integrations.supportHelper.cta}
         </span>
       </Link>
@@ -740,19 +730,19 @@ export default function IntegrationsPage() {
         open={widgetGuideOpen}
         onClose={() => setWidgetGuideOpen(false)}
         label={locale === 'uz' ? 'Saytdagi chat qanday ishlaydi' : 'Как работает чат на сайте'}
-        className="w-[calc(100vw-32px)] sm:w-[520px] max-w-[520px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+        className="w-[calc(100vw-32px)] sm:w-[520px] max-w-[520px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[var(--border)] shadow-2xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)]"
       >
         <div className="p-5 sm:p-6 space-y-4">
-          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3.5">
+          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[var(--border)] pb-3.5">
             <div className="flex items-center gap-3">
-              <div className="size-11 rounded-2xl bg-red-500/10 dark:bg-red-500/20 text-[#FF7277] flex items-center justify-center shrink-0 border border-red-500/20 shadow-xs">
+              <div className="size-11 rounded-2xl bg-red-500/10 dark:bg-red-500/20 text-[var(--accent-link)] flex items-center justify-center shrink-0 border border-red-500/20 shadow-xs">
                 <Globe size={24} />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {locale === 'uz' ? 'Saytdagi chat qanday ishlaydi' : 'Как работает чат на сайте'}
                 </h2>
-                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {locale === 'uz' ? 'Vidjetni o‘rnatish va ishlash tamoyillari' : 'Установка и принципы работы виджета'}
                 </p>
               </div>
@@ -768,13 +758,13 @@ export default function IntegrationsPage() {
             </Button>
           </div>
 
-          <div className="space-y-3 text-xs leading-relaxed text-[var(--text-secondary)] dark:text-[#AABAD0]">
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-              <span className="size-5 rounded-full bg-[var(--surface)] dark:bg-[#142137] font-bold text-[10px] flex items-center justify-center shrink-0 text-[#FF7277] mt-0.5">
+          <div className="space-y-3 text-xs leading-relaxed text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+              <span className="size-5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] font-bold text-[10px] flex items-center justify-center shrink-0 text-[var(--accent-link)] mt-0.5">
                 1
               </span>
               <div>
-                <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                   {locale === 'uz' ? 'Kodni nusxalash' : 'Копирование кода'}
                 </strong>
                 {locale === 'uz'
@@ -783,12 +773,12 @@ export default function IntegrationsPage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-              <span className="size-5 rounded-full bg-[var(--surface)] dark:bg-[#142137] font-bold text-[10px] flex items-center justify-center shrink-0 text-[#FF7277] mt-0.5">
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+              <span className="size-5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] font-bold text-[10px] flex items-center justify-center shrink-0 text-[var(--accent-link)] mt-0.5">
                 2
               </span>
               <div>
-                <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                   {locale === 'uz' ? 'Biznesingiz bilimlari' : 'Знания вашего бизнеса'}
                 </strong>
                 {locale === 'uz'
@@ -797,12 +787,12 @@ export default function IntegrationsPage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
-              <span className="size-5 rounded-full bg-[var(--surface)] dark:bg-[#142137] font-bold text-[10px] flex items-center justify-center shrink-0 text-[#FF7277] mt-0.5">
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
+              <span className="size-5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] font-bold text-[10px] flex items-center justify-center shrink-0 text-[var(--accent-link)] mt-0.5">
                 3
               </span>
               <div>
-                <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                   {locale === 'uz' ? 'Saralash va kontaktlar' : 'Квалификация и контакты'}
                 </strong>
                 {locale === 'uz'
@@ -812,7 +802,7 @@ export default function IntegrationsPage() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[#29374C]">
+          <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[var(--border)]">
             <Button type="button" variant="ghost" onClick={() => setWidgetGuideOpen(false)}>
               {t.common.close}
             </Button>
@@ -840,20 +830,20 @@ export default function IntegrationsPage() {
           }
         }}
         label={locale === 'uz' ? 'Telegramni ulash' : 'Подключение Telegram'}
-        className="w-[calc(100vw-32px)] sm:w-[540px] max-w-[540px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+        className="w-[calc(100vw-32px)] sm:w-[540px] max-w-[540px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[var(--border)] shadow-2xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)]"
       >
         <div className="p-5 sm:p-6 space-y-4">
           {/* Header */}
-          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3.5">
+          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[var(--border)] pb-3.5">
             <div className="flex items-center gap-3">
               <div className="size-11 rounded-2xl bg-[#229ED9]/10 flex items-center justify-center shrink-0 border border-[#229ED9]/20 shadow-xs">
                 <Image src="/integrations/telegram.svg" width={26} height={26} alt="Telegram" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {locale === 'uz' ? 'Telegramni ulash' : 'Подключение Telegram'}
                 </h2>
-                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {locale === 'uz' ? 'Shaxsiy hisob (Kotib rejimi) yoki o‘z botingiz' : 'Личный аккаунт (Secretary Mode) или собственный бот'}
                 </p>
               </div>
@@ -874,14 +864,14 @@ export default function IntegrationsPage() {
           </div>
 
           {/* Mode Switcher Tabs */}
-          <div className="grid grid-cols-2 p-1 rounded-xl bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs font-medium">
+          <div className="grid grid-cols-2 p-1 rounded-xl bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] text-xs font-medium">
             <button
               type="button"
               onClick={() => setTgTab('account')}
               className={`py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 tgTab === 'account'
-                  ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
-                  : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                  ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-xs font-semibold'
+                  : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)]'
               }`}
             >
               <span>{locale === 'uz' ? 'Telegram-hisob' : 'Telegram-аккаунт'}</span>
@@ -894,8 +884,8 @@ export default function IntegrationsPage() {
               onClick={() => setTgTab('custom_bot')}
               className={`py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 tgTab === 'custom_bot'
-                  ? 'bg-[var(--surface)] dark:bg-[#142137] text-[var(--text-primary)] dark:text-[#F4F7FB] shadow-xs font-semibold'
-                  : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+                  ? 'bg-[var(--surface)] dark:bg-[var(--surface-secondary)] text-[var(--text-primary)] dark:text-[var(--text-primary)] shadow-xs font-semibold'
+                  : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)]'
               }`}
             >
               <span>{locale === 'uz' ? 'O‘z Telegram-boti' : 'Свой Telegram-бот'}</span>
@@ -916,7 +906,7 @@ export default function IntegrationsPage() {
                           {locale === 'uz' ? 'Hisob ulangan (Kotib rejimi)' : 'Аккаунт подключён (Secretary Mode)'}
                         </span>
                       </div>
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                         {tgBusinessStatus.enabled
                           ? (locale === 'uz' ? 'Avtojavoblar faol' : 'Автоответы активны')
                           : (locale === 'uz' ? 'To‘xtatilgan' : 'На паузе')}
@@ -924,19 +914,19 @@ export default function IntegrationsPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="p-2.5 rounded-lg bg-[var(--surface)]/70 dark:bg-[#142137]/70 border border-[var(--border)] dark:border-[#29374C]">
-                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
+                      <div className="p-2.5 rounded-lg bg-[var(--surface)]/70 dark:bg-[var(--surface-secondary)]/70 border border-[var(--border)] dark:border-[var(--border)]">
+                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 block">
                           {locale === 'uz' ? 'Telegram-hisob:' : 'Telegram-аккаунт:'}
                         </span>
-                        <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block">
+                        <span className="font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate block">
                           @{tgBusinessStatus.username || tgBusinessStatus.userId}
                         </span>
                       </div>
-                      <div className="p-2.5 rounded-lg bg-[var(--surface)]/70 dark:bg-[#142137]/70 border border-[var(--border)] dark:border-[#29374C]">
-                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 block">
+                      <div className="p-2.5 rounded-lg bg-[var(--surface)]/70 dark:bg-[var(--surface-secondary)]/70 border border-[var(--border)] dark:border-[var(--border)]">
+                        <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 block">
                           {locale === 'uz' ? 'Mas\'ul AI:' : 'Ответственный ИИ:'}
                         </span>
-                        <span className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] truncate block">
+                        <span className="font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate block">
                           {tgBusinessStatus.agentName || (locale === 'uz' ? 'AI-xodim' : 'ИИ-сотрудник')}
                         </span>
                       </div>
@@ -951,8 +941,8 @@ export default function IntegrationsPage() {
                     )}
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] space-y-1">
-                    <p className="font-medium text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/60 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] space-y-1">
+                    <p className="font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       {locale === 'uz' ? 'Qo‘lda boshqarish (Human Takeover):' : 'Ручной перехват (Human Takeover):'}
                     </p>
                     <p className="text-[11px] leading-relaxed">
@@ -962,7 +952,7 @@ export default function IntegrationsPage() {
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
+                  <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] dark:border-[var(--border)]">
                     <Button
                       type="button"
                       variant="ghost"
@@ -1000,11 +990,11 @@ export default function IntegrationsPage() {
                 /* Unconnected State: 3 clear steps */
                 <div className="space-y-4">
                   {/* Step Progress Indicators */}
-                  <div className="grid grid-cols-3 gap-2 pb-2 border-b border-[var(--border)] dark:border-[#29374C] text-xs">
-                    <div className="flex items-center gap-1.5 font-medium text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <div className="grid grid-cols-3 gap-2 pb-2 border-b border-[var(--border)] dark:border-[var(--border)] text-xs">
+                    <div className="flex items-center gap-1.5 font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       <span
                         className={`size-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                          agentId ? 'bg-emerald-500 text-white' : 'bg-[#DC2626] text-white'
+                          agentId ? 'bg-emerald-500 text-white' : 'bg-[var(--accent)] text-white'
                         }`}
                       >
                         {agentId ? <Check size={11} strokeWidth={3} /> : '1'}
@@ -1015,15 +1005,15 @@ export default function IntegrationsPage() {
                     <div
                       className={`flex items-center gap-1.5 font-medium ${
                         bindData
-                          ? 'text-[var(--text-primary)] dark:text-[#F4F7FB]'
-                          : 'text-[var(--text-muted)] dark:text-[#AABAD0]/70'
+                          ? 'text-[var(--text-primary)] dark:text-[var(--text-primary)]'
+                          : 'text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70'
                       }`}
                     >
                       <span
                         className={`size-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           bindData
                             ? 'bg-[#229ED9] text-white'
-                            : 'bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[var(--text-muted)] border border-[var(--border)] dark:border-[#29374C]'
+                            : 'bg-[var(--surface-secondary)] dark:bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border)] dark:border-[var(--border)]'
                         }`}
                       >
                         2
@@ -1031,8 +1021,8 @@ export default function IntegrationsPage() {
                       <span>Telegram</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 font-medium text-[var(--text-muted)] dark:text-[#AABAD0]/70">
-                      <span className="size-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-[var(--surface-secondary)] dark:bg-[#101B2E] text-[var(--text-muted)] border border-[var(--border)] dark:border-[#29374C]">
+                    <div className="flex items-center gap-1.5 font-medium text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
+                      <span className="size-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-[var(--surface-secondary)] dark:bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border)] dark:border-[var(--border)]">
                         3
                       </span>
                       <span>{locale === 'uz' ? 'Tekshirish' : 'Проверка'}</span>
@@ -1054,7 +1044,7 @@ export default function IntegrationsPage() {
                         })),
                       ]}
                     />
-                    <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-1">
+                    <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 mt-1">
                       {locale === 'uz'
                         ? 'AI-xodim ulangan Telegram-hisobingizdagi mijozlar xabarlariga javob beradi.'
                         : 'ИИ-сотрудник будет отвечать на сообщения клиентов в подключённом Telegram-аккаунте.'}
@@ -1074,7 +1064,7 @@ export default function IntegrationsPage() {
                       >
                         <span>{locale === 'uz' ? 'Telegramda davom etish ↗' : 'Продолжить в Telegram ↗'}</span>
                       </Button>
-                      <p className="text-[11px] text-center text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-2">
+                      <p className="text-[11px] text-center text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 mt-2">
                         {locale === 'uz' ? 'Xavfsiz havola 15 daqiqa davomida amal qiladi.' : 'Создаётся безопасная ссылка со сроком действия 15 минут.'}
                       </p>
                     </div>
@@ -1093,7 +1083,7 @@ export default function IntegrationsPage() {
 
                       {/* Secondary action: subtle copy & validity */}
                       <div className="flex items-center justify-between px-1 text-xs">
-                        <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 flex items-center gap-1">
+                        <span className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 flex items-center gap-1">
                           <Clock3 size={12} />
                           <span>{locale === 'uz' ? 'Havola 15 daqiqa amal qiladi' : 'Ссылка действительна 15 минут'}</span>
                         </span>
@@ -1122,13 +1112,13 @@ export default function IntegrationsPage() {
                       </div>
 
                       {/* Real Server Status Indicator */}
-                      <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] flex items-center gap-2.5">
+                      <div className="p-3 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] flex items-center gap-2.5">
                         <span className="size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
                         <div className="text-xs">
-                          <p className="font-medium text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                          <p className="font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                             {locale === 'uz' ? 'Telegramda tasdiqlash kutilmoqda...' : 'Ожидаем подтверждение в Telegram...'}
                           </p>
-                          <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-0.5">
+                          <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 mt-0.5">
                             {locale === 'uz'
                               ? 'Botga /start yuboring va Telegram sozlamalarida chat-botni yoqing.'
                               : 'Отправьте /start боту и включите чат-бота в настройках Telegram.'}
@@ -1137,37 +1127,37 @@ export default function IntegrationsPage() {
                       </div>
 
                       {/* On-Demand Help Accordion */}
-                      <div className="rounded-xl border border-[var(--border)] dark:border-[#29374C] overflow-hidden">
+                      <div className="rounded-xl border border-[var(--border)] dark:border-[var(--border)] overflow-hidden">
                         <button
                           type="button"
                           onClick={() => setTgHelpOpen(!tgHelpOpen)}
-                          className="w-full flex items-center justify-between p-3 bg-[var(--surface-secondary)]/30 dark:bg-[#101B2E]/60 text-xs font-semibold text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] transition-colors cursor-pointer"
+                          className="w-full flex items-center justify-between p-3 bg-[var(--surface-secondary)]/30 dark:bg-[var(--surface)]/60 text-xs font-semibold text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                         >
                           <span>{locale === 'uz' ? 'Yordam kerakmi?' : 'Нужна помощь?'}</span>
                           {tgHelpOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
 
                         {tgHelpOpen && (
-                          <div className="p-3.5 space-y-2.5 text-xs border-t border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137]">
+                          <div className="p-3.5 space-y-2.5 text-xs border-t border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)]">
                             <div className="space-y-2">
                               <div className="flex items-start gap-2.5">
-                                <span className="size-4.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[#101B2E] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 text-[#229ED9]">
+                                <span className="size-4.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[var(--surface)] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 text-[#229ED9]">
                                   1
                                 </span>
-                                <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                                <span className="text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-snug">
                                   {locale === 'uz' ? (
-                                    <><strong>«Telegramda ochish»</strong> tugmasini bosing va <strong>@{bindData.botUsername}</strong> botiga <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[#F4F7FB]">/start</code> yuboring.</>
+                                    <><strong>«Telegramda ochish»</strong> tugmasini bosing va <strong>@{bindData.botUsername}</strong> botiga <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[var(--text-primary)]">/start</code> yuboring.</>
                                   ) : (
-                                    <>Нажмите <strong>«Открыть в Telegram»</strong> и отправьте команду <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[#F4F7FB]">/start</code> боту <strong>@{bindData.botUsername}</strong>.</>
+                                    <>Нажмите <strong>«Открыть в Telegram»</strong> и отправьте команду <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[var(--text-primary)]">/start</code> боту <strong>@{bindData.botUsername}</strong>.</>
                                   )}
                                 </span>
                               </div>
 
                               <div className="flex items-start gap-2.5">
-                                <span className="size-4.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[#101B2E] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 text-[#229ED9]">
+                                <span className="size-4.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[var(--surface)] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 text-[#229ED9]">
                                   2
                                 </span>
-                                <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                                <span className="text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-snug">
                                   {locale === 'uz' ? (
                                     <>Telegramda oching: <strong>Sozlamalar → Telegram Business → Chat-botlar</strong>.</>
                                   ) : (
@@ -1177,10 +1167,10 @@ export default function IntegrationsPage() {
                               </div>
 
                               <div className="flex items-start gap-2.5">
-                                <span className="size-4.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[#101B2E] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 text-[#229ED9]">
+                                <span className="size-4.5 rounded-full bg-[var(--surface-secondary)] dark:bg-[var(--surface)] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 text-[#229ED9]">
                                   3
                                 </span>
-                                <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] leading-snug">
+                                <span className="text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-snug">
                                   {locale === 'uz' ? (
                                     <><strong>@{bindData.botUsername}</strong> botini qo‘shing va <strong>«Xabarlarga javob berish»</strong> bandini albatta yoqing.</>
                                   ) : (
@@ -1190,7 +1180,7 @@ export default function IntegrationsPage() {
                               </div>
                             </div>
 
-                            <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
+                            <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 pt-2 border-t border-[var(--border)] dark:border-[var(--border)]">
                               {locale === 'uz'
                                 ? 'Agar havola muddati tugagan bo‘lsa yoki Telegram so‘rovni rad etsa, «Qayta o‘rnatish» tugmasini bosing va yangi havola yarating.'
                                 : 'Если ссылка истекла или Telegram отклонил запрос, нажмите «Сбросить» и создайте новую ссылку.'}
@@ -1200,7 +1190,7 @@ export default function IntegrationsPage() {
                       </div>
 
                       {/* Modal Footer Controls */}
-                      <div className="flex justify-between items-center pt-2 border-t border-[var(--border)] dark:border-[#29374C]">
+                      <div className="flex justify-between items-center pt-2 border-t border-[var(--border)] dark:border-[var(--border)]">
                         <Button
                           type="button"
                           variant="ghost"
@@ -1248,7 +1238,7 @@ export default function IntegrationsPage() {
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <span className="text-[var(--text-secondary)] dark:text-[#AABAD0] truncate">
+                    <span className="text-[var(--text-secondary)] dark:text-[var(--text-secondary)] truncate">
                       {locale === 'uz' ? 'Bot faol: ' : 'Бот активен: '}
                       <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">
                         @{selectedAgent?.telegramUsername || 'bot'}
@@ -1290,7 +1280,7 @@ export default function IntegrationsPage() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-medium text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <label className="text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {isSelectedConnected
                         ? (locale === 'uz' ? 'Yangi bot tokeni (almashtirish uchun):' : 'Новый токен бота (для замены):')
                         : (locale === 'uz' ? '@BotFather dan olingan bot tokeni:' : 'Токен бота из @BotFather:')}
@@ -1313,18 +1303,18 @@ export default function IntegrationsPage() {
                       onChange={(e) => setToken(e.target.value.trim())}
                       placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
                       required={!isSelectedConnected}
-                      className="w-full h-10 pl-3 pr-10 rounded-xl bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB] font-mono text-xs focus:outline-hidden focus:border-[#229ED9]"
+                      className="w-full h-10 pl-3 pr-10 rounded-xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] text-[var(--text-primary)] dark:text-[var(--text-primary)] font-mono text-xs focus:outline-hidden focus:border-[#229ED9]"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCustomBotToken(!showCustomBotToken)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] p-1 transition-colors cursor-pointer"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)] p-1 transition-colors cursor-pointer"
                       title={showCustomBotToken ? (locale === 'uz' ? 'Yashirish' : 'Скрыть токен') : (locale === 'uz' ? 'Ko‘rsatish' : 'Показать токен')}
                     >
                       {showCustomBotToken ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
                   </div>
-                  <div className="mt-2 p-2.5 rounded-lg bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] flex items-start gap-2 text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/80">
+                  <div className="mt-2 p-2.5 rounded-lg bg-[var(--surface-secondary)]/60 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] flex items-start gap-2 text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/80">
                     <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                     <span>
                       {locale === 'uz'
@@ -1336,20 +1326,20 @@ export default function IntegrationsPage() {
               </div>
 
               {/* Step-by-Step Instruction */}
-              <div className="rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] p-3.5 space-y-2.5">
+              <div className="rounded-xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface-secondary)]/60 dark:bg-[var(--surface)] p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {locale === 'uz' ? 'Bosqichma-bosqich ko‘rsatma:' : 'Пошаговая инструкция:'}
                   </span>
-                  <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">~1 {locale === 'uz' ? 'daqiqa' : 'минута'}</span>
+                  <span className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">~1 {locale === 'uz' ? 'daqiqa' : 'минута'}</span>
                 </div>
 
                 <div className="space-y-2 text-xs">
                   <div className="flex items-start gap-2.5">
-                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       1
                     </span>
-                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz' ? (
                         <>Telegramda rasmiy <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 font-semibold text-[#229ED9] hover:underline">@BotFather<ExternalLink size={10} /></a> botini oching.</>
                       ) : (
@@ -1359,10 +1349,10 @@ export default function IntegrationsPage() {
                   </div>
 
                   <div className="flex items-start gap-2.5">
-                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       2
                     </span>
-                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz' ? (
                         <>
                           <button
@@ -1373,12 +1363,12 @@ export default function IntegrationsPage() {
                               setTimeout(() => setCopiedCmd(false), 2000);
                             }}
                             title="Buyruqdan nusxa olish uchun bosing"
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-mono text-[11px] text-[var(--accent-link)] font-semibold hover:border-[var(--border-strong)] cursor-pointer"
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-mono text-[11px] text-[var(--accent-link)] font-semibold hover:border-[var(--border-strong)] cursor-pointer"
                           >
                             /newbot
                             {copiedCmd ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
                           </button>{' '}
-                          buyrug‘ini yuboring va bot nomini kiriting (masalan, <em className="text-[var(--text-primary)] dark:text-[#F4F7FB]">Sotuv bo‘limi</em>).
+                          buyrug‘ini yuboring va bot nomini kiriting (masalan, <em className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">Sotuv bo‘limi</em>).
                         </>
                       ) : (
                         <>
@@ -1391,39 +1381,39 @@ export default function IntegrationsPage() {
                               setTimeout(() => setCopiedCmd(false), 2000);
                             }}
                             title="Нажмите, чтобы скопировать команду"
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-mono text-[11px] text-[var(--accent-link)] font-semibold hover:border-[var(--border-strong)] cursor-pointer"
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-mono text-[11px] text-[var(--accent-link)] font-semibold hover:border-[var(--border-strong)] cursor-pointer"
                           >
                             /newbot
                             {copiedCmd ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
                           </button>{' '}
-                          и укажите имя бота (например, <em className="text-[var(--text-primary)] dark:text-[#F4F7FB]">Отдел продаж</em>).
+                          и укажите имя бота (например, <em className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">Отдел продаж</em>).
                         </>
                       )}
                     </span>
                   </div>
 
                   <div className="flex items-start gap-2.5">
-                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       3
                     </span>
-                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz' ? (
-                        <>Bot username-ini <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[#F4F7FB]">bot</code> bilan tugaydigan qilib belgilang (masalan: <span className="font-mono text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">myshop_sales_bot</span>).</>
+                        <>Bot username-ini <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[var(--text-primary)]">bot</code> bilan tugaydigan qilib belgilang (masalan: <span className="font-mono text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">myshop_sales_bot</span>).</>
                       ) : (
-                        <>Задайте username бота с окончанием <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[#F4F7FB]">bot</code> (например: <span className="font-mono text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">myshop_sales_bot</span>).</>
+                        <>Задайте username бота с окончанием <code className="font-mono text-[11px] text-[var(--text-primary)] dark:text-[var(--text-primary)]">bot</code> (например: <span className="font-mono text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">myshop_sales_bot</span>).</>
                       )}
                     </span>
                   </div>
 
                   <div className="flex items-start gap-2.5">
-                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       4
                     </span>
-                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz' ? (
-                        <>Berilgan <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">HTTP API tokenini</strong> nusxalang va yuqoridagi maydonga joylang.</>
+                        <>Berilgan <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">HTTP API tokenini</strong> nusxalang va yuqoridagi maydonga joylang.</>
                       ) : (
-                        <>Скопируйте выданный <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">HTTP API токен</strong> и вставьте в поле выше.</>
+                        <>Скопируйте выданный <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">HTTP API токен</strong> и вставьте в поле выше.</>
                       )}
                     </span>
                   </div>
@@ -1431,7 +1421,7 @@ export default function IntegrationsPage() {
               </div>
 
               {/* Footer Actions */}
-              <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[#29374C]">
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--border)] dark:border-[var(--border)]">
                 <Button
                   type="button"
                   variant="ghost"
@@ -1464,19 +1454,19 @@ export default function IntegrationsPage() {
         open={calendarOpen}
         onClose={() => setCalendarOpen(false)}
         label={locale === 'uz' ? 'Taqvim sozlamalari' : 'Настройки календаря'}
-        className="w-[calc(100vw-32px)] sm:w-[500px] max-w-[500px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+        className="w-[calc(100vw-32px)] sm:w-[500px] max-w-[500px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[var(--border)] shadow-2xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)]"
       >
         <div className="p-5 sm:p-6 space-y-4">
-          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3.5">
+          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[var(--border)] pb-3.5">
             <div className="flex items-center gap-3">
-              <div className="size-11 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 border border-[var(--border)] dark:border-[#29374C] shadow-xs">
+              <div className="size-11 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 border border-[var(--border)] dark:border-[var(--border)] shadow-xs">
                 <Image src="/integrations/google-calendar.png" width={26} height={26} alt="Google Calendar" className="object-contain" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   Google {locale === 'uz' ? 'Taqvim' : 'Календарь'}
                 </h2>
-                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {calendar?.connected
                     ? (locale === 'uz' ? 'Sinxronizatsiya faol' : 'Синхронизация активна')
                     : (locale === 'uz' ? 'Uchrashuvlarga avtomatik yozish' : 'Автоматическая запись на встречи')}
@@ -1497,43 +1487,43 @@ export default function IntegrationsPage() {
 
           {!calendar?.connected ? (
             <div className="space-y-4">
-              <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+              <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
                 {locale === 'uz'
                   ? 'Ishchi Google Taqvimni sinxronlang, shunda AI-agentlaringiz real vaqtda bo‘sh vaqtlarni tekshirib, mijozlarni uchrashuv va maslahatlarga avtomatik yozadi.'
                   : 'Синхронизируйте рабочий Google Календарь, чтобы ваши ИИ-агенты могли в реальном времени проверять свободные окна и автоматически записывать клиентов на встречи и консультации.'}
               </p>
 
               {/* Step-by-Step Instruction */}
-              <div className="rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] p-3.5 space-y-2.5">
-                <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+              <div className="rounded-xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface-secondary)]/60 dark:bg-[var(--surface)] p-3.5 space-y-2.5">
+                <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                   {locale === 'uz' ? 'Sinxronizatsiya qanday ishlaydi:' : 'Как работает синхронизация:'}
                 </span>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-start gap-2.5">
-                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       1
                     </span>
-                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz'
                         ? '«Google orqali ulash» tugmasini bosing va ishchi hisobingizga kiring.'
                         : 'Нажмите кнопку «Подключить через Google» и авторизуйте рабочий аккаунт.'}
                     </span>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       2
                     </span>
-                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz'
                         ? 'Asosiy taqvimda bandlikni tekshirish va yangi tadbirlar yaratishga ruxsat bering.'
                         : 'Разрешите чтение занятости и создание событий в основном календаре.'}
                     </span>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       3
                     </span>
-                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz'
                         ? 'AI real vaqtda bo‘sh oraliqlarni tekshirib, mijozlarga to‘qnashuvsiz qulay vaqtlarni taklif qiladi.'
                         : 'ИИ будет проверять окна в реальном времени и предлагать клиентам слоты без накладок.'}
@@ -1542,18 +1532,16 @@ export default function IntegrationsPage() {
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2.5 border-t border-[var(--border)] dark:border-[#29374C]">
+              <div className="pt-2 flex justify-end gap-2.5 border-t border-[var(--border)] dark:border-[var(--border)]">
                 <Button type="button" variant="ghost" onClick={() => setCalendarOpen(false)}>
                   {t.common.cancel}
                 </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  disabled={loading || busy || !calendar?.configured}
-                  onClick={() => window.location.assign('/api/calendar/auth')}
+                <a
+                  href="/api/calendar/auth"
+                  className={`inline-flex items-center justify-center font-medium rounded-[6px] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] text-sm min-h-[44px] sm:min-h-[40px] px-4 py-2 gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-text)] font-semibold shadow-2xs ${loading || busy || !calendar?.configured ? 'opacity-50 pointer-events-none' : ''}`}
                 >
                   {locale === 'uz' ? 'Google orqali ulash' : 'Подключить через Google'}
-                </Button>
+                </a>
               </div>
             </div>
           ) : (
@@ -1582,7 +1570,7 @@ export default function IntegrationsPage() {
               }}
             >
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
-                <span className="text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                <span className="text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {locale === 'uz' ? 'Ulangan hisob: ' : 'Подключённый аккаунт: '}
                   <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{calendar.email}</strong>
                 </span>
@@ -1615,13 +1603,13 @@ export default function IntegrationsPage() {
                 }))}
               />
 
-              <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+              <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                 {locale === 'uz'
                   ? 'Taqvim vaqt mintaqasi: Asia/Tashkent (xorijdagi mijozlar uchun avtomatik konvertatsiya).'
                   : 'Часовой пояс календаря: Asia/Tashkent (автоматическая конвертация для зарубежных клиентов).'}
               </p>
 
-              <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] dark:border-[#29374C]">
+              <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] dark:border-[var(--border)]">
                 <Button
                   type="button"
                   variant="ghost"
@@ -1655,16 +1643,16 @@ export default function IntegrationsPage() {
         open={instagramOpen}
         onClose={() => setInstagramOpen(false)}
         label={locale === 'uz' ? 'Instagram sozlamalari' : 'Настройки Instagram'}
-        className="w-[calc(100vw-32px)] sm:w-[500px] max-w-[500px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+        className="w-[calc(100vw-32px)] sm:w-[500px] max-w-[500px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[var(--border)] shadow-2xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)]"
       >
         <div className="p-5 sm:p-6 space-y-4">
-          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3.5">
+          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[var(--border)] pb-3.5">
             <div className="flex items-center gap-3">
               <div className="size-11 rounded-2xl bg-pink-50 dark:bg-pink-950/40 flex items-center justify-center shrink-0 border border-pink-100 dark:border-pink-900/40 shadow-xs">
                 <Image src="/integrations/instagram.svg" width={26} height={26} alt="Instagram" className="object-contain" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">Instagram Direct</h2>
+                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">Instagram Direct</h2>
                 <Badge variant={instagram?.connected ? 'success' : 'neutral'}>
                   {instagram?.connected
                     ? (locale === 'uz' ? 'Ulangan' : 'Подключён')
@@ -1686,47 +1674,47 @@ export default function IntegrationsPage() {
 
           {!instagram?.connected ? (
             <div className="space-y-4">
-              <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+              <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
                 {locale === 'uz'
                   ? 'Instagram biznes-hisobingizni ulang, shunda AI-agentlar Directdagi mijozlarga darhol javob beradi, katalog yuboradi va 24/7 murojaatlarni saralaydi.'
                   : 'Подключите бизнес-аккаунт Instagram, чтобы ИИ-агенты моментально отвечали клиентам в Direct, отправляли каталог и квалифицировали обращения 24/7.'}
               </p>
 
               {/* Step-by-Step Instruction */}
-              <div className="rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] p-3.5 space-y-2.5">
-                <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+              <div className="rounded-xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface-secondary)]/60 dark:bg-[var(--surface)] p-3.5 space-y-2.5">
+                <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                   {locale === 'uz' ? 'Ulashdan oldingi talablar:' : 'Требования перед подключением:'}
                 </span>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-start gap-2.5">
-                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       1
                     </span>
-                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz' ? (
-                        <>Instagram profilingizni <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">«Professional (Biznes)»</strong> holatiga o‘tkazing.</>
+                        <>Instagram profilingizni <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">«Professional (Biznes)»</strong> holatiga o‘tkazing.</>
                       ) : (
-                        <>Переведите ваш Instagram в статус <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">«Профессиональный (Бизнес)»</strong>.</>
+                        <>Переведите ваш Instagram в статус <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">«Профессиональный (Бизнес)»</strong>.</>
                       )}
                     </span>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       2
                     </span>
-                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz' ? (
-                        <>Instagram ilovasida: Sozlamalar → Xabarlar → Xabarlarga ruxsat → <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">«Ruxsat berish»</strong>ni yoqing.</>
+                        <>Instagram ilovasida: Sozlamalar → Xabarlar → Xabarlarga ruxsat → <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">«Ruxsat berish»</strong>ni yoqing.</>
                       ) : (
-                        <>В приложении Instagram: Настройки → Сообщения → Доступ к сообщениям → Включите <strong className="text-[var(--text-primary)] dark:text-[#F4F7FB]">«Разрешить доступ»</strong>.</>
+                        <>В приложении Instagram: Настройки → Сообщения → Доступ к сообщениям → Включите <strong className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">«Разрешить доступ»</strong>.</>
                       )}
                     </span>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[#142137] border border-[var(--border)] dark:border-[#29374C] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <span className="size-4.5 rounded-full bg-[var(--surface)] dark:bg-[var(--surface-secondary)] border border-[var(--border)] dark:border-[var(--border)] font-semibold text-[10px] flex items-center justify-center shrink-0 text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       3
                     </span>
-                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                    <span className="leading-snug text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {locale === 'uz' ? (
                         <>Instagramni Facebook sahifasiga ulang va quyidagi tugma orqali kiring.</>
                       ) : (
@@ -1737,26 +1725,22 @@ export default function IntegrationsPage() {
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2.5 border-t border-[var(--border)] dark:border-[#29374C]">
+              <div className="pt-2 flex justify-end gap-2.5 border-t border-[var(--border)] dark:border-[var(--border)]">
                 <Button type="button" variant="ghost" onClick={() => setInstagramOpen(false)}>
                   {t.common.cancel}
                 </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  disabled={loading || !instagram?.configured || busy}
-                  onClick={() => {
-                    window.location.href = '/api/instagram/auth';
-                  }}
+                <a
+                  href="/api/instagram/auth"
+                  className={`inline-flex items-center justify-center font-medium rounded-[6px] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] text-sm min-h-[44px] sm:min-h-[40px] px-4 py-2 gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-text)] font-semibold shadow-2xs ${loading || !instagram?.configured || busy ? 'opacity-50 pointer-events-none' : ''}`}
                 >
                   {locale === 'uz' ? 'Instagramni ulash' : 'Подключить Instagram'}
-                </Button>
+                </a>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/20 text-xs">
-                <span className="text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                <span className="text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {locale === 'uz' ? 'Ulangan hisob: ' : 'Подключённый аккаунт: '}
                   <strong className="text-pink-600 dark:text-pink-400 font-semibold">@{instagram.username}</strong>
                 </span>
@@ -1773,12 +1757,12 @@ export default function IntegrationsPage() {
                 ]}
               />
 
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C]">
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)]">
                 <div>
-                  <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB] block">
+                  <span className="text-xs font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] block">
                     {locale === 'uz' ? 'AI avtojavoblari' : 'Автоответы ИИ'}
                   </span>
-                  <span className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+                  <span className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                     {locale === 'uz' ? 'Directdagi mijozlarga avtomatik javob berish' : 'Отвечать клиентам в Direct автоматически'}
                   </span>
                 </div>
@@ -1797,7 +1781,7 @@ export default function IntegrationsPage() {
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] dark:border-[#29374C]">
+              <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] dark:border-[var(--border)]">
                 <Button
                   type="button"
                   variant="ghost"
@@ -1826,17 +1810,17 @@ export default function IntegrationsPage() {
         open={whatsappOpen}
         onClose={() => setWhatsappOpen(false)}
         label="WhatsApp Business"
-        className="w-[calc(100vw-32px)] sm:w-[460px] max-w-[460px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+        className="w-[calc(100vw-32px)] sm:w-[460px] max-w-[460px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[var(--border)] shadow-2xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)]"
       >
         <div className="p-5 sm:p-6 space-y-4">
-          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3.5">
+          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[var(--border)] pb-3.5">
             <div className="flex items-center gap-3">
               <div className="size-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/40 shadow-xs">
                 <Image src="/integrations/whatsapp.svg" width={26} height={26} alt="WhatsApp" className="object-contain" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">WhatsApp Business</h2>
-                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">WhatsApp Business</h2>
+                <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {locale === 'uz' ? 'Sotuvlar va mijozlar xizmati uchun messenjer' : 'Мессенджер для продаж и поддержки'}
                 </p>
               </div>
@@ -1852,7 +1836,7 @@ export default function IntegrationsPage() {
             </Button>
           </div>
 
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
             {locale === 'uz'
               ? 'Rasmiy WhatsApp Cloud API orqali to‘g‘ridan-to‘g‘ri integratsiya yopiq test bosqichida. Tez orada biznes-raqamni ulab, sotuvlarni WhatsAppda avtomatlashtirishingiz mumkin.'
               : 'Прямая интеграция через официальный WhatsApp Cloud API находится на стадии закрытого тестирования. Скоро вы сможете подключить бизнес-номер и автоматизировать продажи в WhatsApp.'}

@@ -2,21 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { CheckCircle2, AlertCircle, X, ExternalLink, Loader2 } from 'lucide-react';
 
 export function GoogleCalendarModal() {
   const {
+    locale,
     isCalendarModalOpen,
     closeCalendarModal,
     isGoogleCalendarConnected,
-    connectGoogleCalendar,
     disconnectGoogleCalendar,
     showToast,
   } = useApp();
 
-  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [statusFailed, setStatusFailed] = useState(false);
   const [statusData, setStatusData] = useState<{
     configured: boolean;
     connected: boolean;
@@ -28,34 +28,26 @@ export function GoogleCalendarModal() {
   const [isCreatingTestEvent, setIsCreatingTestEvent] = useState(false);
   const [testResult, setTestResult] = useState<{ htmlLink?: string; message: string } | null>(null);
 
-  // Load status when modal opens
+  const isLoadingStatus = statusData === null && !statusFailed;
+  // Fetch status without closing the modal or refreshing the whole workspace.
   useEffect(() => {
-    if (isCalendarModalOpen) {
-      setIsLoadingStatus(true);
-      fetch('/api/calendar/status')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            setStatusData(data);
-            if (data.connected && !isGoogleCalendarConnected) {
-              connectGoogleCalendar();
-            }
-          }
-        })
-        .catch(() => {})
-        .finally(() => setIsLoadingStatus(false));
-    }
+    if (!isCalendarModalOpen) return;
+    const controller = new AbortController();
+    fetch('/api/calendar/status', { signal: controller.signal })
+      .then((res) => { if (!res.ok) throw new Error('Status unavailable'); return res.json(); })
+      .then((data) => {
+        if (!data.success) throw new Error('Status unavailable');
+        setStatusData(data);
+        setStatusFailed(false);
+      })
+      .catch(() => { if (!controller.signal.aborted) setStatusFailed(true); });
+    return () => controller.abort();
   }, [isCalendarModalOpen]);
 
   if (!isCalendarModalOpen) return null;
 
   const isConnected = isGoogleCalendarConnected || Boolean(statusData?.connected);
   const isConfigured = Boolean(statusData?.configured);
-
-  const handleOAuthConnect = () => {
-    setIsConnecting(true);
-    window.location.href = '/api/calendar/auth';
-  };
 
   const handleTestEventCreation = async () => {
     setIsCreatingTestEvent(true);
@@ -65,7 +57,7 @@ export function GoogleCalendarModal() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          summary: 'Тестовая запись — gapcha AI',
+          action: 'check',
           clientName: 'Тестовый Клиент',
           clientPhone: '+998 90 123 45 67',
         }),
@@ -76,12 +68,12 @@ export function GoogleCalendarModal() {
           htmlLink: data.htmlLink || data.directLink,
           message: data.message,
         });
-        showToast('Слот забронирован', data.message, 'success');
+        showToast('Проверка календаря', data.message, 'success');
       } else {
         showToast('Ошибка бронирования', data.error || 'Сбой Google API', 'error');
       }
-    } catch (err: any) {
-      showToast('Ошибка сети', err.message || 'Сбой запроса', 'error');
+    } catch (err: unknown) {
+      showToast('Ошибка сети', err instanceof Error ? err.message : 'Сбой запроса', 'error');
     } finally {
       setIsCreatingTestEvent(false);
     }
@@ -132,6 +124,7 @@ export function GoogleCalendarModal() {
           </button>
         </div>
 
+      <Link href="/dashboard/calendar-review" onClick={closeCalendarModal} className="mx-5 mb-3 rounded-lg bg-[var(--surface)] p-3 text-[var(--text-primary)] underline">{locale === 'uz' ? 'Taqvim yozuvlarini tekshirish' : 'Проверка записей календаря'}</Link>
         {/* Content Body */}
         <div className="px-5 sm:px-6 py-3 space-y-4 text-xs text-[var(--text-secondary)]">
           {isLoadingStatus ? (
@@ -244,30 +237,19 @@ export function GoogleCalendarModal() {
               >
                 Отмена
               </button>
-              <button
-                type="button"
-                onClick={handleOAuthConnect}
-                disabled={isConnecting}
-                className="h-10 inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-[6px] transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+              <a
+                href="/api/calendar/auth"
+                className="h-10 inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-[6px] transition-colors shadow-2xs cursor-pointer"
               >
-                {isConnecting ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Переход в Google...</span>
-                  </>
-                ) : (
-                  <>
-                    <Image
-                      src="/images/brands/google-g.png"
-                      alt="Google"
-                      width={16}
-                      height={16}
-                      className="object-contain"
-                    />
-                    <span>Подключить Google Календарь</span>
-                  </>
-                )}
-              </button>
+                <Image
+                  src="/images/brands/google-g.png"
+                  alt="Google"
+                  width={16}
+                  height={16}
+                  className="object-contain"
+                />
+                <span>Подключить Google Календарь</span>
+              </a>
             </>
           )}
         </div>

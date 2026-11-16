@@ -4,7 +4,7 @@
  * Синхронизирован с фактическими возможностями продукта и тарифами (lib/pricing.ts).
  */
 
-import { PLANS, TRIAL_PLAN } from '@/lib/pricing';
+import { PLANS } from '@/lib/pricing';
 
 export type LandingLocale = 'ru' | 'uz';
 

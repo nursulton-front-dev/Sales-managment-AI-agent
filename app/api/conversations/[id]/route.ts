@@ -84,7 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const body = await req.json();
-    const { text, sender = 'human' } = body;
+    const { text } = body;
 
     if (!text) {
       return NextResponse.json({ success: false, error: 'Текст сообщения обязателен' }, { status: 400 });

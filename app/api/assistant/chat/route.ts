@@ -165,7 +165,7 @@ ${knowledgeContext}`;
     try {
       const provider = getLLMProvider();
       const trimmedHistory = Array.isArray(history)
-        ? history.slice(-6).map((h: any) => ({
+        ? history.slice(-6).map((h: { role?: unknown; content?: unknown }) => ({
             role: (h.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
             content: String(h.content || '').slice(0, 1000),
           }))

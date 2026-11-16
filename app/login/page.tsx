@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -72,12 +72,12 @@ export default function LoginPage() {
   const [demoStage, setDemoStage] = useState<number>(6); // Default 6 for initial render/SSR
   const timersRef = useRef<NodeJS.Timeout[]>([]);
 
-  const clearDemoTimers = () => {
+  const clearDemoTimers = useCallback(() => {
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
-  };
+  }, []);
 
-  const startDemoSequence = () => {
+  const startDemoSequence = useCallback(() => {
     clearDemoTimers();
 
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -94,7 +94,7 @@ export default function LoginPage() {
     const t6 = setTimeout(() => setDemoStage(6), 4200);
 
     timersRef.current = [t0, t1, t2, t3, t4, t5, t6];
-  };
+  }, [clearDemoTimers]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -104,7 +104,7 @@ export default function LoginPage() {
       clearTimeout(t);
       clearDemoTimers();
     };
-  }, []);
+  }, [startDemoSequence, clearDemoTimers]);
 
   // 60s cooldown timer for 2FA resend
   useEffect(() => {

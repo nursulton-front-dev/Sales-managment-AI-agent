@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Shield,
   Building2,
-  Users,
   CreditCard,
-  TrendingUp,
   AlertTriangle,
   LifeBuoy,
   Cpu,
@@ -16,13 +14,10 @@ import {
   ExternalLink,
   RotateCcw,
   CheckCircle2,
-  Clock,
-  Sparkles,
-  Zap,
 } from 'lucide-react';
-import { useApp } from '@/context/AppContext';
+import { useApp, type WorkspaceData } from '@/context/AppContext';
 
-interface WorkspaceData {
+interface AdminWorkspaceItem {
   id: string;
   companyName: string;
   niche: string;
@@ -58,14 +53,15 @@ export default function AdminOverviewPage() {
   const router = useRouter();
   const { setWorkspace } = useApp();
 
-  const [workspaces, setWorkspaces] = useState<WorkspaceData[]>([]);
+  const [workspaces, setWorkspaces] = useState<AdminWorkspaceItem[]>([]);
   const [stats, setStats] = useState<StatsData | null>(null);
   const [openTicketsCount, setOpenTicketsCount] = useState<number>(0);
+  const [snapshotTime, setSnapshotTime] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const [wsRes, ticketRes] = await Promise.all([
         fetch('/api/admin/workspaces'),
         fetch('/api/admin/support'),
@@ -79,18 +75,52 @@ export default function AdminOverviewPage() {
 
       const ticketData = await ticketRes.json();
       if (ticketData.success && Array.isArray(ticketData.tickets)) {
-        const pending = ticketData.tickets.filter((t: any) => t.status === 'open' || t.status === 'in_progress');
+        const pending = ticketData.tickets.filter((t: { status?: string }) => t.status === 'open' || t.status === 'in_progress');
         setOpenTicketsCount(pending.length);
       }
+      setSnapshotTime(Date.now());
     } catch (err) {
       console.error('Error fetching admin overview data:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchDashboardData();
+    let ignore = false;
+    async function load() {
+      try {
+        const [wsRes, ticketRes] = await Promise.all([
+          fetch('/api/admin/workspaces'),
+          fetch('/api/admin/support'),
+        ]);
+
+        const wsData = await wsRes.json();
+        if (!ignore && wsData.success) {
+          setWorkspaces(wsData.workspaces || []);
+          setStats(wsData.stats || null);
+        }
+
+        const ticketData = await ticketRes.json();
+        if (!ignore && ticketData.success && Array.isArray(ticketData.tickets)) {
+          const pending = ticketData.tickets.filter((t: { status?: string }) => t.status === 'open' || t.status === 'in_progress');
+          setOpenTicketsCount(pending.length);
+        }
+        if (!ignore) {
+          setSnapshotTime(Date.now());
+        }
+      } catch (err) {
+        console.error('Error fetching admin overview data:', err);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    void load();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   // Compute Attention Required List
@@ -132,25 +162,27 @@ export default function AdminOverviewPage() {
     }
 
     // Check expiring trials
-    const expiringTrials = workspaces.filter((w) => {
-      if (w.plan !== 'trial' || !w.subExpiresAt) return false;
-      const daysLeft = (new Date(w.subExpiresAt).getTime() - Date.now()) / (1000 * 3600 * 24);
-      return daysLeft >= 0 && daysLeft <= 2;
-    });
-
-    if (expiringTrials.length > 0) {
-      items.push({
-        id: 'expiring-trials',
-        type: 'info',
-        title: `Истекает пробный период (${expiringTrials.length})`,
-        description: `Компании ${expiringTrials.map((w) => w.companyName).join(', ')} завершают 3-дневный триал`,
-        link: '/admin/organizations',
-        linkText: 'Продлить или связаться',
+    if (snapshotTime > 0) {
+      const expiringTrials = workspaces.filter((w) => {
+        if (w.plan !== 'trial' || !w.subExpiresAt) return false;
+        const daysLeft = (new Date(w.subExpiresAt).getTime() - snapshotTime) / (1000 * 3600 * 24);
+        return daysLeft >= 0 && daysLeft <= 2;
       });
+
+      if (expiringTrials.length > 0) {
+        items.push({
+          id: 'expiring-trials',
+          type: 'info',
+          title: `Истекает пробный период (${expiringTrials.length})`,
+          description: `Компании ${expiringTrials.map((w) => w.companyName).join(', ')} завершают 3-дневный триал`,
+          link: '/admin/organizations',
+          linkText: 'Продлить или связаться',
+        });
+      }
     }
 
     return items;
-  }, [workspaces, openTicketsCount]);
+  }, [workspaces, openTicketsCount, snapshotTime]);
 
   return (
     <div className="space-y-6">
@@ -461,7 +493,7 @@ export default function AdminOverviewPage() {
                   <td className="py-3 px-3 text-right">
                     <button
                       onClick={() => {
-                        setWorkspace(ws as any);
+                        setWorkspace(ws as unknown as WorkspaceData);
                         router.push('/dashboard');
                       }}
                       className="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-[#DC2626] dark:text-slate-400 dark:hover:text-red-400 font-medium transition"

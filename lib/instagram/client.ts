@@ -390,15 +390,15 @@ export async function sendInstagramDirectMessage({
       body: JSON.stringify(payloadBody),
       signal: AbortSignal.timeout(8000),
     });
-  } catch (netErr: unknown) {
+  } catch {
     // Network timeout or socket abort: the external side effect is ambiguous.
     // Do NOT attempt a secondary POST or fallback; route to operator review.
     throw new DeliveryRejectedError(false, 'outcome_unknown');
   }
 
-  let data: any;
+  let data: { error?: { code?: number; error_subcode?: number }; recipient_id?: string; message_id?: string };
   try {
-    data = await res.json();
+    data = (await res.json()) as typeof data;
   } catch {
     throw new DeliveryRejectedError(false, 'outcome_unknown');
   }

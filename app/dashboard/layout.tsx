@@ -63,7 +63,7 @@ export default function DashboardLayout({
             </div>
             <button
               onClick={handleExitSupport}
-              className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-[6px] text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+              className="bg-[var(--surface)]/20 hover:bg-[var(--surface)]/30 text-white px-3 py-1 rounded-[6px] text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Завершить</span>

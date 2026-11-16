@@ -1,10 +1,8 @@
 import { getServerSessionContext } from '@/src/server/auth/session';
-import { NextRequest, NextResponse, connection } from 'next/server';
+import { NextResponse, connection } from 'next/server';
 import { isGoogleCalendarConfigured } from '@/lib/calendar/google';
-import { getWorkspaceById, getAllWorkspaces } from '@/src/db';
-import { cookies } from 'next/headers';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   await connection();
   try {
     const session = await getServerSessionContext();

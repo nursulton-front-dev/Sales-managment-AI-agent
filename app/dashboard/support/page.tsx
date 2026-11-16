@@ -5,6 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { DataState } from '@/components/ui/DataState';
 import { useUnsavedChanges } from '@/lib/useUnsavedChanges';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SparrowMascot } from '@/components/ui/SparrowMascot';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -14,15 +15,12 @@ import {
   LifeBuoy,
   Plus,
   Send,
-  MessageSquare,
   AlertCircle,
   HelpCircle,
   Lightbulb,
   CheckCircle2,
   Clock,
   Paperclip,
-  X,
-  FileText,
   ChevronRight,
   ArrowLeft,
   RotateCcw,
@@ -55,7 +53,7 @@ interface Message {
 }
 
 export default function SupportPage() {
-  const { user, showToast, locale, t } = useApp();
+  const { showToast, locale, t } = useApp();
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -290,14 +288,17 @@ export default function SupportPage() {
   return (
     <div className="space-y-6 w-full pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <PageHeader
-          title={t.support.title}
-          description={
-            locale === 'uz'
-              ? 'Savol bering, rivojlantirish bo‘yicha taklif yuboring yoki muammoni xabar qiling'
-              : 'Задайте вопрос, отправьте пожелание по развитию или сообщите об инциденте'
-          }
-        />
+        <div className="flex min-w-0 items-center gap-3">
+          <SparrowMascot variant="help" size={64} priority />
+          <PageHeader
+            title={t.support.title}
+            description={
+              locale === 'uz'
+                ? 'Savol bering, rivojlantirish bo‘yicha taklif yuboring yoki muammoni xabar qiling'
+                : 'Задайте вопрос, отправьте пожелание по развитию или сообщите об инциденте'
+            }
+          />
+        </div>
 
         {!isCreating && (
           <Button
@@ -374,7 +375,7 @@ export default function SupportPage() {
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   placeholder={locale === 'uz' ? 'Nima sodir bo‘lganini, qadamlarni yoki taklifingizni yozing...' : 'Опишите, что произошло, шаги воспроизведения или ваше предложение...'}
-                  className="w-full px-3 py-2 text-sm bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors"
+                  className="w-full px-3 py-2 text-sm bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-colors"
                   required
                 />
               </div>
@@ -498,7 +499,7 @@ export default function SupportPage() {
                       key={msg.id}
                       className={`p-4 rounded-lg border text-sm ${
                         isStaff
-                          ? 'bg-[#FEF2F2]/60 dark:bg-[rgba(220,38,38,0.08)] border-[#DC2626]/20'
+                          ? 'bg-[#FEF2F2]/60 dark:bg-[rgba(220,38,38,0.08)] border-[var(--accent)]/20'
                           : 'bg-[var(--surface-secondary)] border-[var(--border)]'
                       }`}
                     >
@@ -558,7 +559,7 @@ export default function SupportPage() {
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     placeholder={locale === 'uz' ? 'Murojaat bo‘yicha javob yoki aniqlik kiriting...' : 'Напишите ответ или уточнение по обращению...'}
-                    className="w-full px-3 py-2 text-sm bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] transition-colors"
+                    className="w-full px-3 py-2 text-sm bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] rounded-[6px] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-colors"
                   />
                   <div className="flex justify-end">
                     <Button
@@ -641,7 +642,7 @@ export default function SupportPage() {
                           {ticket.subject}
                         </span>
                         {ticket.unreadByCustomer && (
-                          <span className="w-2 h-2 rounded-full bg-[#DC2626] shrink-0" title={locale === 'uz' ? 'Yangi javob' : 'Новый ответ'} />
+                          <span className="w-2 h-2 rounded-full bg-[var(--accent)] shrink-0" title={locale === 'uz' ? 'Yangi javob' : 'Новый ответ'} />
                         )}
                       </div>
 

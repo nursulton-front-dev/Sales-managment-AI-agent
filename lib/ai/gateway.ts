@@ -15,6 +15,7 @@ export interface ChatCompletionOptions {
   channel?: 'Telegram' | 'Instagram' | 'WebWidget' | string;
   history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
   isSandbox?: boolean;
+  bookingRequestKey?: string;
 }
 
 export class AgentReplyUnavailableError extends Error {
@@ -37,6 +38,14 @@ export interface ChatCompletionResult {
 }
 
 export const CALENDAR_TOOLS = [
+  {
+    type: 'function' as const,
+    function: {
+      name: 'request_owner_input',
+      description: 'Если в базе знаний нет ответа, передать вопрос владельцу. Не выдумывать цены и условия.',
+      parameters: { type: 'object', properties: { question: { type: 'string' } }, required: ['question'] },
+    },
+  },
   {
     type: 'function' as const,
     function: {
@@ -91,6 +100,55 @@ export const CALENDAR_TOOLS = [
   },
 ];
 
+interface ToolCallArgs {
+  date?: string;
+  startTime?: string;
+  clientName?: string;
+  clientPhone?: string;
+  serviceName?: string;
+  notes?: string;
+  question?: string;
+  [key: string]: unknown;
+}
+
+interface ToolCallWorkspace {
+  id: string;
+  companyName?: string;
+  googleCalendarConnected?: boolean;
+  googleRefreshToken?: string | null;
+  googleCalendarWorkingHours?: string | null;
+  googleCalendarSlotDuration?: number | null;
+  settings?: Record<string, unknown> | null;
+  [key: string]: unknown;
+}
+
+interface ToolCallAgent {
+  id: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+interface ToolResultPayload {
+  success?: boolean;
+  error?: string;
+  availableSlots?: string[];
+  date?: string;
+  booked?: boolean;
+  pending?: boolean;
+  appointmentTime?: string;
+  leadId?: string;
+  status?: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+interface ToolExecutionOutput {
+  toolResult: ToolResultPayload;
+  isBooking: boolean;
+  appointmentTime?: string;
+  leadId?: string;
+}
+
 async function executeToolCall({
   name,
   args,
@@ -99,36 +157,61 @@ async function executeToolCall({
   channel,
   clientName,
   clientPhone,
+  bookingRequestKey,
+  customerMessage,
 }: {
+  customerMessage: string;
+  bookingRequestKey?: string;
   name: string;
-  args: any;
-  workspace: any;
-  agent: any;
+  args: ToolCallArgs;
+  workspace: ToolCallWorkspace | null | undefined;
+  agent: ToolCallAgent;
   channel?: string;
   clientName?: string;
   clientPhone?: string;
-}): Promise<{
-  toolResult: any;
-  isBooking: boolean;
-  appointmentTime?: string;
-  leadId?: string;
-}> {
-  const timeZone = (workspace?.settings as any)?.timezone || 'Asia/Tashkent';
+}): Promise<ToolExecutionOutput> {
+  const wsSettings = workspace?.settings && typeof workspace.settings === 'object' ? (workspace.settings as Record<string, unknown>) : null;
+  const timeZone = typeof wsSettings?.timezone === 'string' ? wsSettings.timezone : 'Asia/Tashkent';
   const workingHours = workspace?.googleCalendarWorkingHours || '10:00-18:00';
   const slotDuration = workspace?.googleCalendarSlotDuration || 30;
 
+  if (name === 'request_owner_input') {
+    if (!workspace?.id) {
+      return { toolResult: { error: 'Не удалось определить рабочее пространство.' }, isBooking: false };
+    }
+    if (typeof args.question !== 'string' || !args.question.trim() || args.question.length > 2000) {
+      return { toolResult: { error: 'Пожалуйста, уточните вопрос.' }, isBooking: false };
+    }
+    try {
+      const { requestOwnerInput } = await import('@/lib/knowledge/requests');
+      await requestOwnerInput(workspace.id, agent.id, args.question);
+      return { toolResult: { success: true }, isBooking: false };
+    } catch {
+      return { toolResult: { error: 'Мне не хватает информации. Пожалуйста, обратитесь к менеджеру напрямую.' }, isBooking: false };
+    }
+  }
+
   if (name === 'check_calendar_slots') {
     const dateStr = args.date; // YYYY-MM-DD
+    if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || Number.isNaN(Date.parse(`${dateStr}T00:00:00Z`)) || new Date(`${dateStr}T00:00:00Z`).toISOString().slice(0, 10) !== dateStr) {
+      return { toolResult: { error: 'Некорректная дата. Уточните день записи.' }, isBooking: false };
+    }
     let busySlots: Array<{ start: string; end: string }> = [];
 
-    if (workspace?.googleCalendarConnected && workspace?.googleRefreshToken) {
+    if (!workspace?.googleCalendarConnected || !workspace?.googleRefreshToken) {
+      return { toolResult: { date: dateStr, error: 'Календарь не подключён. Свободное время подтвердит менеджер.' }, isBooking: false };
+    }
+    {
       try {
-        const timeMin = `${dateStr}T00:00:00Z`;
-        const timeMax = `${dateStr}T23:59:59Z`;
+        // Include adjacent UTC days so timezone offsets cannot hide busy slots.
+        const midnight = Date.parse(`${dateStr}T00:00:00Z`);
+        const timeMin = new Date(midnight - 24 * 60 * 60 * 1000).toISOString();
+        const timeMax = new Date(midnight + 2 * 24 * 60 * 60 * 1000).toISOString();
         const { getGoogleCalendarFreeBusy } = await import('@/lib/calendar/google');
         busySlots = await getGoogleCalendarFreeBusy(workspace.googleRefreshToken, timeMin, timeMax);
       } catch (err) {
-        console.warn('Google Calendar free/busy check failed:', err);
+        console.warn('Google Calendar free/busy check failed:', err instanceof Error ? err.message : 'unknown error');
+        return { toolResult: { date: dateStr, error: 'Не удалось проверить календарь. Время подтвердит менеджер.' }, isBooking: false };
       }
     }
 
@@ -148,7 +231,13 @@ async function executeToolCall({
   }
 
   if (name === 'book_appointment') {
-    const startTimeStr = args.startTime;
+    if (!workspace?.id) {
+      return { toolResult: { success: false, error: 'Не удалось определить рабочее пространство.' }, isBooking: false };
+    }
+    const startTimeStr = typeof args.startTime === 'string' ? args.startTime : '';
+    if (!startTimeStr) {
+      return { toolResult: { success: false, error: 'Пожалуйста, укажите желаемое время записи.' }, isBooking: false };
+    }
     const client = args.clientName || clientName || 'Клиент';
     const phone = args.clientPhone || clientPhone || '';
     const service = args.serviceName || agent?.name || 'Консультация';
@@ -156,6 +245,9 @@ async function executeToolCall({
     const { isSlotWithinWorkingHours } = await import('@/lib/calendar/working-hours');
     const slotCheck = isSlotWithinWorkingHours(startTimeStr, slotDuration, workingHours, timeZone);
 
+    if (slotCheck.valid && new Date(slotCheck.startIso!).getTime() <= Date.now()) {
+      return { toolResult: { success: false, error: 'Нельзя записаться на прошедшее время.' }, isBooking: false };
+    }
     if (!slotCheck.valid) {
       return {
         toolResult: {
@@ -168,57 +260,31 @@ async function executeToolCall({
 
     const { upsertLead } = await import('@/src/db');
 
-    // If Google Calendar is connected, create real event with duplicate safeguard
+    const { bookingConfirmation } = await import('@/lib/calendar/confirmation');
+    const consent = bookingConfirmation(slotCheck.startIso!, timeZone, customerMessage);
+    if (!consent.confirmed) {
+      return { toolResult: { success: false, error: `Для подтверждения отправьте: «${consent.ru}». Tasdiqlash uchun: «${consent.uz}».` }, isBooking: false };
+    }
+
     if (workspace?.googleCalendarConnected && workspace?.googleRefreshToken) {
+      if (!bookingRequestKey) {
+        return { toolResult: { success: false, error: 'Для подтверждения записи обратитесь к менеджеру.' }, isBooking: false };
+      }
       try {
-        const { createGoogleCalendarEvent, findExistingGoogleCalendarEvent } = await import('@/lib/calendar/google');
-        const existingEvent = await findExistingGoogleCalendarEvent(
-          workspace.googleRefreshToken,
-          slotCheck.startIso!,
-          slotCheck.endIso!,
-          phone
-        );
-
-        let gEvent = existingEvent;
-        if (!gEvent) {
-          gEvent = await createGoogleCalendarEvent(workspace.googleRefreshToken, {
-            summary: `${service}: ${client} (${phone})`,
-            description: `Запись через gapcha AI (${channel || 'Чат'}). Сотрудник: ${agent?.name}`,
-            startTime: slotCheck.startIso!,
-            endTime: slotCheck.endIso!,
-            attendeeName: client,
-            attendeePhone: phone,
-            channel: channel || 'Chat',
-            timeZone,
-          });
-        }
-
-        const lead = await upsertLead({
-          workspaceId: workspace.id,
-          agentId: agent.id,
-          clientName: client,
-          clientPhone: phone,
-          channel: channel || 'WebWidget',
-          status: 'booked',
-          appointmentTime: new Date(slotCheck.startIso!),
-          googleEventId: gEvent?.id || null,
-          googleEventLink: gEvent?.htmlLink || null,
+        const { bookReservedInterval } = await import('@/lib/calendar/reservations');
+        const result = await bookReservedInterval({
+          workspaceId: workspace.id, requestKey: bookingRequestKey,
+          start: slotCheck.startIso!, end: slotCheck.endIso!, refreshToken: workspace.googleRefreshToken,
+          payload: { agentId: agent.id, clientName: client, clientPhone: phone,
+            channel: channel || 'WebWidget', summary: `${service}: ${client} (${phone})`, timeZone },
         });
-
-        return {
-          toolResult: {
-            success: true,
-            booked: true,
-            eventId: gEvent?.id,
-            eventLink: gEvent?.htmlLink,
-            appointmentTime: slotCheck.startIso,
-          },
-          isBooking: true,
-          appointmentTime: slotCheck.startIso,
-          leadId: lead.id,
-        };
-      } catch (calErr) {
-        console.warn('Google Calendar event creation failed:', calErr);
+        if (result.status === 'busy') return { toolResult: { success: false, error: 'Это время уже занято. Пожалуйста, выберите другое.' }, isBooking: false };
+        if (result.status === 'pending') return { toolResult: { success: false, error: 'Результат записи уточняется. Пожалуйста, дождитесь подтверждения менеджера.' }, isBooking: false };
+        return { toolResult: { success: true, booked: true, eventId: result.eventId, appointmentTime: slotCheck.startIso },
+          isBooking: true, appointmentTime: slotCheck.startIso, leadId: result.leadId };
+      } catch {
+        // Never turn uncertain provider/local persistence outcomes into confirmed bookings.
+        return { toolResult: { success: false, error: 'Не удалось подтвердить запись. Пожалуйста, обратитесь к менеджеру.' }, isBooking: false };
       }
     }
 
@@ -242,13 +308,16 @@ async function executeToolCall({
         message:
           'Календарь компании не синхронизирован. Заявка зафиксирована со статусом «Ожидает подтверждения». Менеджер свяжется для подтверждения времени.',
       },
-      isBooking: true,
+      isBooking: false,
       appointmentTime: slotCheck.startIso,
       leadId: lead.id,
     };
   }
 
   if (name === 'save_lead_qualification') {
+    if (!workspace?.id) {
+      return { toolResult: { error: 'Не удалось определить рабочее пространство.' }, isBooking: false };
+    }
     const client = args.clientName || clientName || 'Клиент';
     const phone = args.clientPhone || clientPhone || '';
     const { upsertLead } = await import('@/src/db');
@@ -369,6 +438,7 @@ export async function processAgentMessage({
   channel,
   history = [],
   isSandbox = false,
+  bookingRequestKey,
 }: ChatCompletionOptions): Promise<ChatCompletionResult> {
   const query = message.trim();
 
@@ -383,7 +453,7 @@ export async function processAgentMessage({
   const tokensCost = 1;
 
   // Check balance and subscription entitlement before proceeding
-  if (ws) {
+  if (ws && !isSandbox) {
     const entitlement = isWorkspaceEntitled(ws);
     if (!entitlement.entitled) {
       if (entitlement.reason === 'subscription_expired') {
@@ -404,7 +474,8 @@ export async function processAgentMessage({
 
   // Construct precise server time & date context
   const now = new Date();
-  const timeZone = (ws?.settings as any)?.timezone || 'Asia/Tashkent';
+  const wsSettings = ws?.settings && typeof ws.settings === 'object' ? (ws.settings as Record<string, unknown>) : null;
+  const timeZone = typeof wsSettings?.timezone === 'string' ? wsSettings.timezone : 'Asia/Tashkent';
   const dateFormatted = new Intl.DateTimeFormat('ru-RU', {
     timeZone,
     weekday: 'long',
@@ -415,11 +486,8 @@ export async function processAgentMessage({
     minute: '2-digit',
   }).format(now);
 
-  const currentDay = now.getDay();
-  const daysUntilMonday = currentDay === 1 ? 7 : (8 - currentDay) % 7 || 7;
-  const nextMonday = new Date(now.getTime() + daysUntilMonday * 86400000);
-  const nextMondayStr = nextMonday.toISOString().split('T')[0];
-  const todayIso = now.toISOString().split('T')[0];
+  const { getCompanyDateContext } = await import('@/lib/calendar/working-hours');
+  const { today: todayIso, nextMonday: nextMondayStr } = getCompanyDateContext(now, timeZone);
 
   const serverTimeContext = `\nКОНТЕКСТ ДАТЫ И ВРЕМЕНИ:\n- Текущая дата и время сервера: ${dateFormatted} (${timeZone}).\n- Сегодняшняя дата: ${todayIso}.\n- Ближайший понедельник: ${nextMondayStr}.\n- Рабочие часы компании: ${ws?.googleCalendarWorkingHours || '10:00-18:00'}.\n- Все даты и слоты предлагай строго относительно сегодняшней даты. Никогда не предлагай прошедшие даты.\n`;
 
@@ -457,7 +525,7 @@ export async function processAgentMessage({
       ];
 
       const dsRes = await ds.complete({
-        messages: messages as any,
+        messages,
         tools: CALENDAR_TOOLS,
       });
 
@@ -470,7 +538,14 @@ export async function processAgentMessage({
             fnArgs = JSON.parse(tc.function.arguments);
           } catch {}
 
+          if (isSandbox) {
+            reply = 'Это тестовый диалог: запись, проверка календаря и создание заявки не выполняются. Для реального действия подключите канал.';
+            continue;
+          }
+
           const executed = await executeToolCall({
+            customerMessage: query,
+            bookingRequestKey,
             name: fnName,
             args: fnArgs,
             workspace: ws,
@@ -488,22 +563,29 @@ export async function processAgentMessage({
 
           // Format natural reply based on tool outcome
           if (fnName === 'check_calendar_slots') {
+            if (executed.toolResult.error) {
+              reply = executed.toolResult.error;
+              continue;
+            }
             const slots = executed.toolResult.availableSlots || [];
             if (slots.length > 0) {
-              reply = `На ${executed.toolResult.date} доступны свободные слоты: ${slots.slice(0, 5).join(', ')}. Какое время вам больше подходит?`;
+              reply = `На ${executed.toolResult.date || ''} доступны свободные слоты: ${slots.slice(0, 5).join(', ')}. Какое время вам больше подходит?`;
             } else {
-              reply = `На ${executed.toolResult.date} все слоты заняты либо день нерабочий. Подскажите, пожалуйста, другой удобный день?`;
+              reply = `На ${executed.toolResult.date || ''} все слоты заняты либо день нерабочий. Подскажите, пожалуйста, другой удобный день?`;
             }
           } else if (fnName === 'book_appointment') {
-            if (executed.toolResult.booked) {
+            if (executed.toolResult.booked && executed.toolResult.appointmentTime) {
               const dt = new Date(executed.toolResult.appointmentTime);
-              const formattedTime = dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-              reply = `Отлично! Вы успешно записаны на ${executed.toolResult.appointmentTime.split('T')[0]} в ${formattedTime}. Будем рады видеть вас!`;
+              const formattedDate = new Intl.DateTimeFormat('ru-RU', { timeZone, day: '2-digit', month: '2-digit', year: 'numeric' }).format(dt);
+              const formattedTime = new Intl.DateTimeFormat('ru-RU', { timeZone, hour: '2-digit', minute: '2-digit' }).format(dt);
+              reply = `Отлично! Вы успешно записаны на ${formattedDate} в ${formattedTime}. Будем рады видеть вас!`;
             } else if (executed.toolResult.pending) {
               reply = `Благодарю! Ваша заявка на запись принята со статусом «Ожидает подтверждения». Наш менеджер свяжется с вами для окончательного согласования времени.`;
             } else {
               reply = executed.toolResult.error || 'К сожалению, выбранное время не подходит под рабочие часы. Давайте выберем другое время?';
             }
+          } else if (fnName === 'request_owner_input') {
+            reply = executed.toolResult.error || 'Мне не хватает информации для точного ответа. Вопрос передан владельцу для уточнения.';
           } else if (fnName === 'save_lead_qualification') {
             reply = 'Спасибо за ответы! Я зафиксировал ваши пожелания и передал специалисту.';
           }
@@ -571,10 +653,8 @@ export async function processAgentMessage({
   }
 
   // Deduct tokens atomically
-  if (ws) {
-    const desc = isSandbox
-      ? 'Тестовый ответ в песочнице (-1 токен)'
-      : 'Ответ ИИ-сотрудника в диалоге (-1 токен)';
+  if (ws && !isSandbox) {
+    const desc = 'Ответ ИИ-сотрудника в диалоге (-1 токен)';
 
     const transaction = await recordTokenTransaction({
       workspaceId: ws.id,
@@ -587,7 +667,7 @@ export async function processAgentMessage({
 
   return {
     reply,
-    tokensCost,
+    tokensCost: isSandbox ? 0 : tokensCost,
     isBooking,
     appointmentTime,
     leadId,

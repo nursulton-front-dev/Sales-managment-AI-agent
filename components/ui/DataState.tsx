@@ -27,7 +27,7 @@ export function DataState({
 }: DataStateProps) {
   let contextLocale: 'ru' | 'uz' = 'ru';
   try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+
     const app = useApp();
     if (app?.locale) contextLocale = app.locale;
   } catch {
@@ -39,14 +39,14 @@ export function DataState({
   const [showLoading, setShowLoading] = useState(false);
 
   useEffect(() => {
-    if (!loading) {
-      setShowLoading(false);
-      return;
-    }
+    if (!loading) return;
     const timer = setTimeout(() => {
       setShowLoading(true);
     }, 220);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      setShowLoading(false);
+    };
   }, [loading]);
 
   if (!loading && !error) return null;
@@ -143,7 +143,7 @@ export function DataState({
       >
         {/* Calm sparrow in idle pose (not joyful, not blocking text) */}
         <div className="shrink-0 p-1">
-          <SparrowMascot variant="idle" size={48} animate={false} />
+          <SparrowMascot variant="look" size={48} />
         </div>
 
         <div className="flex-1 min-w-0 space-y-1">

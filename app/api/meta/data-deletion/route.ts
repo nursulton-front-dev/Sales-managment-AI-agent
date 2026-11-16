@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       url: statusUrl,
       confirmation_code: confirmationCode,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Ошибка запроса' }, { status: 500 });
   }
 }

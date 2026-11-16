@@ -3,7 +3,7 @@ import { getAllWorkspaces, updateWorkspace, addTokenLog, getAllTokenLogs, create
 import { publicWorkspace } from '@/lib/server/public-data';
 import { adminCan } from '@/src/server/admin/access';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   await connection();
   try {
     const session = await adminCan('workspaces');
@@ -96,9 +96,10 @@ export async function GET(req: NextRequest) {
       },
       workspaces: workspaces.map(publicWorkspace),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching admin workspaces:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Неизвестная ошибка';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -283,8 +284,9 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Неизвестное действие' }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating admin workspace:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Неизвестная ошибка';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

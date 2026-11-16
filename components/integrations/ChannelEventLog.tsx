@@ -47,7 +47,7 @@ const statusBadgeVariant = (status: string): 'success' | 'warning' | 'neutral' =
 };
 
 export function ChannelEventLog() {
-  const { locale, t } = useApp();
+  const { locale } = useApp();
   const [events, setEvents] = useState<Event[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,14 +69,38 @@ export function ChannelEventLog() {
     }
   }, [locale]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial async request and polling cleanup.
   useEffect(() => {
-    void load();
+    let ignore = false;
+    async function init() {
+      try {
+        const response = await fetch('/api/integrations/events');
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || (locale === 'uz' ? 'Jurnalni yuklab bo‘lmadi' : 'Не удалось загрузить журнал'));
+        }
+        if (!ignore) {
+          setEvents(data.events);
+          setError(null);
+        }
+      } catch (failure) {
+        if (!ignore) {
+          setError(failure instanceof Error ? failure.message : (locale === 'uz' ? 'Server bilan aloqa yo‘q' : 'Нет связи с сервером'));
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    void init();
     const timer = setInterval(() => {
       if (!document.hidden) void load();
     }, 15000);
-    return () => clearInterval(timer);
-  }, [load]);
+    return () => {
+      ignore = true;
+      clearInterval(timer);
+    };
+  }, [load, locale]);
 
   const handleRefreshQueue = async () => {
     setBusy(true);

@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import { PLANS_LIST, TOKEN_PACKAGES, ROADMAP_MODULES, type PlanId } from '@/lib/pricing';
 import { PricingCard } from '@/components/pricing/PricingCard';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
@@ -13,13 +12,8 @@ import { DataState } from '@/components/ui/DataState';
 import {
   FileText,
   X,
-  CreditCard,
   MessageSquare,
-  Sparkles,
-  Clock,
   ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
 } from 'lucide-react';
 
 type Transaction = {
@@ -38,7 +32,8 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const reload = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch('/api/billing/transactions');
       const data = await res.json();
@@ -52,10 +47,35 @@ export default function BillingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    void load();
+    let ignore = false;
+    async function fetchTransactions() {
+      try {
+        const res = await fetch('/api/billing/transactions');
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Не удалось загрузить историю операций');
+        }
+        if (!ignore) {
+          setTransactions(data.logs || []);
+          setError(null);
+        }
+      } catch (failure) {
+        if (!ignore) {
+          setError(failure instanceof Error ? failure.message : 'Ошибка сети');
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    void fetchTransactions();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const active = Boolean(workspace?.subscriptionActive);
@@ -75,15 +95,15 @@ export default function BillingPage() {
       {/* ========================================================================= */}
       {/* 1. CURRENT SUBSCRIPTION & RESPONSES BALANCE HERO */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-6 sm:p-7 shadow-xs">
+      <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-6 sm:p-7 shadow-xs">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           {/* Current Plan */}
           <div className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
               {locale === 'uz' ? 'Sizning tarifingiz' : 'Ваш тариф'}
             </span>
             <div className="flex items-center gap-3">
-              <span className="text-xl font-bold px-3 py-1.5 rounded-xl bg-[var(--surface-secondary)] dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <span className="text-xl font-bold px-3 py-1.5 rounded-xl bg-[var(--surface-secondary)] dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {plan}
               </span>
               <Badge variant={active ? 'success' : 'warning'}>
@@ -92,7 +112,7 @@ export default function BillingPage() {
                   : (locale === 'uz' ? '○ Sinov davri' : '○ Пробный период')}
               </Badge>
             </div>
-            <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+            <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
               {active
                 ? (locale === 'uz' ? 'Obuna to‘langan va faol' : 'Подписка оплачена и активна')
                 : (locale === 'uz'
@@ -102,19 +122,19 @@ export default function BillingPage() {
           </div>
 
           {/* AI Responses Balance */}
-          <div className="space-y-1 md:border-x md:border-[var(--border)] md:dark:border-[#29374C] md:px-6">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+          <div className="space-y-1 md:border-x md:border-[var(--border)] md:dark:border-[var(--border)] md:px-6">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
               {locale === 'uz' ? 'AI javoblari balansi' : 'Баланс ИИ-ответов'}
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-primary)] dark:text-[#F4F7FB] tabular-nums">
+              <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-primary)] dark:text-[var(--text-primary)] tabular-nums">
                 {tokenBalance.toLocaleString(locale === 'uz' ? 'uz-UZ' : 'ru-RU')}
               </span>
-              <span className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+              <span className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                 {locale === 'uz' ? 'javob (tokenlar)' : 'ответов (токенов)'}
               </span>
             </div>
-            <p className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+            <p className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
               {locale === 'uz'
                 ? '1 ta AI javobi = 1 token. Mijoz murojaatida 1 birlik sarflanadi.'
                 : '1 ответ ИИ = 1 токен. При обращении клиента списывается 1 единица.'}
@@ -125,13 +145,13 @@ export default function BillingPage() {
           <div className="flex flex-col sm:flex-row md:flex-col gap-3 justify-center md:items-end">
             <a
               href="#pricing-plans"
-              className="px-4 py-2 rounded-xl bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold text-xs text-center transition-all shadow-xs"
+              className="px-4 py-2 rounded-xl bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold text-xs text-center transition-all shadow-xs"
             >
               {locale === 'uz' ? 'Tarifni o‘zgartirish' : 'Сменить тариф'}
             </a>
             <a
               href="#transactions"
-              className="text-xs font-semibold text-[var(--text-secondary)] dark:text-[#AABAD0] hover:text-[#FF7277] flex items-center justify-center gap-1 transition-colors"
+              className="text-xs font-semibold text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:text-[var(--accent-link)] flex items-center justify-center gap-1 transition-colors"
             >
               <span>{locale === 'uz' ? 'Amallar tarixi' : 'История операций'}</span>
               <ArrowRight size={14} />
@@ -145,10 +165,10 @@ export default function BillingPage() {
       {/* ========================================================================= */}
       <section id="pricing-plans" className="space-y-4">
         <div>
-          <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+          <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
             {locale === 'uz' ? 'Tarif rejalari' : 'Тарифные планы'}
           </h2>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1">
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1">
             {locale === 'uz'
               ? 'Kompaniyangiz uchun mos ko‘lamni tanlang: bitta yordamchidan tortib sotuv bo‘limlarigacha.'
               : 'Выберите масштаб для вашей компании: от одного ассистента до распределённой команды отделов продаж.'}
@@ -171,13 +191,13 @@ export default function BillingPage() {
           ))}
         </div>
 
-        <div className="p-4 rounded-xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface-secondary)]/50 dark:bg-[#101B2E] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] flex items-center justify-between gap-4">
+        <div className="p-4 rounded-xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface-secondary)]/50 dark:bg-[var(--surface)] text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] flex items-center justify-between gap-4">
           <p>
             {locale === 'uz'
               ? 'Onlayn to‘lov tizimi ulanish jarayonida. Tarifni tanlash arizani qayd etadi, lekin mablag‘ni avtomatik yechmaydi.'
               : 'Онлайн-оплата находится в процессе интеграции. Выбор тарифа фиксирует заявку, но не списывает средства автоматически.'}
           </p>
-          <span className="shrink-0 text-[11px] font-semibold text-[#FF7277]">
+          <span className="shrink-0 text-[11px] font-semibold text-[var(--accent-link)]">
             {locale === 'uz' ? 'Haqqoniy hisob-kitob' : 'Честный расчёт'}
           </span>
         </div>
@@ -189,14 +209,14 @@ export default function BillingPage() {
       <section className="space-y-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+            <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
               {locale === 'uz' ? 'Imkoniyatlar rejasi (Roadmap)' : 'План развития возможностей (Roadmap)'}
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
               {locale === 'uz' ? 'Tez kunda' : 'Скоро'}
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1">
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1">
             {locale === 'uz'
               ? 'Ushbu imkoniyatlar faol ishlab chiqilmoqda va relizdan so‘ng tariflarga qo‘shimcha to‘lovsiz qo‘shiladi.'
               : 'Эти функции находятся в активной разработке и появятся в тарифах без дополнительной платы после релиза.'}
@@ -207,20 +227,20 @@ export default function BillingPage() {
           {ROADMAP_MODULES.map((module) => (
             <div
               key={module.title}
-              className="p-5 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] space-y-2"
+              className="p-5 rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] space-y-2"
             >
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-semibold text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <h3 className="font-semibold text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {module.title}
                 </h3>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[#101B2E] text-[var(--text-muted)] dark:text-[#AABAD0] border border-[var(--border)] dark:border-[#29374C]">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[var(--surface)] text-[var(--text-muted)] dark:text-[var(--text-secondary)] border border-[var(--border)] dark:border-[var(--border)]">
                   {module.status}
                 </span>
               </div>
-              <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+              <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
                 {module.description}
               </p>
-              <span className="inline-block text-[10px] font-semibold text-[#FF7277] pt-1">
+              <span className="inline-block text-[10px] font-semibold text-[var(--accent-link)] pt-1">
                 {locale === 'uz' ? 'Tarif:' : 'Тариф:'} {module.tier}
               </span>
             </div>
@@ -233,10 +253,10 @@ export default function BillingPage() {
       {/* ========================================================================= */}
       <section className="space-y-4">
         <div>
-          <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+          <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
             {locale === 'uz' ? 'Qo‘shimcha AI javoblari paketlari' : 'Докупка пакетов ИИ-ответов'}
           </h2>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1">
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1">
             {locale === 'uz'
               ? 'Faol trafikda asosiy limit tugab qolsa, balansni bir bosishda to‘ldiring.'
               : 'Если основной лимит тарифа подходит к концу при активном трафике, пополните баланс в один клик.'}
@@ -247,25 +267,25 @@ export default function BillingPage() {
           {TOKEN_PACKAGES.map((pack) => (
             <div
               key={pack.id}
-              className="p-6 rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] flex flex-col justify-between space-y-4 hover:border-[var(--border-strong)] transition-all"
+              className="p-6 rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] flex flex-col justify-between space-y-4 hover:border-[var(--border-strong)] transition-all"
             >
               <div className="space-y-2">
-                <span className="text-xs font-semibold text-[var(--text-muted)] dark:text-[#AABAD0]/70 uppercase">
+                <span className="text-xs font-semibold text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 uppercase">
                   {pack.name}
                 </span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                     {pack.usdPriceFormatted}
                   </span>
-                  <span className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                  <span className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                     · {pack.uzsPriceFormatted}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-[#FF7277]">
+                <div className="flex items-center gap-2 text-xs font-bold text-[var(--accent-link)]">
                   <MessageSquare size={13} />
                   <span>{pack.responsesFormatted}</span>
                 </div>
-                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed pt-1">
+                <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed pt-1">
                   {pack.description}
                 </p>
               </div>
@@ -287,22 +307,22 @@ export default function BillingPage() {
       {/* 5. TRANSACTIONS HISTORY */}
       {/* ========================================================================= */}
       <section id="transactions" className="space-y-4">
-        <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+        <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
           {locale === 'uz' ? 'Amallar tarixi' : 'История операций'}
         </h2>
-        <DataState loading={loading} error={error} retry={load} />
+        <DataState loading={loading} error={error} retry={reload} />
         {!loading && !error && (
-          <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] overflow-hidden shadow-xs">
+          <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] overflow-hidden shadow-xs">
             {!transactions.length ? (
               <div className="py-14 px-4 text-center">
                 <FileText
                   size={40}
-                  className="mx-auto text-[var(--text-muted)] dark:text-[#AABAD0]/60 mb-3"
+                  className="mx-auto text-[var(--text-muted)] dark:text-[var(--text-secondary)]/60 mb-3"
                 />
-                <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {locale === 'uz' ? 'Hozircha amallar yo‘q' : 'Операций пока нет'}
                 </h3>
-                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0] mt-1 max-w-sm mx-auto">
+                <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-1 max-w-sm mx-auto">
                   {locale === 'uz'
                     ? 'Bu yerda AI javoblari uchun sarflar va hisob to‘ldirishlar ko‘rinadi.'
                     : 'Здесь будут отображаться списания за ИИ-ответы и начисления токенов.'}
@@ -316,10 +336,10 @@ export default function BillingPage() {
                     className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 text-xs"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <p className="font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                         {item.description}
                       </p>
-                      <time className="text-[11px] text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-0.5 block">
+                      <time className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 mt-0.5 block">
                         {new Date(item.createdAt).toLocaleString(locale === 'uz' ? 'uz-UZ' : 'ru-RU')}
                       </time>
                     </div>
@@ -328,13 +348,13 @@ export default function BillingPage() {
                         className={`tabular-nums font-bold ${
                           item.tokensDelta > 0
                             ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-[var(--text-primary)] dark:text-[#F4F7FB]'
+                            : 'text-[var(--text-primary)] dark:text-[var(--text-primary)]'
                         }`}
                       >
                         {item.tokensDelta > 0 ? '+' : ''}
                         {item.tokensDelta} {locale === 'uz' ? 'javob' : 'отв.'}
                       </strong>
-                      <span className="text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                      <span className="text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                         ${item.amountUsd}
                       </span>
                     </div>
@@ -351,19 +371,19 @@ export default function BillingPage() {
         open={paymentNotice}
         onClose={() => setPaymentNotice(false)}
         label={locale === 'uz' ? 'Tarifni tanlash' : 'Выбор тарифа'}
-        className="w-[calc(100vw-32px)] sm:w-[460px] max-w-[460px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[#29374C] shadow-2xl bg-[var(--surface)] dark:bg-[#142137]"
+        className="w-[calc(100vw-32px)] sm:w-[460px] max-w-[460px] p-0 rounded-2xl overflow-hidden border border-[var(--border)] dark:border-[var(--border)] shadow-2xl bg-[var(--surface)] dark:bg-[var(--surface-secondary)]"
       >
         <div className="p-5 sm:p-6 space-y-4">
-          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[#29374C] pb-3.5">
+          <div className="flex justify-between items-center border-b border-[var(--border)] dark:border-[var(--border)] pb-3.5">
             <div className="flex items-center gap-2.5">
-              <div className="size-10 rounded-xl bg-red-500/10 text-[#FF7277] flex items-center justify-center font-bold text-sm">
+              <div className="size-10 rounded-xl bg-red-500/10 text-[var(--accent-link)] flex items-center justify-center font-bold text-sm">
                 AI
               </div>
               <div>
-                <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                <h3 className="font-semibold text-base text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {locale === 'uz' ? `${selected?.toUpperCase()} tarifi` : `Тариф ${selected?.toUpperCase()}`}
                 </h3>
-                <p className="text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+                <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {locale === 'uz' ? 'Tanlovni tasdiqlash' : 'Подтверждение выбора'}
                 </p>
               </div>
@@ -379,13 +399,13 @@ export default function BillingPage() {
             </Button>
           </div>
 
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[#AABAD0] leading-relaxed">
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)] leading-relaxed">
             {locale === 'uz'
               ? 'Payme / Click / bank kartalari orqali onlayn to‘lov moduli yuridik kelishuv bosqichida. Sizning obunangiz va joriy balansingiz avtomatik o‘zgarmaydi.'
               : 'Модуль онлайн-оплаты через Payme / Click / банковские карты находится на этапе юридического согласования. Ваша подписка и текущий баланс не изменяются автоматически.'}
           </p>
 
-          <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)]/60 dark:bg-[#101B2E] border border-[var(--border)] dark:border-[#29374C] text-xs text-[var(--text-secondary)] dark:text-[#AABAD0]">
+          <div className="p-3.5 rounded-xl bg-[var(--surface-secondary)]/60 dark:bg-[var(--surface)] border border-[var(--border)] dark:border-[var(--border)] text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
             {locale === 'uz'
               ? 'Kengaytirilgan tarifni ulash yoki shaxsiy test o‘tkazish uchun yordam xizmatimizga murojaat qiling.'
               : 'Для подключения расширенного тарифа или персонального тестирования обратитесь в нашу службу поддержки.'}
@@ -395,7 +415,7 @@ export default function BillingPage() {
             <Button
               type="button"
               variant="primary"
-              className="bg-[#FF7277] hover:bg-[#ff5d63] text-[#0B1220] font-semibold"
+              className="bg-[var(--accent-link)] hover:bg-[#ff5d63] text-[var(--background)] font-semibold"
               onClick={() => setPaymentNotice(false)}
             >
               {locale === 'uz' ? 'Tushunarli' : 'Понятно'}

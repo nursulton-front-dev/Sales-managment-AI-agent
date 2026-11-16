@@ -15,5 +15,5 @@ export async function POST(req: NextRequest) {
     const safeHistory = Array.isArray(history) ? history.slice(-20).filter((item) => item && ['user', 'assistant'].includes(item.role) && typeof item.content === 'string' && item.content.length <= 4000) : [];
     const result = await processAgentMessage({ message, agentId: agent.id, workspaceId: session.workspaceId, history: safeHistory, isSandbox: true });
     return NextResponse.json({ success: true, reply: result.reply, tokensCost: result.tokensCost });
-  } catch (error) { return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Не удалось получить ответ' }, { status: 500 }); }
+  } catch { return NextResponse.json({ success: false, error: 'Не удалось получить ответ' }, { status: 500 }); }
 }

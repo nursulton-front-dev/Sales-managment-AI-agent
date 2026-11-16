@@ -35,7 +35,7 @@ export function publicWorkspace(workspace: Workspace) {
     telegramBusinessAgentId: workspace.telegramBusinessAgentId || null,
     telegramBusinessUsername: workspace.telegramBusinessUsername || null,
     telegramBusinessConnectedAt: workspace.telegramBusinessConnectedAt || null,
-    settings: ((workspace as any).settings as Record<string, any>) || {},
+    settings: (workspace.settings && typeof workspace.settings === 'object' ? (workspace.settings as Record<string, unknown>) : {}),
     createdAt: workspace.createdAt,
   };
 }

@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { PLANS_LIST, TRIAL_PLAN, PlanId, PlanOrTrialId } from '@/lib/pricing';
+import { PLANS_LIST, PlanOrTrialId } from '@/lib/pricing';
 import { PricingCard } from './PricingCard';
-import { Clock, ArrowRight, Info, Check } from 'lucide-react';
+import { Clock, ArrowRight, Info } from 'lucide-react';
 
 interface PricingSelectorProps {
   mode: 'registration' | 'billing';
@@ -77,9 +77,9 @@ export function PricingSelector({
 
       {/* Free Trial Banner - Calm horizontal bar matching the mockup */}
       {showTrialBanner && (
-        <div className="rounded-2xl border border-[var(--border)] dark:border-[#29374C] bg-[var(--surface)] dark:bg-[#142137] p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
-            <Clock className="w-4 h-4 text-[#FF7277] shrink-0" />
+        <div className="rounded-2xl border border-[var(--border)] dark:border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-secondary)] p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+            <Clock className="w-4 h-4 text-[var(--accent-link)] shrink-0" />
             <span>
               Сначала попробуйте: <span className="font-bold">3 дня и 100 ИИ-ответов бесплатно</span>
             </span>
@@ -95,7 +95,7 @@ export function PricingSelector({
                 onContinue();
               }
             }}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF7277] hover:underline transition-colors cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-link)] hover:underline transition-colors cursor-pointer self-start sm:self-auto"
           >
             <span>{isTrialSelected ? 'Выбран бесплатный старт' : 'Начать бесплатно'}</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -157,7 +157,7 @@ export function PricingSelector({
               type="button"
               disabled={!selectedPlan || isProcessing || (mode === 'billing' && selectedPlan === currentPlan)}
               onClick={onContinue}
-              className="w-full sm:w-auto h-11 px-6 rounded-[6px] text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer bg-[#DC2626] text-white hover:bg-[#B91C1C] disabled:bg-[var(--surface-secondary)] disabled:text-[var(--text-muted)] disabled:border disabled:border-[var(--border)] disabled:cursor-not-allowed shadow-xs"
+              className="w-full sm:w-auto h-11 px-6 rounded-[6px] text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-secondary)] disabled:text-[var(--text-muted)] disabled:border disabled:border-[var(--border)] disabled:cursor-not-allowed shadow-xs"
             >
               <span>
                 {isProcessing
@@ -191,7 +191,7 @@ export function PricingSelector({
               type="button"
               disabled={isProcessing}
               onClick={onContinue}
-              className="h-10 px-4 rounded-[6px] text-xs font-semibold bg-[#DC2626] text-white hover:bg-[#B91C1C] flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+              className="h-10 px-4 rounded-[6px] text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
             >
               <span>Продолжить</span>
               <ArrowRight className="w-3.5 h-3.5" />

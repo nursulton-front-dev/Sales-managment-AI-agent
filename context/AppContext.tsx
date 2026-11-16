@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/auth-client';
 import { SupportedLocale, TranslationDictionary, DICTIONARIES } from '@/src/config/i18n';
 
@@ -18,7 +19,7 @@ export interface Lead {
   appointmentDate: string | null; tokensSpent: number; contact: string; notes?: string; createdAt: string;
 }
 export interface ToastMessage { id: string; title: string; description?: string; type: 'success' | 'info' | 'warning' | 'error'; }
-interface WorkspaceData {
+export interface WorkspaceData {
   subscriptionActive?: boolean;
   trialDaysLeft?: number;
   id: string;
@@ -50,7 +51,7 @@ interface WorkspaceData {
   settings?: {
     quickStartDismissed?: boolean;
     timezone?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   createdAt?: string;
 }
@@ -99,6 +100,7 @@ function getInitialLocale(): SupportedLocale {
 }
 
 export function AppContextProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [locale, setLocaleState] = useState<SupportedLocale>(getInitialLocale);
   const [workspace, saveWorkspace] = useState<WorkspaceData | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -149,7 +151,7 @@ export function AppContextProvider({ children }: { children: ReactNode }) {
         // Non-blocking
       }
     }
-  }, [workspace?.id, workspace?.settings]);
+  }, [workspace]);
   const removeToast = useCallback((id: string) => setToasts((items) => items.filter((item) => item.id !== id)), []);
   const showToast = useCallback((title: string, description?: string, type: ToastMessage['type'] = 'success') => {
     const id = crypto.randomUUID();
@@ -253,7 +255,7 @@ export function AppContextProvider({ children }: { children: ReactNode }) {
       const result = await authClient.signOut(); if (result.error) throw new Error(result.error.message);
       await fetch('/api/auth/logout', { method: 'POST' });
       for (const key of Object.keys(localStorage)) if (key.startsWith('ai_os_')) localStorage.removeItem(key);
-      setUser(null); saveWorkspace(null); setAgents([]); setLeads([]); window.location.assign('/login');
+      setUser(null); saveWorkspace(null); setAgents([]); setLeads([]); router.push('/login');
     } catch { showToast('Не удалось выйти', 'Попробуйте ещё раз.', 'error'); }
   };
   const activeAgent = agents.find((agent) => agent.isActive) || agents[0] || null;

@@ -36,9 +36,10 @@ async function handleCron(request: Request) {
       processed,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Channel recovery failed:', error);
-    return Response.json({ success: false, error: error.message }, { status: 500 });
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return Response.json({ success: false, error: msg }, { status: 500 });
   }
 }
 

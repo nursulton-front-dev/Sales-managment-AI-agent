@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE() {
   await connection();
   try {
     const session = await getServerSessionContext();

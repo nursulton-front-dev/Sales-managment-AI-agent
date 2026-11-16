@@ -16,16 +16,16 @@ export function LandingFooter({ content, locale, onLocaleChange }: LandingFooter
   const { footer, nav } = content;
 
   return (
-    <footer className="bg-slate-950 text-slate-400 py-14 sm:py-16 border-t border-slate-800 text-xs sm:text-sm">
+    <footer className="bg-slate-950 text-[var(--text-muted)] py-14 sm:py-16 border-t border-[var(--border)] text-xs sm:text-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 sm:gap-10">
           {/* Brand Info */}
           <div className="md:col-span-5 space-y-4">
             <BrandLogo variant="full" width={150} theme="white" href="/" ariaLabel="gapcha AI" />
-            <p className="text-slate-400 text-xs sm:text-sm max-w-sm leading-relaxed">
+            <p className="text-[var(--text-muted)] text-xs sm:text-sm max-w-sm leading-relaxed">
               {footer.tagline}
             </p>
-            <div className="pt-2 space-y-1 text-xs text-slate-400">
+            <div className="pt-2 space-y-1 text-xs text-[var(--text-muted)]">
               <p>{footer.support}</p>
               <p>{footer.telegramBot}</p>
             </div>
@@ -94,16 +94,16 @@ export function LandingFooter({ content, locale, onLocaleChange }: LandingFooter
             </ul>
 
             <div className="pt-4 space-y-2">
-              <span className="text-xs text-slate-400 flex items-center gap-1.5 font-medium">
+              <span className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 font-medium">
                 <Globe size={13} />
                 {footer.language}:
               </span>
-              <div className="inline-flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl">
+              <div className="inline-flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] p-1 rounded-xl">
                 <button
                   type="button"
                   onClick={() => onLocaleChange('ru')}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    locale === 'ru' ? 'bg-slate-800 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    locale === 'ru' ? 'bg-[var(--surface-secondary)] text-white shadow-xs' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                   }`}
                   aria-pressed={locale === 'ru'}
                 >
@@ -113,7 +113,7 @@ export function LandingFooter({ content, locale, onLocaleChange }: LandingFooter
                   type="button"
                   onClick={() => onLocaleChange('uz')}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    locale === 'uz' ? 'bg-slate-800 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    locale === 'uz' ? 'bg-[var(--surface-secondary)] text-white shadow-xs' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                   }`}
                   aria-pressed={locale === 'uz'}
                 >
@@ -125,9 +125,9 @@ export function LandingFooter({ content, locale, onLocaleChange }: LandingFooter
         </div>
 
         {/* Bottom copyright line */}
-        <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--text-muted)]">
           <p>{footer.rights}</p>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-[var(--text-muted)]">
             Платформа gapcha AI не аффилирована с Telegram FZ-LLC и Meta Platforms, Inc.
           </p>
         </div>

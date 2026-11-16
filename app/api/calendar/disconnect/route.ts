@@ -1,9 +1,8 @@
 import { getServerSessionContext } from '@/src/server/auth/session';
-import { NextRequest, NextResponse } from 'next/server';
-import { updateWorkspace, getWorkspaceById, getAllWorkspaces } from '@/src/db';
-import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+import { updateWorkspace } from '@/src/db';
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const session = await getServerSessionContext();
     const ws = session.workspace;

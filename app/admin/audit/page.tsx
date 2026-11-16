@@ -1,20 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   History,
   Shield,
   Search,
-  Filter,
   User,
-  Clock,
   CheckCircle2,
-  AlertTriangle,
   RotateCcw,
-  ArrowRight,
-  Database,
-  Building2,
-  ChevronDown,
 } from 'lucide-react';
 
 interface AuditLog {
@@ -25,8 +18,8 @@ interface AuditLog {
   entityId: string;
   action: string;
   reason: string;
-  diffBefore: any;
-  diffAfter: any;
+  diffBefore: unknown;
+  diffAfter: unknown;
   result: string;
   createdAt: string;
 }
@@ -39,9 +32,9 @@ export default function AdminAuditPage() {
   const [actionFilter, setActionFilter] = useState('all');
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await fetch('/api/admin/audit');
       const data = await res.json();
       if (data.success) {
@@ -52,10 +45,29 @@ export default function AdminAuditPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchLogs();
+    let ignore = false;
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/audit');
+        const data = await res.json();
+        if (!ignore && data.success) {
+          setLogs(data.logs || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch audit logs:', err);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    void load();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const filteredLogs = logs.filter((log) => {

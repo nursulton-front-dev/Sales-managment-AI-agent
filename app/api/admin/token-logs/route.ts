@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse, connection } from 'next/server';
+import { NextResponse, connection } from 'next/server';
 import { getAllTokenLogs } from '@/src/db';
 import { adminCan } from '@/src/server/admin/access';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   await connection();
   try {
     const session = await adminCan('billing');
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
     const logs = await getAllTokenLogs();
     return NextResponse.json({ success: true, logs });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Ошибка запроса' }, { status: 500 });
   }
 }

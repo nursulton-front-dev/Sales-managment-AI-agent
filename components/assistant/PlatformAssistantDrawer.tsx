@@ -2,21 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
-  Sparkles,
   X,
   Send,
   Loader2,
   AlertCircle,
   CheckCircle2,
-  HelpCircle,
   ArrowRight,
-  ShieldAlert,
   Ticket,
   ExternalLink,
-  Bot,
-  RefreshCw,
 } from 'lucide-react';
 import { AssistantMessage, AssistantLanguage, AssistantPendingAction } from '@/lib/assistant/types';
 import { BrandMascot } from '@/components/ui/BrandMascot';
@@ -26,35 +20,40 @@ interface PlatformAssistantDrawerProps {
   className?: string;
 }
 
+function generateAssistantMessageId(prefix: string): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return `${prefix}_${crypto.randomUUID()}`;
+  }
+  return `${prefix}_${Date.now()}`;
+}
+
 export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDrawerProps) {
-  const router = useRouter();
+  const { locale } = useApp();
   const [isOpen, setIsOpen] = useState(false);
-  const [lang, setLang] = useState<AssistantLanguage>('ru');
+  const [lang, setLang] = useState<AssistantLanguage>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedLang = localStorage.getItem('gapcha_assistant_lang');
+        if (savedLang === 'uz' || savedLang === 'ru') return savedLang;
+      } catch {}
+    }
+    return locale === 'uz' ? 'uz' : 'ru';
+  });
+  const [prevLocale, setPrevLocale] = useState(locale);
+
+  if (locale !== prevLocale) {
+    setPrevLocale(locale);
+    setLang(locale === 'uz' ? 'uz' : 'ru');
+  }
+
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingAction, setPendingAction] = useState<AssistantPendingAction | null>(null);
   const [isExecutingAction, setIsExecutingAction] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const { locale } = useApp();
-
-  // Load language preference or sync with app locale
-  useEffect(() => {
-    try {
-      const savedLang = localStorage.getItem('gapcha_assistant_lang');
-      if (savedLang === 'uz' || savedLang === 'ru') {
-        setLang(savedLang);
-      } else {
-        setLang(locale);
-      }
-    } catch {
-      setLang(locale);
-    }
-  }, [locale]);
 
   const handleLangChange = (newLang: AssistantLanguage) => {
     setLang(newLang);
@@ -126,7 +125,7 @@ export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDra
       }
 
       const assistantMsg: AssistantMessage = {
-        id: `msg_a_${Date.now()}`,
+        id: generateAssistantMessageId('msg_a'),
         role: 'assistant',
         content: data.reply,
         timestamp: new Date().toISOString(),
@@ -135,11 +134,9 @@ export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDra
       };
 
       setMessages(prev => [...prev, assistantMsg]);
-      if (data.pendingAction) {
-        setPendingAction(data.pendingAction);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Ошибка сети');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Ошибка сети';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -165,17 +162,20 @@ export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDra
       }
 
       const updateMsg: AssistantMessage = {
-        id: `msg_action_${Date.now()}`,
+        id: generateAssistantMessageId('msg_action'),
         role: 'assistant',
         content: data.reply,
         timestamp: new Date().toISOString(),
         actionResult: data.actionResult,
       };
 
-      setMessages(prev => [...prev, updateMsg]);
-      setPendingAction(null);
-    } catch (err: any) {
-      setError(err.message || 'Ошибка выполнения действия');
+      setMessages(prev => [
+        ...prev.map(m => m.pendingAction ? { ...m, pendingAction: undefined } : m),
+        updateMsg,
+      ]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Ошибка выполнения действия';
+      setError(msg);
     } finally {
       setIsExecutingAction(false);
     }
@@ -396,7 +396,7 @@ export function PlatformAssistantDrawer({ className = '' }: PlatformAssistantDra
                               <span>{lang === 'uz' ? 'Tasdiqlash va yuborish' : 'Отправить обращение'}</span>
                             </button>
                             <button
-                              onClick={() => setPendingAction(null)}
+                              onClick={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, pendingAction: undefined } : m))}
                               disabled={isExecutingAction}
                               className="px-2.5 py-1.5 rounded-md border border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30"
                             >

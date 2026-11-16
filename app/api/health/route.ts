@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse, connection } from 'next/server';
+import { NextResponse, connection } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { adminCan } from '@/src/server/admin/access';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   await connection();
   const startTime = Date.now();
 

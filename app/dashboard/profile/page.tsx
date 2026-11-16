@@ -89,10 +89,10 @@ export default function ProfilePage() {
                 }
               }}
             >
-              <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {locale === 'uz' ? 'Shaxsiy ma\'lumotlar' : 'Личные данные'}
               </h2>
-              <div className="w-16 h-16 rounded-full bg-red-500/10 text-[#FF7277] flex items-center justify-center text-2xl font-bold border border-red-500/20">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 text-[var(--accent-link)] flex items-center justify-center text-2xl font-bold border border-red-500/20">
                 {user?.name?.slice(0, 1) || 'A'}
               </div>
               <Input
@@ -112,7 +112,7 @@ export default function ProfilePage() {
                   ? (locale === 'uz' ? 'Email tasdiqlangan' : 'Email подтверждён')
                   : (locale === 'uz' ? 'Email tasdiqlanmagan' : 'Email не подтверждён')}
               </Badge>
-              <p className="text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/70">
+              <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70">
                 {locale === 'uz'
                   ? 'Email manzilini o‘zgartirish uchun qo‘llab-quvvatlash xizmatiga murojaat qiling.'
                   : 'Смена email пока недоступна через интерфейс.'}
@@ -127,13 +127,13 @@ export default function ProfilePage() {
         {/* Appearance & Language Card */}
         <Card>
           <CardBody className="space-y-5">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
               {locale === 'uz' ? 'Mavzu va til sozlamalari' : 'Оформление и язык'}
             </h2>
 
             {/* Theme Selector */}
             <fieldset>
-              <legend className="text-sm font-medium mb-3 text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <legend className="text-sm font-medium mb-3 text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {locale === 'uz' ? 'Interfeys mavzusi' : 'Тема интерфейса'}
               </legend>
               <div className="grid grid-cols-3 gap-3">
@@ -161,8 +161,8 @@ export default function ProfilePage() {
                     onClick={() => setTheme(value)}
                     className={`rounded-xl border p-3 text-xs sm:text-sm font-medium flex flex-col items-center gap-2.5 transition-all cursor-pointer ${
                       theme === value
-                        ? 'border-[#FF7277] bg-red-500/10 text-[var(--text-primary)] dark:text-[#F4F7FB] font-bold'
-                        : 'border-[var(--border)] dark:border-[#29374C] hover:border-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[#AABAD0]'
+                        ? 'border-[var(--accent-link)] bg-red-500/10 text-[var(--text-primary)] dark:text-[var(--text-primary)] font-bold'
+                        : 'border-[var(--border)] dark:border-[var(--border)] hover:border-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-secondary)]'
                     }`}
                   >
                     <Icon size={20} />
@@ -174,8 +174,8 @@ export default function ProfilePage() {
 
             {/* Platform Language Selector */}
             <fieldset>
-              <legend className="text-sm font-medium mb-3 text-[var(--text-primary)] dark:text-[#F4F7FB] flex items-center gap-2">
-                <Globe size={16} className="text-[#FF7277]" />
+              <legend className="text-sm font-medium mb-3 text-[var(--text-primary)] dark:text-[var(--text-primary)] flex items-center gap-2">
+                <Globe size={16} className="text-[var(--accent-link)]" />
                 <span>{locale === 'uz' ? 'Kabinet tili (Platforma)' : 'Язык интерфейса платформы'}</span>
               </legend>
               <div className="grid grid-cols-2 gap-3">
@@ -190,20 +190,20 @@ export default function ProfilePage() {
                     onClick={() => void setLocale(item.code)}
                     className={`rounded-xl border p-3 text-left transition-all cursor-pointer ${
                       locale === item.code
-                        ? 'border-[#FF7277] bg-red-500/10 shadow-2xs'
-                        : 'border-[var(--border)] dark:border-[#29374C] hover:border-[var(--border-strong)]'
+                        ? 'border-[var(--accent-link)] bg-red-500/10 shadow-2xs'
+                        : 'border-[var(--border)] dark:border-[var(--border)] hover:border-[var(--border-strong)]'
                     }`}
                   >
-                    <div className="font-bold text-xs sm:text-sm text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                    <div className="font-bold text-xs sm:text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       {item.label}
                     </div>
-                    <div className="text-[11px] text-[var(--text-secondary)] dark:text-[#AABAD0] mt-0.5">
+                    <div className="text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)] mt-0.5">
                       {item.sub}
                     </div>
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-[var(--text-muted)] dark:text-[#AABAD0]/70 mt-2">
+              <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-secondary)]/70 mt-2">
                 {locale === 'uz'
                   ? 'Kabinet tili alohida saqlanadi va mijozlarga javob beradigan AI qoidalarini o‘zgartirmaydi.'
                   : 'Язык платформы сохраняется отдельно и не меняет правила ответов работающих ассистентов.'}
@@ -255,7 +255,7 @@ export default function ProfilePage() {
                 }
               }}
             >
-              <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {t.profile.security}
               </h2>
               <Input
@@ -294,7 +294,7 @@ export default function ProfilePage() {
         <div className="space-y-5">
           <Card>
             <CardBody className="space-y-4">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {locale === 'uz' ? 'Faol seanslar' : 'Активные сеансы'}
               </h2>
               <Button
@@ -323,10 +323,10 @@ export default function ProfilePage() {
                 <ul className="divide-y divide-[var(--border)] dark:divide-[#29374C]">
                   {sessions.map((session) => (
                     <li key={session.id} className="py-3 text-xs sm:text-sm">
-                      <p className="break-words font-medium text-[var(--text-primary)] dark:text-[#F4F7FB]">
+                      <p className="break-words font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                         {session.userAgent || (locale === 'uz' ? 'Noma\'lum qurilma' : 'Устройство не определено')}
                       </p>
-                      <p className="text-[var(--text-secondary)] dark:text-[#AABAD0] text-xs mt-0.5">
+                      <p className="text-[var(--text-secondary)] dark:text-[var(--text-secondary)] text-xs mt-0.5">
                         {locale === 'uz' ? 'Kirish vaqti:' : 'Вход:'}{' '}
                         {new Date(session.createdAt).toLocaleString(
                           locale === 'uz' ? 'uz-UZ' : 'ru-RU'
@@ -341,7 +341,7 @@ export default function ProfilePage() {
 
           <Card>
             <CardBody className="space-y-4">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[#F4F7FB]">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {locale === 'uz' ? 'Hisob' : 'Аккаунт'}
               </h2>
               <Button variant="ghost" onClick={logout} className="text-red-500 hover:text-red-600">

@@ -131,10 +131,11 @@ export async function POST(req: NextRequest) {
       },
       message: 'Ваше обращение принято. Мы свяжемся с вами по указанному адресу электронной почты.',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Public support ticket error:', error);
+    const msg = error instanceof Error ? error.message : 'Ошибка при отправке обращения';
     return NextResponse.json(
-      { success: false, error: error.message || 'Ошибка при отправке обращения' },
+      { success: false, error: msg },
       { status: 500 }
     );
   }

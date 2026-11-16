@@ -32,7 +32,7 @@ export async function getWorkspaceDiagnostics(workspaceId: string): Promise<Assi
   const channelsSummary = getWorkspaceChannelsSummary(workspace, agents, widget);
   const plan = workspace.plan || 'trial';
   const maxAgents = getMaxAgentsForPlan(plan);
-  const activeAgents = agents.filter((a: any) => a.isActive);
+  const activeAgents = agents.filter((a: { isActive?: boolean }) => a.isActive);
 
   // Safe sanitized recent errors (last 5)
   let sanitizedErrors: Array<{ code: string; channel: string; timestamp: string; description: string }> = [];
@@ -50,7 +50,7 @@ export async function getWorkspaceDiagnostics(workspaceId: string): Promise<Assi
       .limit(5)
       .catch(() => []);
 
-    sanitizedErrors = recentFailedEvents.map((e: any) => ({
+    sanitizedErrors = recentFailedEvents.map((e: { errorCode: string | null; channel: string; createdAt: Date | null }) => ({
       code: e.errorCode || 'processing_error',
       channel: e.channel,
       timestamp: e.createdAt ? new Date(e.createdAt).toISOString() : new Date().toISOString(),
@@ -70,17 +70,31 @@ export async function getWorkspaceDiagnostics(workspaceId: string): Promise<Assi
   const tb = channelsSummary.channels.find(c => c.id === 'telegram_business');
   const ig = channelsSummary.channels.find(c => c.id === 'instagram');
 
+  const mapStatus = (state?: string): 'connected' | 'disconnected' | 'needs_reconnect' | 'needs_permission' => {
+    if (state === 'connected') return 'connected';
+    if (state === 'needs_reconnect') return 'needs_reconnect';
+    if (state === 'needs_permission') return 'needs_permission';
+    return 'disconnected';
+  };
+
+  const mapInstagramStatus = (state?: string): 'connected' | 'disconnected' | 'needs_reconnect' | 'error' => {
+    if (state === 'connected') return 'connected';
+    if (state === 'needs_reconnect') return 'needs_reconnect';
+    if (state === 'error') return 'error';
+    return 'disconnected';
+  };
+
   return {
     workspaceId,
     checkedAt: new Date().toISOString(),
     channels: {
       telegramBusiness: tb ? {
-        status: tb.state === 'not_connected' ? 'disconnected' : tb.state as any,
+        status: mapStatus(tb.state),
         username: tb.identifier,
         canReply: tb.canReply,
       } : undefined,
       instagram: ig ? {
-        status: ig.state === 'not_connected' ? 'disconnected' : ig.state as any,
+        status: mapInstagramStatus(ig.state),
         username: ig.identifier,
         autoReply: ig.canReply,
       } : undefined,
@@ -94,7 +108,7 @@ export async function getWorkspaceDiagnostics(workspaceId: string): Promise<Assi
       activeAgents: activeAgents.length,
       primaryAgentName: agents[0]?.name,
       hasKnowledgeBase: Boolean(agents[0]?.knowledgeBase && agents[0].knowledgeBase.length > 20),
-      calendarEnabled: Boolean(agents.some((a: any) => a.googleCalendarConnected)),
+      calendarEnabled: Boolean(agents.some((a: { googleCalendarConnected?: boolean }) => a.googleCalendarConnected)),
     },
     calendar: {
       connected: Boolean(workspace.googleCalendarConnected),

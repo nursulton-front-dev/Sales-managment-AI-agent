@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/ui/BrandLogo';
+import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
 import { LandingContent, LandingLocale } from '@/lib/landing/content';
 import { Menu, X, ArrowRight, Globe } from 'lucide-react';
 
@@ -66,8 +67,8 @@ export function LandingHeader({
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
         scrolled
-          ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs'
-          : 'bg-white/80 backdrop-blur-sm border-b border-transparent'
+          ? 'bg-[var(--surface)]/95 backdrop-blur-md border-b border-[var(--border)]/80 shadow-xs'
+          : 'bg-[var(--surface)]/80 backdrop-blur-sm border-b border-transparent'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
@@ -82,7 +83,7 @@ export function LandingHeader({
             <a
               key={link.href}
               href={link.href}
-              className="px-2.5 py-1.5 text-xs xl:text-sm font-medium text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626]"
+              className="px-2.5 py-1.5 text-xs xl:text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg hover:bg-[var(--surface-secondary)]/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             >
               {link.label}
             </a>
@@ -93,7 +94,7 @@ export function LandingHeader({
         <div className="hidden sm:flex items-center gap-3">
           {/* Language Switcher */}
           <div
-            className="inline-flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200/70 text-xs font-semibold"
+            className="inline-flex items-center p-1 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)]/70 text-xs font-semibold"
             role="group"
             aria-label="Выбор языка"
           >
@@ -102,8 +103,8 @@ export function LandingHeader({
               onClick={() => onLocaleChange('ru')}
               className={`px-2.5 py-1 rounded-lg transition-all ${
                 locale === 'ru'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
               aria-pressed={locale === 'ru'}
             >
@@ -114,8 +115,8 @@ export function LandingHeader({
               onClick={() => onLocaleChange('uz')}
               className={`px-2.5 py-1 rounded-lg transition-all ${
                 locale === 'uz'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
               aria-pressed={locale === 'uz'}
             >
@@ -127,7 +128,7 @@ export function LandingHeader({
           {isLoggedIn ? (
             <Link
               href="/dashboard"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-[#DC2626] hover:bg-[#b91c1c] active:bg-[#991b1b] rounded-xl transition-all shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold text-[var(--accent-text)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-hover)] rounded-xl transition-all shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
             >
               <span>{content.nav.dashboard}</span>
               <ArrowRight size={15} />
@@ -136,13 +137,13 @@ export function LandingHeader({
             <>
               <Link
                 href="/login"
-                className="px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626]"
+                className="px-3.5 py-2 text-xs sm:text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-xl hover:bg-[var(--surface-secondary)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               >
                 {content.nav.login}
               </Link>
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-[#DC2626] hover:bg-[#b91c1c] active:bg-[#991b1b] rounded-xl transition-all shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold text-[var(--accent-text)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-hover)] rounded-xl transition-all shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
               >
                 <span>{content.nav.register}</span>
                 <ArrowRight size={15} />
@@ -151,16 +152,17 @@ export function LandingHeader({
           )}
         </div>
 
+        <ThemeSwitcher locale={locale} />
         {/* Mobile Hamburger Button */}
         <div className="flex items-center gap-2 lg:hidden">
           {/* Mobile Language Switcher */}
           <button
             type="button"
             onClick={() => onLocaleChange(locale === 'ru' ? 'uz' : 'ru')}
-            className="p-2 text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200 rounded-xl sm:hidden flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626]"
+            className="p-2 text-xs font-bold text-[var(--text-secondary)] bg-[var(--surface-secondary)] border border-[var(--border)] rounded-xl sm:hidden flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             aria-label={`Переключить язык на ${locale === 'ru' ? 'узбекский' : 'русский'}`}
           >
-            <Globe size={14} className="text-slate-500" />
+            <Globe size={14} className="text-[var(--text-muted)]" />
             <span className="uppercase">{locale}</span>
           </button>
 
@@ -168,7 +170,7 @@ export function LandingHeader({
             ref={menuButtonRef}
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626]"
+            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-navigation"
             aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню навигации'}
@@ -183,22 +185,22 @@ export function LandingHeader({
         <div
           id="mobile-navigation"
           ref={drawerRef}
-          className="lg:hidden fixed inset-x-0 top-16 sm:top-20 bottom-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 px-6 py-6 overflow-y-auto flex flex-col justify-between"
+          className="lg:hidden fixed inset-x-0 top-16 sm:top-20 bottom-0 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)] px-6 py-6 overflow-y-auto flex flex-col justify-between"
           role="dialog"
           aria-modal="true"
           aria-label="Мобильное меню"
         >
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                 Навигация
               </span>
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+              <div className="flex items-center gap-1 bg-[var(--surface-secondary)] p-1 rounded-xl">
                 <button
                   type="button"
                   onClick={() => onLocaleChange('ru')}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    locale === 'ru' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
+                    locale === 'ru' ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-muted)]'
                   }`}
                 >
                   RU
@@ -207,7 +209,7 @@ export function LandingHeader({
                   type="button"
                   onClick={() => onLocaleChange('uz')}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    locale === 'uz' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
+                    locale === 'uz' ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-xs' : 'text-[var(--text-muted)]'
                   }`}
                 >
                   UZ
@@ -221,7 +223,7 @@ export function LandingHeader({
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="px-3 py-2.5 text-base font-semibold text-slate-800 hover:text-[#DC2626] rounded-xl hover:bg-slate-50 transition-colors"
+                  className="px-3 py-2.5 text-base font-semibold text-[var(--text-primary)] hover:text-[var(--accent)] rounded-xl hover:bg-[var(--background)] transition-colors"
                 >
                   {link.label}
                 </a>
@@ -230,12 +232,12 @@ export function LandingHeader({
           </div>
 
           {/* Mobile Footer CTAs */}
-          <div className="pt-6 border-t border-slate-200/80 space-y-3">
+          <div className="pt-6 border-t border-[var(--border)]/80 space-y-3">
             {isLoggedIn ? (
               <Link
                 href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-white bg-[#DC2626] rounded-xl shadow-xs"
+                className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-[var(--accent-text)] bg-[var(--accent)] rounded-xl shadow-xs"
               >
                 <span>{content.nav.dashboard}</span>
                 <ArrowRight size={16} />
@@ -245,7 +247,7 @@ export function LandingHeader({
                 <Link
                   href="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-white bg-[#DC2626] rounded-xl shadow-xs"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-[var(--accent-text)] bg-[var(--accent)] rounded-xl shadow-xs"
                 >
                   <span>{content.nav.register}</span>
                   <ArrowRight size={16} />
@@ -253,7 +255,7 @@ export function LandingHeader({
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center py-3 text-sm font-semibold text-slate-700 bg-slate-100 rounded-xl"
+                  className="w-full flex items-center justify-center py-3 text-sm font-semibold text-[var(--text-secondary)] bg-[var(--surface-secondary)] rounded-xl"
                 >
                   {content.nav.login}
                 </Link>

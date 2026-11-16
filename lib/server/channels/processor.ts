@@ -79,22 +79,13 @@ export async function processChannelEvent(id: string) {
         void sendTelegramChatAction(tgToken, payload.contact.slice(3), 'typing', payload.businessConnectionId);
       }
 
-      const result = await processAgentMessage({ message: payload.text, agentId: agent.id, workspaceId: event.workspaceId, clientName: conversation.clientName, clientPhone: conversation.clientPhone, channel: event.channel,
+      const result = await processAgentMessage({ bookingRequestKey: event.id, message: payload.text, agentId: agent.id, workspaceId: event.workspaceId, clientName: conversation.clientName, clientPhone: conversation.clientPhone, channel: event.channel,
         history: messages.filter((message) => message.id !== `in_${event.id}`).slice(-12).map((message) => ({ role: message.sender === 'client' ? 'user' as const : 'assistant' as const, content: message.text })),
       });
       payload.reply = result.reply;
       payload.tokensCost = result.tokensCost;
-      if (result.isBooking && result.appointmentTime) {
-        await upsertLead({
-          workspaceId: event.workspaceId,
-          agentId: agent.id,
-          clientName: conversation.clientName,
-          clientPhone: conversation.clientPhone,
-          channel: event.channel,
-          status: 'booked',
-          appointmentTime: new Date(result.appointmentTime),
-        });
-      }
+      // The gateway already persists the booking with the confirmed Google event ID.
+      // A second upsert here can target a different contact and lose that association.
       stage = 'prepared';
       await patchEvent(id, { payload, stage });
     }

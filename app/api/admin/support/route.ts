@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse, connection } from 'next/server';
+import { NextResponse, connection } from 'next/server';
 import { adminCan } from '@/src/server/admin/access';
 import { getAllSupportTicketsForAdmin } from '@/lib/server/support';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   await connection();
   try {
     const session = await adminCan('support');
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
     const tickets = await getAllSupportTicketsForAdmin();
     return NextResponse.json({ success: true, tickets });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Ошибка запроса' }, { status: 500 });
   }
 }

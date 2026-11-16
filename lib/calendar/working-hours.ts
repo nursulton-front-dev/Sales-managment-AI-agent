@@ -26,6 +26,18 @@ export interface WorkingHoursRange {
   endTotalMinutes: number;
 }
 
+/** Calendar dates used in prompts must follow the company's local day. */
+export function getCompanyDateContext(now: Date, timeZone: string): { today: string; nextMonday: string } {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+    timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now).map((part) => [part.type, part.value]));
+  const today = `${parts.year}-${parts.month}-${parts.day}`;
+  const localDay = new Date(`${today}T00:00:00Z`);
+  const daysUntilMonday = (8 - localDay.getUTCDay()) % 7 || 7;
+  localDay.setUTCDate(localDay.getUTCDate() + daysUntilMonday);
+  return { today, nextMonday: localDay.toISOString().slice(0, 10) };
+}
+
 export function parseWorkingHours(rangeStr = '10:00-18:00'): WorkingHoursRange {
   const normalized = normalizeWorkingHours(rangeStr) || '10:00-18:00';
   const [startPart, endPart] = normalized.split('-');
@@ -54,8 +66,18 @@ export function isSlotWithinWorkingHours(
   timeZone = 'Asia/Tashkent',
   allowedDaysOfWeek = [1, 2, 3, 4, 5, 6] // 0=Sun, 1=Mon, ..., 6=Sat (Mon-Sat by default)
 ): { valid: boolean; reason?: string; startIso?: string; endIso?: string } {
+  if (typeof startTime === 'string') {
+    const match = startTime.match(/^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(?::00(?:\.000)?)?(?:Z|[+-]\d{2}:\d{2})$/);
+    const day = match && new Date(`${match[1]}T00:00:00Z`);
+    if (!match || !day || Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== match[1]) {
+      return { valid: false, reason: 'Уточните дату, время и часовой пояс записи' };
+    }
+  }
+  try { new Intl.DateTimeFormat('en', { timeZone }); } catch {
+    return { valid: false, reason: 'Часовой пояс компании настроен неверно' };
+  }
   const dateObj = typeof startTime === 'string' ? new Date(startTime) : startTime;
-  if (isNaN(dateObj.getTime())) {
+  if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime()) || !Number.isInteger(durationMinutes) || durationMinutes <= 0) {
     return { valid: false, reason: 'Некорректная дата или время записи' };
   }
 
@@ -136,6 +158,7 @@ export function getAvailableDaySlots(
   busySlots: Array<{ start: string; end: string }> = [],
   timeZone = 'Asia/Tashkent'
 ): string[] {
+  if (!Number.isInteger(slotDuration) || slotDuration <= 0) return [];
   const range = parseWorkingHours(workingHoursRange);
   const availableSlots: string[] = [];
 
@@ -146,10 +169,22 @@ export function getAvailableDaySlots(
 
   for (let m = range.startTotalMinutes; m + slotDuration <= range.endTotalMinutes; m += slotDuration) {
     const timeStr = formatMinutes(m);
-    // Construct slot start in ISO format for the date
-    const slotStartIso = `${dateStr}T${timeStr}:00`;
-    const slotStartDate = new Date(`${slotStartIso}+05:00`); // Assuming Asia/Tashkent UTC+5 or local
-    const slotStartMs = slotStartDate.getTime();
+    // Resolve local wall time in the company's timezone, including DST changes.
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const desired = Date.UTC(year, month - 1, day, Math.floor(m / 60), m % 60);
+    const formatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    });
+    let slotStartMs = desired;
+    for (let i = 0; i < 3; i++) {
+      const parts = Object.fromEntries(formatter.formatToParts(slotStartMs).map((part) => [part.type, part.value]));
+      const represented = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute));
+      slotStartMs += desired - represented;
+    }
+    const actual = Object.fromEntries(formatter.formatToParts(slotStartMs).map((part) => [part.type, part.value]));
+    if (`${actual.year}-${actual.month}-${actual.day}` !== dateStr || `${actual.hour}:${actual.minute}` !== timeStr) continue;
+    if (slotStartMs <= Date.now() || !isSlotWithinWorkingHours(new Date(slotStartMs), slotDuration, workingHoursRange, timeZone).valid) continue;
     const slotEndMs = slotStartMs + slotDuration * 60000;
 
     // Check if slot overlaps with any busy interval

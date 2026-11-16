@@ -1,27 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { ThemeSwitcher } from '@/components/theme/ThemeSwitcher';
 import {
-  Shield,
   LifeBuoy,
   Search,
   ArrowLeft,
   RefreshCw,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Lightbulb,
-  HelpCircle,
-  MessageSquare,
   Send,
-  User,
   Paperclip,
-  Check,
-  ChevronRight,
-  Filter,
 } from 'lucide-react';
 
 interface Ticket {
@@ -54,12 +42,10 @@ interface Message {
 }
 
 export default function AdminSupportQueuePage() {
-  const router = useRouter();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [ticketDetails, setTicketDetails] = useState<{ ticket: Ticket; messages: Message[] } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Filters
   const [filterType, setFilterType] = useState<string>('all');
@@ -71,9 +57,9 @@ export default function AdminSupportQueuePage() {
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
 
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await fetch('/api/admin/support');
       const data = await res.json();
       if (data.success) {
@@ -84,15 +70,33 @@ export default function AdminSupportQueuePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchTickets();
+    let ignore = false;
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/support');
+        const data = await res.json();
+        if (!ignore && data.success) {
+          setTickets(data.tickets || []);
+        }
+      } catch (err) {
+        console.error('Failed to load tickets queue:', err);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+    void load();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const loadTicketDetails = async (id: string) => {
     try {
-      setLoadingDetails(true);
       setSelectedTicketId(id);
       const res = await fetch(`/api/admin/support/${id}`);
       const data = await res.json();
@@ -104,8 +108,6 @@ export default function AdminSupportQueuePage() {
       }
     } catch (err) {
       console.error('Failed to load details:', err);
-    } finally {
-      setLoadingDetails(false);
     }
   };
 
@@ -338,7 +340,7 @@ export default function AdminSupportQueuePage() {
                     <span className="text-xs text-[var(--text-muted)]">Статус:</span>
                     <select
                       value={ticketDetails.ticket.status}
-                      onChange={(e) => handleUpdateStatus(e.target.value as any)}
+                      onChange={(e) => handleUpdateStatus(e.target.value as Ticket['status'])}
                       className="px-2.5 py-1 text-xs font-medium bg-[var(--surface-secondary)] border border-[var(--border)] rounded-[6px] text-[var(--text-primary)]"
                     >
                       <option value="new">Новое</option>

@@ -1,0 +1,12 @@
+const assert = require('node:assert/strict');
+const load = require('../scripts/helpers/load-typescript.cjs')({});
+const { getAvailableDaySlots, isSlotWithinWorkingHours } = load('lib/calendar/working-hours.ts');
+const busy = [{ start: '2030-01-14T14:00:00Z', end: '2030-01-14T14:30:00Z' }];
+const ny = getAvailableDaySlots('2030-01-14', '09:00-10:00', 30, busy, 'America/New_York');
+assert.deepEqual(Array.from(ny), ['09:30']);
+assert.deepEqual(Array.from(getAvailableDaySlots('2030-01-13', '09:00-10:00', 30, [], 'Asia/Tashkent')), []);
+assert.deepEqual(Array.from(getAvailableDaySlots('2020-01-13', '09:00-10:00', 30, [], 'Asia/Tashkent')), []);
+assert.deepEqual(Array.from(getAvailableDaySlots('2030-01-14', '09:00-10:00', 0, [], 'Asia/Tashkent')), []);
+assert.equal(isSlotWithinWorkingHours(undefined).valid, false);
+assert.equal(isSlotWithinWorkingHours('2030-01-14T10:00:00+05:00', -30).valid, false);
+console.log('Calendar timezone, busy, past, closed day and invalid duration checks passed');

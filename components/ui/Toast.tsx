@@ -33,24 +33,24 @@ export function ToastContainer() {
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-start gap-3 p-4 bg-white rounded-xl shadow-lg border ${borderColor} transition-all duration-300 transform translate-y-0`}
+            className={`pointer-events-auto flex items-start gap-3 p-4 bg-[var(--surface)] rounded-xl shadow-lg border ${borderColor} transition-all duration-300 transform translate-y-0`}
           >
             <div className={`p-1.5 rounded-lg shrink-0 ${iconColor}`}>
               <Icon className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0 pt-0.5">
-              <h4 className="text-sm font-semibold text-slate-900 leading-tight">
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] leading-tight">
                 {toast.title}
               </h4>
               {toast.description && (
-                <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+                <p className="mt-1 text-xs text-[var(--text-muted)] leading-relaxed">
                   {toast.description}
                 </p>
               )}
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors"
+              className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] p-1 rounded-md transition-colors"
             >
               <X className="w-4 h-4" />
             </button>

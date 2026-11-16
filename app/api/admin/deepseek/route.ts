@@ -22,8 +22,8 @@ export async function GET() {
       configured: isConfigured,
       toolsMode: process.env.AI_SANDBOX_TOOLS_MODE || 'dry_run',
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Ошибка запроса' }, { status: 500 });
   }
 }
 
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       durationMs: testResult.durationMs,
       usage: testResult.usage,
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Ошибка запроса' }, { status: 500 });
   }
 }

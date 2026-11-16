@@ -1,76 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
 
 :root {
-  --background: #F8FAFC;
-  --surface: #FFFFFF;
-  --surface-secondary: #F1F5F9;
+  color-scheme: light;
+  --background: #FAF7F0;
+  --surface: #FFFDF8;
+  --surface-secondary: #F0EDE4;
   --surface-elevated: #FFFFFF;
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
-  --border: #E2E8F0;
-  --border-strong: #CBD5E1;
-  --accent: #E52329;
-  --accent-hover: #C91C22;
+  --text-primary: #252B27;
+  --text-secondary: #505C55;
+  --text-muted: #68736C;
+  --border: #DDDCD1;
+  --border-strong: #A7B1A8;
+  --accent: #C65116;
+  --accent-hover: #A64010;
   --accent-text: #FFFFFF;
-  --accent-link: #B91C1C;
-  --accent-soft: #FFF1F2;
-  --accent-soft-text: #B91C1C;
-  --focus-ring: #2563EB;
-  --card-business: #18232D;
-
-  --success: #16A34A;
-  --success-bg: #DCFCE7;
-  --success-border: #BBF7D0;
-  --success-text: #15803D;
-
-  --warning: #D97706;
-  --warning-bg: #FEF3C7;
-  --warning-border: #FDE68A;
-  --warning-text: #B45309;
-
-  --danger: #DC2626;
-  --danger-bg: #FEE2E2;
-  --danger-border: #FECACA;
-  --danger-text: #B91C1C;
+  --accent-link: #AD4210;
+  --accent-soft: #FCEADA;
+  --accent-soft-text: #A64010;
+  --brand-orange: #FF7A1A;
+  --brand-turquoise: #00B9B0;
+  --secondary: #087F78;
+  --secondary-soft: #E0F2EC;
+  --secondary-text: #086860;
+  --focus-ring: #087F78;
+  --card-business: #253E35;
+  --success: #16734E;
+  --success-bg: #E1F2E8;
+  --success-border: #ACD4BB;
+  --success-text: #17603F;
+  --warning: #A26112;
+  --warning-bg: #FFF0CF;
+  --warning-border: #E8CE91;
+  --warning-text: #80500B;
+  --danger: #BE3439;
+  --danger-bg: #FCE8E7;
+  --danger-border: #E7B6B4;
+  --danger-text: #A12B31;
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
+  --radius-dialog: 1.25rem;
+  --space-page: clamp(1rem, 3vw, 2rem);
+  --space-card: clamp(1rem, 2vw, 1.5rem);
+  --shadow-card: 0 2px 8px rgb(37 43 39 / 0.04);
+  --shadow-popover: 0 12px 36px rgb(37 43 39 / 0.13);
+  --duration-fast: 160ms;
 }
 
 .dark {
   color-scheme: dark;
-  --background: #0B1220;
-  --surface: #111C2F;
-  --surface-secondary: #1A2740;
-  --surface-elevated: #1E293B;
-  --text-primary: #F8FAFC;
-  --text-secondary: #CBD5E1;
-  --text-muted: #94A3B8;
-  --border: #29364B;
-  --border-strong: #475569;
-  --accent: #F87171;
-  --accent-hover: #FCA5A5;
-  --accent-text: #0B1220;
-  --accent-link: #FCA5A5;
-  --accent-soft: rgba(220, 38, 38, 0.16);
-  --accent-soft-text: #FCA5A5;
-  --focus-ring: #93C5FD;
-  --card-business: #18232D;
+  --background: #171E1C;
+  --surface: #212B27;
+  --surface-secondary: #2B3731;
+  --surface-elevated: #344139;
+  --text-primary: #F7F4EA;
+  --text-secondary: #C8D1C9;
+  --text-muted: #A1B1A6;
+  --border: #3B4B41;
+  --border-strong: #708578;
+  --accent: #FFAA70;
+  --accent-hover: #FFBE94;
+  --accent-text: #292019;
+  --accent-link: #FFB886;
+  --accent-soft: #412F23;
+  --accent-soft-text: #FFB886;
+  --secondary: #65D4C5;
+  --secondary-soft: #203D36;
+  --secondary-text: #8AE1D3;
+  --focus-ring: #65D4C5;
+  --card-business: #253E35;
+  --success: #7CD9A8;
+  --success-bg: #203B2C;
+  --success-border: #3D6B50;
+  --success-text: #9CE2B9;
+  --warning: #F2C36D;
+  --warning-bg: #3C3220;
+  --warning-border: #6B5934;
+  --warning-text: #F2CE8A;
+  --danger: #F18F91;
+  --danger-bg: #442B2C;
+  --danger-border: #754347;
+  --danger-text: #FFA9AB;
+  --shadow-card: 0 2px 8px rgb(0 0 0 / 0.1);
+  --shadow-popover: 0 12px 36px rgb(0 0 0 / 0.25);
+}
 
-  --success: #4ADE80;
-  --success-bg: rgba(74, 222, 128, 0.12);
-  --success-border: rgba(74, 222, 128, 0.28);
-  --success-text: #86EFAC;
-
-  --warning: #FBBF24;
-  --warning-bg: rgba(251, 191, 36, 0.12);
-  --warning-border: rgba(251, 191, 36, 0.28);
-  --warning-text: #FDE68A;
-
-  --danger: #F87171;
-  --danger-bg: rgba(248, 113, 113, 0.12);
-  --danger-border: rgba(248, 113, 113, 0.28);
-  --danger-text: #FCA5A5;
+@theme inline {
+  --font-sans: var(--font-sora), var(--font-noto), system-ui, sans-serif;
 }
 
 html {
@@ -81,7 +99,7 @@ html {
 body {
   background-color: var(--background);
   color: var(--text-primary);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sora), var(--font-noto), system-ui, sans-serif;
   font-size: 14px;
   line-height: 22px;
   -webkit-font-smoothing: antialiased;
@@ -146,10 +164,10 @@ body {
     color: var(--text-primary);
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: var(--radius-dialog);
     max-height: 90dvh;
     padding: 0;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-popover);
     overflow: auto;
   }
   .chorla-dialog:not(.drawer):not(.navigation-drawer) {
@@ -205,3 +223,19 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+::selection { background: var(--accent-soft); color: var(--accent-soft-text); }
+
+@font-face { font-family: 'Gapcha Sora'; src: url('/fonts/sora-latin.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'Gapcha Sora'; src: url('/fonts/sora-latin-ext.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1EFF; }
+@font-face { font-family: 'Gapcha Noto'; src: url('/fonts/noto-cyrillic.woff2') format('woff2'); font-style: normal; font-weight: 400 700; font-display: swap; }
+:root { --font-sora: 'Gapcha Sora'; --font-noto: 'Gapcha Noto'; }
+@media (prefers-reduced-motion: no-preference) {
+  .companion-motion-hello { animation: companion-wave 600ms ease-in-out 2; transform-origin: 50% 80%; }
+  .companion-motion-loading { animation: companion-wait 1.8s ease-in-out infinite; }
+  .companion-motion-success { animation: companion-success 650ms ease-out; }
+  .companion-motion-error { animation: companion-wave 300ms ease-in-out 2; }
+}
+@keyframes companion-wave { 50% { transform: rotate(5deg); } }
+@keyframes companion-wait { 50% { transform: translateY(-3px); } }
+@keyframes companion-success { 45% { transform: translateY(-7px); } }

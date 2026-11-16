@@ -1,126 +1,38 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useSyncExternalStore } from 'react';
 import { useTheme } from 'next-themes';
 import { Sun, Moon, Laptop, Check } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
-interface ThemeSwitcherProps {
-  compact?: boolean;
-  className?: string;
-  buttonClassName?: string;
-}
-
-export function ThemeSwitcher({
-  compact = false,
-  className = '',
-  buttonClassName = '',
-}: ThemeSwitcherProps) {
+interface ThemeSwitcherProps { compact?: boolean; className?: string; buttonClassName?: string; locale?: 'ru' | 'uz' }
+const subscribe = () => () => {};
+export function ThemeSwitcher({ className = '', buttonClassName = '', locale: localeOverride }: ThemeSwitcherProps) {
+  const { locale } = useApp();
+  const uz = (localeOverride || locale) === 'uz';
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
+  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
+  const [open, setOpen] = useState(false);
+  const container = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Close on outside click
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  // Close on Escape key
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
+    if (!open) return;
+    const outside = (event: MouseEvent) => { if (!container.current?.contains(event.target as Node)) setOpen(false); };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus(); } };
+    document.addEventListener('mousedown', outside); document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('mousedown', outside); document.removeEventListener('keydown', escape); };
+  }, [open]);
   const options = [
-    { value: 'light', label: 'Светлая', icon: Sun },
-    { value: 'dark', label: 'Тёмная', icon: Moon },
-    { value: 'system', label: 'Как в системе', icon: Laptop },
-  ] as const;
-
-  if (!mounted) {
-    return (
-      <div
-        className={`h-10 w-10 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] flex items-center justify-center opacity-70 ${buttonClassName || className}`}
-        aria-label="Переключение темы оформления"
-      >
-        <Sun className="w-4 h-4" />
-      </div>
-    );
-  }
-
-  const currentOption = options.find((o) => o.value === theme) || options[2];
-  const DisplayIcon = resolvedTheme === 'dark' ? Moon : Sun;
-
-  return (
-    <div className={`relative inline-block text-left ${className}`} ref={containerRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-        aria-label={`Тема оформления: ${currentOption.label}. Нажмите для выбора.`}
-        title={`Тема оформления: ${currentOption.label}`}
-        className={`h-10 w-10 rounded-[6px] border border-[#D8DFE8] dark:border-slate-700 bg-white dark:bg-[#111C2E] hover:bg-slate-50 dark:hover:bg-slate-800 text-[#171A21] dark:text-[#F1F5F9] flex items-center justify-center transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] focus-visible:ring-offset-2 ${buttonClassName}`}
-      >
-        <DisplayIcon className="w-4 h-4 text-[#526079] dark:text-[#A5B4C8]" />
-      </button>
-
-      {isOpen && (
-        <div
-          role="menu"
-          aria-label="Режимы темы оформления"
-          className="absolute right-0 mt-2 w-48 rounded-[8px] border border-[#D8DFE8] dark:border-slate-800 bg-white dark:bg-[#111C2E] shadow-xl py-1.5 z-50 focus:outline-none animate-in fade-in-50 zoom-in-95 duration-100"
-        >
-          <div className="px-3 py-1.5 text-[11px] font-semibold text-[#526079] dark:text-slate-400 border-b border-[#D8DFE8]/60 dark:border-slate-800 mb-1">
-            Тема оформления
-          </div>
-          {options.map((option) => {
-            const Icon = option.icon;
-            const isSelected = theme === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setTheme(option.value);
-                  setIsOpen(false);
-                }}
-                className={`w-full px-3 py-2 text-xs flex items-center justify-between text-left transition-colors cursor-pointer ${
-                  isSelected
-                    ? 'bg-slate-100 dark:bg-slate-800/80 text-[#DC2626] font-semibold'
-                    : 'text-[#171A21] dark:text-[#F1F5F9] hover:bg-slate-50 dark:hover:bg-slate-800/50 font-normal'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Icon className="w-4 h-4 opacity-75" />
-                  <span>{option.label}</span>
-                </div>
-                {isSelected && <Check className="w-3.5 h-3.5 text-[#DC2626] stroke-[2.5]" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+    { value: 'light', label: uz ? 'Yorug‘' : 'Светлая', icon: Sun },
+    { value: 'dark', label: uz ? 'Qorong‘i' : 'Тёмная', icon: Moon },
+    { value: 'system', label: uz ? 'Tizimga mos' : 'Как в системе', icon: Laptop },
+  ];
+  const label = uz ? 'Mavzuni tanlash' : 'Выбор темы';
+  const Icon = mounted && resolvedTheme === 'dark' ? Moon : Sun;
+  return <div ref={container} className={`relative inline-block text-left ${className}`}>
+    <button ref={trigger} type="button" disabled={!mounted} onClick={() => setOpen(!open)} aria-expanded={open} aria-label={label} title={label} className={`inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] ${buttonClassName}`}><Icon aria-hidden="true" size={19}/></button>
+    {open && <div className="absolute right-0 z-50 mt-2 w-44 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] p-1 shadow-[var(--shadow-popover)]" role="group" aria-label={label}>
+      {options.map(({ value, label, icon: OptionIcon }) => <button key={value} type="button" aria-pressed={theme === value} onClick={() => { setTheme(value); setOpen(false); trigger.current?.focus(); }} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-secondary)]"><OptionIcon size={16} aria-hidden="true"/><span className="flex-1">{label}</span>{theme === value && <Check size={16} aria-hidden="true"/>}</button>)}
+    </div>}
+  </div>;
 }

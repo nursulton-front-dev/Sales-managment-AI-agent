@@ -29,7 +29,7 @@ export function Sidebar({
   onMobileClose?: () => void;
 }) {
   const path = usePathname();
-  const { openSandbox, isSuperAdmin, t } = useApp();
+  const { openSandbox, isSuperAdmin, t, locale } = useApp();
 
   const work = [
     [t.nav.overview, '/dashboard', House],
@@ -37,6 +37,8 @@ export function Sidebar({
     [t.nav.conversations, '/dashboard/conversations', MessageSquare],
     [t.nav.agents, '/dashboard/agents', Users],
     [t.nav.integrations, '/dashboard/integrations', Plug],
+    [locale === 'uz' ? 'AI uchun javob' : 'ИИ нужен ответ', '/dashboard/knowledge-requests', MessageSquare],
+    [locale === 'uz' ? 'Yozuvlarni tekshirish' : 'Проверка записей', '/dashboard/calendar-review', CalendarDays],
   ] as const;
 
   const company = [
@@ -56,8 +58,8 @@ export function Sidebar({
         aria-current={active ? 'page' : undefined}
         className={`flex items-center gap-3 min-h-10 px-3.5 rounded-xl text-xs sm:text-sm transition-all ${
           active
-            ? 'bg-red-500/10 dark:bg-red-500/15 text-[#FF7277] font-bold border border-red-500/20 shadow-2xs'
-            : 'text-[var(--text-secondary)] dark:text-[#AABAD0] hover:bg-[var(--surface-secondary)] dark:hover:bg-[#142137] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB]'
+            ? 'bg-[var(--accent-soft)] text-[var(--accent-soft-text)] font-bold border border-[var(--accent)]/20 shadow-2xs'
+            : 'text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] dark:hover:bg-[var(--surface-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)]'
         }`}
       >
         <Icon size={18} strokeWidth={1.75} className="shrink-0" />
@@ -67,8 +69,8 @@ export function Sidebar({
   };
 
   const content = (
-    <div className="flex flex-col w-full h-full min-h-0 bg-[var(--surface)] dark:bg-[#101B2E]">
-      <div className="h-16 flex items-center justify-between px-5 border-b border-[var(--border)] dark:border-[#29374C] shrink-0">
+    <div className="flex flex-col w-full h-full min-h-0 bg-[var(--surface)] dark:bg-[var(--surface)]">
+      <div className="h-16 flex items-center justify-between px-5 border-b border-[var(--border)] dark:border-[var(--border)] shrink-0">
         <BrandLogo variant="full" width={150} href="/dashboard" ariaLabel="gapcha AI" />
         <button
           type="button"
@@ -89,7 +91,7 @@ export function Sidebar({
           [t.nav.company, company],
         ].map(([label, items]) => (
           <div key={label as string} className="space-y-1">
-            <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] dark:text-[#AABAD0]/60">
+            <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] dark:text-[var(--text-secondary)]/60">
               {label as string}
             </p>
             {(items as typeof work | typeof company).map(([title, href, Icon]) =>
@@ -99,16 +101,16 @@ export function Sidebar({
         ))}
       </nav>
 
-      <div className="p-3 border-t border-[var(--border)] dark:border-[#29374C] shrink-0 space-y-1">
+      <div className="p-3 border-t border-[var(--border)] dark:border-[var(--border)] shrink-0 space-y-1">
         <button
           type="button"
           onClick={() => {
             onMobileClose();
             openSandbox();
           }}
-          className="w-full flex items-center gap-3 min-h-10 px-3.5 text-xs sm:text-sm font-semibold text-[var(--text-secondary)] dark:text-[#AABAD0] hover:bg-[var(--surface-secondary)] dark:hover:bg-[#142137] hover:text-[var(--text-primary)] dark:hover:text-[#F4F7FB] rounded-xl transition-colors cursor-pointer"
+          className="w-full flex items-center gap-3 min-h-10 px-3.5 text-xs sm:text-sm font-semibold text-[var(--text-secondary)] dark:text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] dark:hover:bg-[var(--surface-secondary)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-primary)] rounded-xl transition-colors cursor-pointer"
         >
-          <Play size={17} strokeWidth={1.75} className="text-[#FF7277]" />
+          <Play size={17} strokeWidth={1.75} className="text-[var(--accent-link)]" />
           <span>{t.nav.testDrive}</span>
         </button>
         {item(t.nav.support, '/dashboard/support', Headphones)}
@@ -120,14 +122,14 @@ export function Sidebar({
 
   return (
     <>
-      <aside className="hidden lg:flex w-60 shrink-0 border-r border-[var(--border)] dark:border-[#29374C] h-full shadow-2xs">
+      <aside className="hidden lg:flex w-60 shrink-0 border-r border-[var(--border)] dark:border-[var(--border)] h-full shadow-2xs">
         {content}
       </aside>
       <Dialog
         open={mobileOpen}
         onClose={onMobileClose}
         label="Меню навигации"
-        className="navigation-drawer p-0 border-r border-[var(--border)] dark:border-[#29374C]"
+        className="navigation-drawer p-0 border-r border-[var(--border)] dark:border-[var(--border)]"
       >
         {content}
       </Dialog>

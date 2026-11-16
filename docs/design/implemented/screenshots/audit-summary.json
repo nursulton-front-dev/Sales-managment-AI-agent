@@ -1,0 +1,288 @@
+{
+  "timestamp": "2026-11-16T07:31:35.237Z",
+  "pagesTested": 13,
+  "screenshots": [
+    "desktop-light-ru-landing.png",
+    "desktop-light-ru-login.png",
+    "desktop-light-ru-register.png",
+    "desktop-light-ru-not-found.png",
+    "desktop-light-ru-dashboard-overview.png",
+    "desktop-light-ru-dashboard-agents.png",
+    "desktop-light-ru-dashboard-wizard.png",
+    "desktop-light-ru-dashboard-conversations.png",
+    "desktop-light-ru-dashboard-leads.png",
+    "desktop-light-ru-dashboard-integrations.png",
+    "desktop-light-ru-dashboard-billing.png",
+    "desktop-light-ru-dashboard-company.png",
+    "desktop-light-ru-dashboard-support.png",
+    "mobile-light-uz-landing.png",
+    "mobile-light-uz-login.png",
+    "mobile-light-uz-register.png",
+    "mobile-light-uz-not-found.png",
+    "mobile-light-uz-dashboard-overview.png",
+    "mobile-light-uz-dashboard-agents.png",
+    "mobile-light-uz-dashboard-wizard.png",
+    "mobile-light-uz-dashboard-conversations.png",
+    "mobile-light-uz-dashboard-leads.png",
+    "mobile-light-uz-dashboard-integrations.png",
+    "mobile-light-uz-dashboard-billing.png",
+    "mobile-light-uz-dashboard-company.png",
+    "mobile-light-uz-dashboard-support.png",
+    "desktop-dark-ru-landing.png",
+    "desktop-dark-ru-dashboard-overview.png",
+    "desktop-dark-ru-dashboard-wizard.png",
+    "desktop-dark-ru-dashboard-conversations.png",
+    "desktop-dark-ru-dashboard-integrations.png"
+  ],
+  "performance": [
+    {
+      "page": "landing",
+      "path": "/",
+      "status": 200,
+      "loadTimeMs": 107,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "login",
+      "path": "/login",
+      "status": 200,
+      "loadTimeMs": 399,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "register",
+      "path": "/register",
+      "status": 200,
+      "loadTimeMs": 246,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "not-found",
+      "path": "/not-found",
+      "status": 404,
+      "loadTimeMs": 90,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-overview",
+      "path": "/dashboard",
+      "status": 200,
+      "loadTimeMs": 102,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-agents",
+      "path": "/dashboard/agents",
+      "status": 200,
+      "loadTimeMs": 176,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-wizard",
+      "path": "/dashboard/agents/new",
+      "status": 200,
+      "loadTimeMs": 142,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-conversations",
+      "path": "/dashboard/conversations",
+      "status": 200,
+      "loadTimeMs": 295,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-leads",
+      "path": "/dashboard/leads",
+      "status": 200,
+      "loadTimeMs": 174,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-integrations",
+      "path": "/dashboard/integrations",
+      "status": 200,
+      "loadTimeMs": 163,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-billing",
+      "path": "/dashboard/billing",
+      "status": 200,
+      "loadTimeMs": 119,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-company",
+      "path": "/dashboard/company",
+      "status": 200,
+      "loadTimeMs": 199,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-support",
+      "path": "/dashboard/support",
+      "status": 200,
+      "loadTimeMs": 137,
+      "viewport": "1440x900",
+      "locale": "ru",
+      "theme": "light"
+    },
+    {
+      "page": "landing",
+      "path": "/",
+      "status": 304,
+      "loadTimeMs": 52,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "login",
+      "path": "/login",
+      "status": 304,
+      "loadTimeMs": 131,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "register",
+      "path": "/register",
+      "status": 304,
+      "loadTimeMs": 46,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "not-found",
+      "path": "/not-found",
+      "status": 404,
+      "loadTimeMs": 63,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-overview",
+      "path": "/dashboard",
+      "status": 304,
+      "loadTimeMs": 107,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-agents",
+      "path": "/dashboard/agents",
+      "status": 304,
+      "loadTimeMs": 275,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-wizard",
+      "path": "/dashboard/agents/new",
+      "status": 304,
+      "loadTimeMs": 212,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-conversations",
+      "path": "/dashboard/conversations",
+      "status": 304,
+      "loadTimeMs": 224,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-leads",
+      "path": "/dashboard/leads",
+      "status": 304,
+      "loadTimeMs": 184,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-integrations",
+      "path": "/dashboard/integrations",
+      "status": 304,
+      "loadTimeMs": 262,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-billing",
+      "path": "/dashboard/billing",
+      "status": 304,
+      "loadTimeMs": 194,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-company",
+      "path": "/dashboard/company",
+      "status": 304,
+      "loadTimeMs": 214,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    },
+    {
+      "page": "dashboard-support",
+      "path": "/dashboard/support",
+      "status": 304,
+      "loadTimeMs": 169,
+      "viewport": "390x844",
+      "locale": "uz",
+      "theme": "light"
+    }
+  ],
+  "mascotChecks": [
+    {
+      "src": "http://localhost:3100/_next/image?url=/illustrations/gapcha/elder-3d/avatar.webp&w=3840&q=75",
+      "naturalWidth": 20,
+      "naturalHeight": 20,
+      "complete": true,
+      "visible": false
+    }
+  ],
+  "reducedMotionChecks": [
+    {
+      "status": "PASSED",
+      "activeAnimations": 0
+    }
+  ]
+}

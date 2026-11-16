@@ -5,6 +5,8 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // CommonJS scripts explicitly use require and are not TypeScript modules.
+  { files: ["**/*.cjs"], rules: { "@typescript-eslint/no-require-imports": "off" } },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

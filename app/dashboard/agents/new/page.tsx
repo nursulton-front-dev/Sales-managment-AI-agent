@@ -1,19 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import {
   GraduationCap,
   Stethoscope,
-  Scissors,
   ShoppingBag,
   Target,
-  Briefcase,
   ArrowRight,
   ArrowLeft,
   Check,
-  Calendar,
   Send,
   Play,
   CheckCircle2,
@@ -22,6 +19,7 @@ import {
 import { AgentSetupWizard } from '@/components/wizard/AgentSetupWizard';
 import { SparrowMascot } from '@/components/ui/SparrowMascot';
 import { AgentDraft, WizardNiche } from '@/lib/wizard/types';
+import { mergeAssistantDraft, type DraftRevisions } from '@/lib/wizard/merge-draft';
 import { ARCHETYPES, createInitialDraft } from '@/lib/wizard/archetypes';
 
 interface NicheTemplate {
@@ -107,7 +105,7 @@ const STEPS = [
 
 export default function NewAgentWizardPage() {
   const router = useRouter();
-  const { createAgent, openSandbox, showToast, workspace, locale, t } = useApp();
+  const { openSandbox, showToast, workspace, locale, t } = useApp();
   const isUz = locale === 'uz';
 
   const [creationMode, setCreationMode] = useState<'ai' | 'manual'>('ai');
@@ -123,44 +121,86 @@ export default function NewAgentWizardPage() {
   const [tgVariant, setTgVariant] = useState<'platform' | 'custom_bot'>('platform');
   const [botToken, setBotToken] = useState<string>('');
 
-  // Synchronize draft on locale change if unedited
-  useEffect(() => {
-    if (!draft.pricingConfirmed && !draft.goalConfirmed) {
-      setDraft(createInitialDraft(draft.nicheTemplate, locale));
-    }
-  }, [locale]);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftLoadError, setDraftLoadError] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<'saving' | 'saved' | 'error'>('saving');
+  const draftRef = useRef(draft);
+  const revisionRef = useRef(0);
+  const fieldRevisionsRef = useRef<DraftRevisions>({});
+  const savedRevisionRef = useRef(0);
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finalizedRef = useRef(false);
 
-  // Load existing draft from server on mount
   useEffect(() => {
     let active = true;
     async function loadServerDraft() {
       try {
         const res = await fetch('/api/assistant/wizard');
         const data = await res.json();
-        if (active && data.success && data.draft) {
+        if (!res.ok || !data.success || !data.draft) throw new Error('Draft load failed');
+        if (active) {
+          draftRef.current = data.draft;
           setDraft(data.draft);
-          if (data.draft.currentStep) {
-            setCurrentStep(data.draft.currentStep);
-          }
+          if (data.draft.currentStep) setCurrentStep(data.draft.currentStep);
+          setAutosaveStatus('saved');
+          setDraftReady(true);
         }
-      } catch {}
+      } catch {
+        if (active) setDraftLoadError(true);
+      }
     }
-    loadServerDraft();
-    return () => {
-      active = false;
-    };
+    void loadServerDraft();
+    return () => { active = false; };
   }, []);
 
-  // Update draft helper
-  const updateDraft = (patch: Partial<AgentDraft>) => {
-    setDraft((prev) => {
-      const next = { ...prev, ...patch, updatedAt: new Date().toISOString() };
-      // auto-save to sessionStorage
-      try {
-        sessionStorage.setItem('gapcha_agent_draft', JSON.stringify(next));
-      } catch {}
-      return next;
+  const persistDraft = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    const revision = revisionRef.current;
+    const snapshot = draftRef.current;
+    const save = saveChainRef.current.catch(() => {}).then(async () => {
+      if (finalizedRef.current || revision <= savedRevisionRef.current) return;
+      const res = await fetch('/api/assistant/wizard', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_draft', draft: snapshot }),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.error || 'Draft save failed');
+      savedRevisionRef.current = revision;
+      if (revision === revisionRef.current) setAutosaveStatus('saved');
     });
+    saveChainRef.current = save;
+    void save.catch(() => {
+      if (revision === revisionRef.current) setAutosaveStatus('error');
+    });
+    return save;
+  }, []);
+
+  const changeDraft = useCallback((value: React.SetStateAction<AgentDraft>) => {
+    if (finalizedRef.current) return;
+    const next = typeof value === 'function' ? value(draftRef.current) : value;
+    const previous = draftRef.current;
+    revisionRef.current += 1;
+    for (const key of Object.keys(next) as (keyof AgentDraft)[]) {
+      if (JSON.stringify(previous[key]) !== JSON.stringify(next[key])) fieldRevisionsRef.current[key] = revisionRef.current;
+    }
+    draftRef.current = next;
+    setDraft(next);
+    setAutosaveStatus('saving');
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => { void persistDraft(); }, 500);
+  }, [persistDraft]);
+
+  useEffect(() => () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      void persistDraft();
+    }
+  }, [persistDraft]);
+
+  const updateDraft = (patch: Partial<AgentDraft>) => {
+    changeDraft(prev => ({ ...prev, ...patch, updatedAt: new Date().toISOString() }));
   };
 
   // Select Niche in manual mode
@@ -181,13 +221,14 @@ export default function NewAgentWizardPage() {
     setIsSavingAgent(true);
 
     try {
+      await persistDraft();
       const res = await fetch('/api/assistant/wizard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'finalize',
           draft: {
-            ...draft,
+            ...draftRef.current,
             tgBotToken: tgVariant === 'custom_bot' && botToken.trim() ? botToken.trim() : null,
           },
         }),
@@ -198,16 +239,18 @@ export default function NewAgentWizardPage() {
         throw new Error(data.error || (isUz ? 'Xodimni yaratib bo‘lmadi' : 'Не удалось создать сотрудника'));
       }
 
+      finalizedRef.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
       setSavedAgentId(data.agentId || 'new-agent');
       setIsSaved(true);
       showToast(t.wizard.successTitle, undefined, 'success');
       try {
         sessionStorage.removeItem('gapcha_agent_draft');
       } catch {}
-    } catch (err: any) {
+    } catch (err: unknown) {
       showToast(
         isUz ? 'Xatolik yuz berdi' : 'Ошибка сохранения',
-        err.message || (isUz ? 'Qayta urinib ko‘ring' : 'Попробуйте ещё раз'),
+        err instanceof Error ? err.message : (isUz ? 'Qayta urinib ko‘ring' : 'Попробуйте ещё раз'),
         'error'
       );
     } finally {
@@ -215,10 +258,16 @@ export default function NewAgentWizardPage() {
     }
   };
 
+  if (!draftReady) return (
+    <div role="status" className="p-6">
+      {draftLoadError ? (isUz ? 'Qoralamani yuklab bo‘lmadi. Sahifani yangilang.' : 'Не удалось загрузить черновик. Обновите страницу.') : (isUz ? 'Qoralama yuklanmoqda…' : 'Загружаем черновик…')}
+    </div>
+  );
+
   const activeStep = creationMode === 'ai' ? draft.currentStep : currentStep;
 
   return (
-    <div className="w-full max-w-[1300px] mx-auto pb-20 space-y-6">
+    <fieldset disabled={isSavingAgent} className="w-full max-w-[1300px] mx-auto pb-20 space-y-6 border-0 p-0">
       {/* ============================================================= */}
       {/* 1. CLEAN TOP HEADER: Title, Compact Mode Switcher & Steps     */}
       {/* ============================================================= */}
@@ -247,7 +296,7 @@ export default function NewAgentWizardPage() {
                 onClick={() => setCreationMode('ai')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                   creationMode === 'ai'
-                    ? 'bg-[#ED262A] text-white shadow-2xs'
+                    ? 'bg-[var(--accent)] text-white shadow-2xs'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
@@ -261,7 +310,7 @@ export default function NewAgentWizardPage() {
                 onClick={() => setCreationMode('manual')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                   creationMode === 'manual'
-                    ? 'bg-[#ED262A] text-white shadow-2xs'
+                    ? 'bg-[var(--accent)] text-white shadow-2xs'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
@@ -289,11 +338,11 @@ export default function NewAgentWizardPage() {
                     type="button"
                     onClick={() => {
                       if (creationMode === 'manual') setCurrentStep(st.num);
-                      else updateDraft({ currentStep: st.num as any });
+                      else updateDraft({ currentStep: st.num as AgentDraft['currentStep'] });
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
                       isCurrent
-                        ? 'bg-[#ED262A] text-white shadow-2xs'
+                        ? 'bg-[var(--accent)] text-white shadow-2xs'
                         : isCompleted
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                         : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -343,7 +392,7 @@ export default function NewAgentWizardPage() {
             <button
               type="button"
               onClick={() => openSandbox(savedAgentId || undefined)}
-              className="px-5 py-2.5 text-xs font-semibold text-white bg-[#ED262A] hover:bg-[#d01f23] rounded-xl transition-colors cursor-pointer min-h-[44px] inline-flex items-center gap-1.5 shadow-2xs"
+              className="px-5 py-2.5 text-xs font-semibold text-white bg-[var(--accent)] hover:bg-[#d01f23] rounded-xl transition-colors cursor-pointer min-h-[44px] inline-flex items-center gap-1.5 shadow-2xs"
             >
               <Play className="w-3.5 h-3.5" />
               <span>{t.wizard.openSandbox}</span>
@@ -363,7 +412,11 @@ export default function NewAgentWizardPage() {
         /* ============================================================= */
         <AgentSetupWizard
           draft={draft}
-          onDraftChange={setDraft}
+          onDraftChange={changeDraft}
+          getDraftRevisions={() => ({ ...fieldRevisionsRef.current })}
+          onAssistantDraft={(response, before) => changeDraft(current => mergeAssistantDraft(current, response, before, fieldRevisionsRef.current))}
+          autosaveStatus={autosaveStatus}
+          onRetrySave={() => { setAutosaveStatus('saving'); void persistDraft(); }}
           onSaveAndLaunch={handleFinalizeAgent}
           isSaving={isSavingAgent}
           onOpenSandbox={() => openSandbox()}
@@ -397,11 +450,11 @@ export default function NewAgentWizardPage() {
                       onClick={() => handleSelectNiche(n)}
                       className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3.5 ${
                         isSelected
-                          ? 'border-[#ED262A] bg-red-500/10 font-bold shadow-2xs'
+                          ? 'border-[var(--accent)] bg-red-500/10 font-bold shadow-2xs'
                           : 'border-[var(--border)] bg-[var(--surface-secondary)]/40 hover:bg-[var(--surface-secondary)]'
                       }`}
                     >
-                      <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[#ED262A] shrink-0">
+                      <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--accent)] shrink-0">
                         <Icon size={20} />
                       </div>
                       <div className="min-w-0">
@@ -426,7 +479,7 @@ export default function NewAgentWizardPage() {
                   value={draft.name}
                   onChange={(e) => updateDraft({ name: e.target.value })}
                   placeholder={isUz ? 'Masalan: Savdo menejeri' : 'Например: ИИ-Менеджер продаж'}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-xs sm:text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-xs sm:text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 />
               </div>
 
@@ -434,7 +487,7 @@ export default function NewAgentWizardPage() {
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
-                  className="px-5 py-2.5 rounded-xl bg-[#ED262A] text-white font-bold text-xs sm:text-sm hover:bg-[#d01f23] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[var(--accent)] text-white font-bold text-xs sm:text-sm hover:bg-[#d01f23] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{t.common.continue}</span>
                   <ArrowRight size={15} />
@@ -461,7 +514,7 @@ export default function NewAgentWizardPage() {
                 rows={8}
                 value={draft.servicesAndPricing}
                 onChange={(e) => updateDraft({ servicesAndPricing: e.target.value, pricingConfirmed: true })}
-                className="w-full px-4 py-3 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-xs sm:text-sm font-mono text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+                className="w-full px-4 py-3 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border)] text-xs sm:text-sm font-mono text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
 
               <div className="flex items-center justify-between pt-3">
@@ -476,7 +529,7 @@ export default function NewAgentWizardPage() {
                 <button
                   type="button"
                   onClick={() => setCurrentStep(3)}
-                  className="px-5 py-2.5 rounded-xl bg-[#ED262A] text-white font-bold text-xs sm:text-sm hover:bg-[#d01f23] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[var(--accent)] text-white font-bold text-xs sm:text-sm hover:bg-[#d01f23] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{t.common.continue}</span>
                   <ArrowRight size={15} />
@@ -505,7 +558,7 @@ export default function NewAgentWizardPage() {
                   onClick={() => setTgVariant('platform')}
                   className={`p-4 rounded-xl border transition-all cursor-pointer ${
                     tgVariant === 'platform'
-                      ? 'border-[#ED262A] bg-red-500/10 font-bold shadow-2xs'
+                      ? 'border-[var(--accent)] bg-red-500/10 font-bold shadow-2xs'
                       : 'border-[var(--border)] bg-[var(--surface-secondary)]/40 hover:bg-[var(--surface-secondary)]'
                   }`}
                 >
@@ -523,7 +576,7 @@ export default function NewAgentWizardPage() {
                   onClick={() => setTgVariant('custom_bot')}
                   className={`p-4 rounded-xl border transition-all cursor-pointer ${
                     tgVariant === 'custom_bot'
-                      ? 'border-[#ED262A] bg-red-500/10 font-bold shadow-2xs'
+                      ? 'border-[var(--accent)] bg-red-500/10 font-bold shadow-2xs'
                       : 'border-[var(--border)] bg-[var(--surface-secondary)]/40 hover:bg-[var(--surface-secondary)]'
                   }`}
                 >
@@ -548,7 +601,7 @@ export default function NewAgentWizardPage() {
                     value={botToken}
                     onChange={(e) => setBotToken(e.target.value)}
                     placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs sm:text-sm font-mono text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#ED262A]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs sm:text-sm font-mono text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                   />
                 </div>
               )}
@@ -565,7 +618,7 @@ export default function NewAgentWizardPage() {
                 <button
                   type="button"
                   onClick={() => setCurrentStep(4)}
-                  className="px-5 py-2.5 rounded-xl bg-[#ED262A] text-white font-bold text-xs sm:text-sm hover:bg-[#d01f23] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[var(--accent)] text-white font-bold text-xs sm:text-sm hover:bg-[#d01f23] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{t.common.continue}</span>
                   <ArrowRight size={15} />
@@ -577,7 +630,7 @@ export default function NewAgentWizardPage() {
           {/* STEP 4: Final Launch */}
           {currentStep === 4 && (
             <div className="space-y-5 text-center max-w-md mx-auto py-4">
-              <div className="size-12 rounded-2xl bg-red-500/10 text-[#ED262A] flex items-center justify-center mx-auto">
+              <div className="size-12 rounded-2xl bg-red-500/10 text-[var(--accent)] flex items-center justify-center mx-auto">
                 <CheckCircle2 size={24} />
               </div>
 
@@ -605,7 +658,7 @@ export default function NewAgentWizardPage() {
                   type="button"
                   onClick={handleFinalizeAgent}
                   disabled={isSavingAgent}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#ED262A] text-white font-bold text-xs sm:text-sm hover:bg-[#d01f23] transition-colors inline-flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[var(--accent)] text-white font-bold text-xs sm:text-sm hover:bg-[#d01f23] transition-colors inline-flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   <Check size={16} />
                   <span>{isSavingAgent ? t.common.saving : t.wizard.saveAndLaunch}</span>
@@ -615,6 +668,6 @@ export default function NewAgentWizardPage() {
           )}
         </div>
       )}
-    </div>
+    </fieldset>
   );
 }

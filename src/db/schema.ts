@@ -45,7 +45,7 @@ export const workspaces = pgTable('workspaces', {
   telegramBusinessEnabled: boolean('telegram_business_enabled').notNull().default(false),
   telegramBusinessAgentId: text('telegram_business_agent_id'),
   telegramBusinessConnectedAt: timestamp('telegram_business_connected_at', { withTimezone: true }),
-  settings: jsonb('settings').$type<Record<string, any>>().default({}),
+  settings: jsonb('settings').$type<Record<string, unknown>>().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

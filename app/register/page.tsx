@@ -917,9 +917,12 @@ function RegisterWizard() {
               {logoPreview ? (
                 <div className="flex items-center justify-between p-3 rounded-[6px] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
                   <div className="flex items-center gap-3">
-                    <img
+                    <Image
                       src={logoPreview}
                       alt="Logo preview"
+                      width={40}
+                      height={40}
+                      unoptimized
                       className="w-10 h-10 object-contain rounded border border-slate-200 dark:border-slate-700 bg-white p-0.5"
                     />
                     <div>

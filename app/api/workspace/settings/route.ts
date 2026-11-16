@@ -87,7 +87,8 @@ export async function PATCH(req: NextRequest) {
       updates.googleCalendarSlotDuration = Number(googleCalendarSlotDuration);
     }
     if (quickStartDismissed !== undefined || settings !== undefined) {
-      const currentSettings = ((session.workspace as any).settings as Record<string, any>) || {};
+      const wsSettings = (session.workspace as { settings?: Record<string, unknown> | null }).settings;
+      const currentSettings = (wsSettings && typeof wsSettings === 'object' ? wsSettings : {}) as Record<string, unknown>;
       const newSettings = { ...currentSettings };
       if (quickStartDismissed !== undefined) {
         newSettings.quickStartDismissed = Boolean(quickStartDismissed);
