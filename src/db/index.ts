@@ -47,6 +47,7 @@ interface DBData {
   instagramEvents: schema.InstagramEvent[];
   adminAuditLogs: schema.AdminAuditLog[];
   telegramBusinessBindings: schema.TelegramBusinessBinding[];
+  aiExecutionLogs?: schema.AIExecutionLog[];
 }
 
 const DATA_DIR = process.env.CHORLA_DATA_DIR || path.join(process.cwd(), '.data');
@@ -66,6 +67,7 @@ const INITIAL_SEED: DBData = {
   instagramEvents: [],
   adminAuditLogs: [],
   telegramBusinessBindings: [],
+  aiExecutionLogs: [],
 };
 
 function readStore(): DBData {
@@ -107,6 +109,10 @@ function readStore(): DBData {
       if (b.createdAt) b.createdAt = new Date(b.createdAt);
       if (b.expiresAt) b.expiresAt = new Date(b.expiresAt);
       if (b.redeemedAt) b.redeemedAt = new Date(b.redeemedAt);
+    });
+    parsed.aiExecutionLogs = parsed.aiExecutionLogs || [];
+    parsed.aiExecutionLogs.forEach((l) => {
+      if (l.createdAt) l.createdAt = new Date(l.createdAt);
     });
     return parsed;
   } catch (err) {
@@ -563,6 +569,14 @@ export async function createLead(data: Partial<schema.NewLead> & { workspaceId: 
     googleEventId: data.googleEventId || null,
     googleEventLink: data.googleEventLink || null,
     tokensSpent: data.tokensSpent !== undefined ? data.tokensSpent : 0,
+    notes: data.notes || null,
+    budget: data.budget || null,
+    interestedService: data.interestedService || null,
+    preferredLanguage: data.preferredLanguage || null,
+    salesStage: data.salesStage || null,
+    lastAgreedStep: data.lastAgreedStep || null,
+    objections: data.objections || null,
+    clientMemory: data.clientMemory || null,
     createdAt: new Date(),
   };
 
@@ -621,6 +635,14 @@ export async function upsertLead(
     if (data.googleEventId) updates.googleEventId = data.googleEventId;
     if (data.googleEventLink) updates.googleEventLink = data.googleEventLink;
     if (data.tokensSpent) updates.tokensSpent = (existing.tokensSpent || 0) + data.tokensSpent;
+    if (data.notes) updates.notes = data.notes;
+    if (data.budget) updates.budget = data.budget;
+    if (data.interestedService) updates.interestedService = data.interestedService;
+    if (data.preferredLanguage) updates.preferredLanguage = data.preferredLanguage;
+    if (data.salesStage) updates.salesStage = data.salesStage;
+    if (data.lastAgreedStep) updates.lastAgreedStep = data.lastAgreedStep;
+    if (data.objections) updates.objections = data.objections;
+    if (data.clientMemory) updates.clientMemory = { ...existing.clientMemory, ...data.clientMemory };
 
     if (Object.keys(updates).length > 0) {
       const updated = await updateLead(existing.id, updates);
@@ -806,6 +828,7 @@ export async function createConversation(data: Partial<schema.NewConversation> &
     clientPhone: data.clientPhone,
     channel: data.channel || 'Telegram',
     status: data.status || 'active',
+    clientMemory: data.clientMemory || null,
     lastMessageText: data.lastMessageText || '',
     lastMessageAt: new Date(),
     createdAt: new Date(),
@@ -889,6 +912,13 @@ export async function createMessage(data: Partial<schema.NewMessage> & {
     sender: data.sender,
     text: data.text,
     tokensCost: data.tokensCost || 0,
+    provider: data.provider || null,
+    model: data.model || null,
+    inputTokens: data.inputTokens || 0,
+    outputTokens: data.outputTokens || 0,
+    cachedInputTokens: data.cachedInputTokens || 0,
+    latencyMs: data.latencyMs || 0,
+    estimatedCostUsd: data.estimatedCostUsd || '0',
     createdAt: data.createdAt || new Date(),
   };
 
@@ -1404,3 +1434,63 @@ export async function getWorkspaceByInstagramUserId(instagramUserId: string): Pr
   const store = readStore();
   return store.workspaces.find((w) => w.instagramUserId === instagramUserId) || null;
 }
+
+export async function recordAIExecutionLog(log: Partial<schema.NewAIExecutionLog> & {
+  workspaceId: string;
+  provider: string;
+  model: string;
+}): Promise<schema.AIExecutionLog> {
+  const fullLog: schema.AIExecutionLog = {
+    id: log.id || `log_${randomUUID()}`,
+    workspaceId: log.workspaceId,
+    conversationId: log.conversationId || null,
+    channel: log.channel || null,
+    provider: log.provider,
+    model: log.model,
+    inputTokens: log.inputTokens || 0,
+    outputTokens: log.outputTokens || 0,
+    cachedInputTokens: log.cachedInputTokens || 0,
+    latencyMs: log.latencyMs || 0,
+    status: log.status || 'success',
+    errorCode: log.errorCode || null,
+    toolCallsCount: log.toolCallsCount || 0,
+    estimatedCostUsd: log.estimatedCostUsd || '0',
+    createdAt: log.createdAt || new Date(),
+  };
+
+  if (db) {
+    try {
+      const [inserted] = await db.insert(schema.aiExecutionLogs).values(fullLog).returning();
+      return inserted || fullLog;
+    } catch (err) {
+      console.warn('Neon insert aiExecutionLog error:', err);
+      return fullLog;
+    }
+  }
+
+  const store = readStore();
+  if (!store.aiExecutionLogs) store.aiExecutionLogs = [];
+  store.aiExecutionLogs.push(fullLog);
+  writeStore(store);
+  return fullLog;
+}
+
+export async function getConversationClientMemory(conversationId: string): Promise<schema.ClientMemoryProfile> {
+  const conv = await getConversationById(conversationId);
+  return (conv?.clientMemory as schema.ClientMemoryProfile) || {};
+}
+
+export async function updateConversationClientMemory(
+  conversationId: string,
+  memoryUpdates: Partial<schema.ClientMemoryProfile>
+): Promise<schema.ClientMemoryProfile> {
+  const conv = await getConversationById(conversationId);
+  const current = (conv?.clientMemory as schema.ClientMemoryProfile) || {};
+  const merged: schema.ClientMemoryProfile = {
+    ...current,
+    ...memoryUpdates,
+  };
+  await updateConversation(conversationId, { clientMemory: merged });
+  return merged;
+}
+

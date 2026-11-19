@@ -79,11 +79,32 @@ export async function processChannelEvent(id: string) {
         void sendTelegramChatAction(tgToken, payload.contact.slice(3), 'typing', payload.businessConnectionId);
       }
 
-      const result = await processAgentMessage({ bookingRequestKey: event.id, message: payload.text, agentId: agent.id, workspaceId: event.workspaceId, clientName: conversation.clientName, clientPhone: conversation.clientPhone, channel: event.channel,
-        history: messages.filter((message) => message.id !== `in_${event.id}`).slice(-12).map((message) => ({ role: message.sender === 'client' ? 'user' as const : 'assistant' as const, content: message.text })),
+      const result = await processAgentMessage({
+        bookingRequestKey: event.id,
+        message: payload.text,
+        agentId: agent.id,
+        workspaceId: event.workspaceId,
+        conversationId: conversation.id,
+        clientName: conversation.clientName,
+        clientPhone: conversation.clientPhone,
+        channel: event.channel,
+        history: messages
+          .filter((message) => message.id !== `in_${event.id}`)
+          .slice(-20)
+          .map((message) => ({
+            role: (message.sender === 'client' ? 'user' : 'assistant') as 'user' | 'assistant',
+            content: message.text,
+          })),
       });
       payload.reply = result.reply;
       payload.tokensCost = result.tokensCost;
+      payload.provider = result.provider;
+      payload.model = result.model;
+      payload.inputTokens = result.inputTokens;
+      payload.outputTokens = result.outputTokens;
+      payload.cachedInputTokens = result.cachedInputTokens;
+      payload.latencyMs = result.latencyMs;
+      payload.estimatedCostUsd = result.estimatedCostUsd;
       // The gateway already persists the booking with the confirmed Google event ID.
       // A second upsert here can target a different contact and lose that association.
       stage = 'prepared';
@@ -128,7 +149,21 @@ export async function processChannelEvent(id: string) {
     }
 
     if (stage === 'delivered') {
-      await createMessage({ id: `out_${id}`, conversationId: conversation.id, workspaceId: event.workspaceId, sender: 'agent', text: payload.reply!, tokensCost: payload.tokensCost || 0 });
+      await createMessage({
+        id: `out_${id}`,
+        conversationId: conversation.id,
+        workspaceId: event.workspaceId,
+        sender: 'agent',
+        text: payload.reply!,
+        tokensCost: payload.tokensCost || 0,
+        provider: payload.provider,
+        model: payload.model,
+        inputTokens: payload.inputTokens,
+        outputTokens: payload.outputTokens,
+        cachedInputTokens: payload.cachedInputTokens,
+        latencyMs: payload.latencyMs,
+        estimatedCostUsd: payload.estimatedCostUsd,
+      });
       await patchEvent(id, { status: 'done', lockedUntil: null, errorCode: null });
     }
   } catch (error) {

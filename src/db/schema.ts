@@ -66,6 +66,25 @@ export const agents = pgTable('agents', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+export interface ClientMemoryProfile {
+  clientName?: string;
+  clientPhone?: string;
+  preferredLanguage?: 'ru' | 'uz_latn' | 'uz_cyrl' | 'en' | 'mixed' | string;
+  interestedService?: string;
+  budget?: string;
+  preferredTime?: string;
+  salesStage?: 'new' | 'qualifying' | 'presentation' | 'objection_handling' | 'booking_pending' | 'booked' | 'closed';
+  objections?: string[];
+  lastAgreedStep?: string;
+  pendingBooking?: {
+    serviceName: string;
+    startTime: string;
+    timeZone: string;
+    proposedAt: string;
+  };
+  customNotes?: string;
+}
+
 // 3. Leads (Лиды и воронка)
 export const leads = pgTable('leads', {
   id: text('id').primaryKey(),
@@ -81,6 +100,14 @@ export const leads = pgTable('leads', {
   googleEventId: text('google_event_id'),
   googleEventLink: text('google_event_link'),
   tokensSpent: integer('tokens_spent').notNull().default(0),
+  notes: text('notes'),
+  budget: text('budget'),
+  interestedService: text('interested_service'),
+  preferredLanguage: text('preferred_language'),
+  salesStage: text('sales_stage'),
+  lastAgreedStep: text('last_agreed_step'),
+  objections: jsonb('objections').$type<string[]>().default([]),
+  clientMemory: jsonb('client_memory').$type<ClientMemoryProfile>().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -111,6 +138,7 @@ export const conversations = pgTable('conversations', {
   status: text('status').notNull().default('active'), // 'active' (AI responds), 'human_takeover' (paused for human), 'closed'
   lastMessageText: text('last_message_text').default(''),
   lastMessageAt: timestamp('last_message_at', { withTimezone: true }).defaultNow().notNull(),
+  clientMemory: jsonb('client_memory').$type<ClientMemoryProfile>().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -126,6 +154,13 @@ export const messages = pgTable('messages', {
   sender: text('sender').notNull(), // 'client', 'agent', 'human'
   text: text('text').notNull(),
   tokensCost: integer('tokens_cost').notNull().default(0),
+  provider: text('provider'),
+  model: text('model'),
+  inputTokens: integer('input_tokens').default(0),
+  outputTokens: integer('output_tokens').default(0),
+  cachedInputTokens: integer('cached_input_tokens').default(0),
+  latencyMs: integer('latency_ms').default(0),
+  estimatedCostUsd: text('estimated_cost_usd').default('0'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -338,6 +373,29 @@ export type NewAdminAuditLog = typeof adminAuditLogs.$inferInsert;
 export type InstagramEvent = typeof instagramEvents.$inferSelect;
 export type NewInstagramEvent = typeof instagramEvents.$inferInsert;
 
+export const aiExecutionLogs = pgTable('ai_execution_logs', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  conversationId: text('conversation_id'),
+  channel: text('channel'),
+  provider: text('provider').notNull(),
+  model: text('model').notNull(),
+  inputTokens: integer('input_tokens').notNull().default(0),
+  outputTokens: integer('output_tokens').notNull().default(0),
+  cachedInputTokens: integer('cached_input_tokens').default(0),
+  latencyMs: integer('latency_ms').notNull().default(0),
+  status: text('status').notNull().default('success'), // 'success' | 'error' | 'fallback'
+  errorCode: text('error_code'),
+  toolCallsCount: integer('tool_calls_count').notNull().default(0),
+  estimatedCostUsd: text('estimated_cost_usd').notNull().default('0'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type AIExecutionLog = typeof aiExecutionLogs.$inferSelect;
+export type NewAIExecutionLog = typeof aiExecutionLogs.$inferInsert;
+
 export const websiteWidgets = pgTable('website_widgets', {
   id: text('id').primaryKey(),
   workspaceId: text('workspace_id').notNull().unique().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -369,6 +427,13 @@ export type ChannelPayload = {
   reply?: string;
   tokensCost?: number;
   businessConnectionId?: string;
+  provider?: string;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
+  latencyMs?: number;
+  estimatedCostUsd?: string;
 };
 export const channelEvents = pgTable('channel_events', {
   id: text('id').primaryKey(),

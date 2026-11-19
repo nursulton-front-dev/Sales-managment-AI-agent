@@ -16,6 +16,7 @@ export interface LLMMessage {
       arguments: string;
     };
   }>;
+  rawAssistantContent?: unknown;
 }
 
 export interface ToolDefinition {
@@ -39,6 +40,7 @@ export interface LLMUsage {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
+  cachedPromptTokens?: number;
 }
 
 export interface LLMResponse {
@@ -55,11 +57,13 @@ export interface LLMResponse {
   model: string;
   usage?: LLMUsage;
   durationMs: number;
+  rawResponse?: unknown;
 }
 
 export interface LLMProvider {
   name: string;
   defaultModel: string;
+  isConfigured(): boolean;
   checkHealth(): Promise<{ ok: boolean; message: string; models?: string[] }>;
   complete(options: LLMRequestOptions): Promise<LLMResponse>;
 }

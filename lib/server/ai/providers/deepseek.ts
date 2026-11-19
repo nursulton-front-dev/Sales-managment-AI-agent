@@ -9,7 +9,7 @@ export class DeepSeekProvider implements LLMProvider {
 
   constructor() {
     this.baseUrl = (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '');
-    this.defaultModel = process.env.DEEPSEEK_MODEL || 'deepseek-flash';
+    this.defaultModel = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
     this.apiKey = process.env.DEEPSEEK_API_KEY;
     this.thinkingMode = process.env.DEEPSEEK_THINKING === 'enabled' ? 'enabled' : 'disabled';
   }
@@ -65,9 +65,20 @@ export class DeepSeekProvider implements LLMProvider {
     }
 
     const startTime = Date.now();
+    const formattedMessages = options.messages.map((m) => {
+      const item: Record<string, unknown> = {
+        role: m.role,
+        content: m.content ?? '',
+      };
+      if (m.name) item.name = m.name;
+      if (m.tool_call_id) item.tool_call_id = m.tool_call_id;
+      if (m.tool_calls && m.tool_calls.length > 0) item.tool_calls = m.tool_calls;
+      return item;
+    });
+
     const payload: Record<string, unknown> = {
       model: this.defaultModel,
-      messages: options.messages,
+      messages: formattedMessages,
       temperature: options.temperature ?? 0.3,
       max_tokens: options.maxTokens ?? 1024,
     };
@@ -122,15 +133,17 @@ export class DeepSeekProvider implements LLMProvider {
       content: message?.content || '',
       toolCalls: message?.tool_calls || undefined,
       provider: 'deepseek',
-      model: this.defaultModel,
+      model: data?.model || this.defaultModel,
       usage: data?.usage
         ? {
             promptTokens: data.usage.prompt_tokens || 0,
             completionTokens: data.usage.completion_tokens || 0,
             totalTokens: data.usage.total_tokens || 0,
+            cachedPromptTokens: data.usage.prompt_tokens_details?.cached_tokens || data.usage.prompt_cache_hit_tokens || 0,
           }
         : undefined,
       durationMs,
+      rawResponse: data,
     };
   }
 }
